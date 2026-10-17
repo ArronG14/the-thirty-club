@@ -1,0 +1,22 @@
+node_modules/
+dist/
+coverage/
+playwright-report/
+test-results/
+.env*
+!.env.example
+.DS_Store
+
+# Local tool state, caches and temporary files
+.cache/
+.vite/
+.netlify/
+*.tsbuildinfo
+*.log
+*.tmp
+*.swp
+*.swo
+*~
+Thumbs.db
+.AppleDouble/
+.LSOverride
