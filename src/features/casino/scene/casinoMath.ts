@@ -21,6 +21,8 @@ export interface Shot {
   look: Vec3;
   /** Half-width (m) kept in frame at the look point's distance. */
   halfWidth: number;
+  /** Half-height (m) always kept in frame, which governs landscape. */
+  halfHeight: number;
 }
 
 /**
@@ -28,14 +30,49 @@ export interface Shot {
  * (−1.4, −1.2); slot machine at (2.3, −3.9) facing the room.
  */
 export const SHOTS: Record<Station, Shot> = {
-  lobby: { eye: [0.4, 1.75, 5.3], look: [0.4, 1.15, -2.4], halfWidth: 3.4 },
-  roulette: {
-    eye: [-1.4, 2.5, -0.15],
-    look: [-1.4, 0.8, -1.25],
-    halfWidth: 0.8,
+  lobby: {
+    eye: [-0.3, 1.75, 5.3],
+    look: [-0.3, 1.15, -2.4],
+    halfWidth: 3.4,
+    halfHeight: 2.4,
   },
-  slots: { eye: [2.3, 1.62, -1.5], look: [2.3, 1.12, -3.9], halfWidth: 0.9 },
+  roulette: {
+    eye: [-1.4, 2.6, -0.7],
+    look: [-1.4, 0.8, -1.6],
+    halfWidth: 0.62,
+    halfHeight: 0.8,
+  },
+  slots: {
+    eye: [2.3, 1.62, -1.5],
+    look: [2.3, 1.12, -3.9],
+    halfWidth: 1.0,
+    halfHeight: 1.05,
+  },
 };
+
+/**
+ * Landscape framings. The wheel and the machine are centred on their own
+ * height rather than hung from the top of a tall portrait frame.
+ */
+export const LANDSCAPE_SHOTS: Partial<Record<Station, Shot>> = {
+  roulette: {
+    eye: [-1.4, 2.45, -0.95],
+    look: [-1.4, 0.95, -1.85],
+    halfWidth: 0.9,
+    halfHeight: 0.62,
+  },
+  slots: {
+    eye: [2.3, 1.75, -1.5],
+    look: [2.3, 1.5, -3.9],
+    halfWidth: 1.0,
+    halfHeight: 1.4,
+  },
+};
+
+/** The shot for a station at this aspect ratio. */
+export function shotFor(station: Station, aspect: number): Shot {
+  return (aspect > 1.2 && LANDSCAPE_SHOTS[station]) || SHOTS[station];
+}
 
 /** Intermediate eye positions, chosen in open floor and above furniture. */
 export const VIA: Record<Exclude<Station, 'lobby'>, readonly Vec3[]> = {
@@ -88,6 +125,7 @@ export interface CameraPose {
   eye: Vec3;
   look: Vec3;
   halfWidth: number;
+  halfHeight: number;
 }
 
 /**
@@ -112,6 +150,7 @@ export function cameraPose(
       lerp(from.look[2], to.look[2], lead),
     ],
     halfWidth: lerp(from.halfWidth, to.halfWidth, eased),
+    halfHeight: lerp(from.halfHeight, to.halfHeight, eased),
   };
 }
 
@@ -132,12 +171,22 @@ export function approach(
   return current + (goal - current) * (1 - Math.exp(-rate * dt));
 }
 
-/** Vertical fov (degrees) keeping `halfWidth` metres in frame at `distance`. */
-export function fovFor(aspect: number, distance: number, halfWidth: number) {
+/**
+ * Vertical fov (degrees) keeping `halfWidth` metres in frame horizontally
+ * and `halfHeight` vertically at `distance`. Portrait is governed by the
+ * width, landscape by the height.
+ */
+export function fovFor(
+  aspect: number,
+  distance: number,
+  halfWidth: number,
+  halfHeight = 0,
+) {
   const horizontalHalf = Math.atan(halfWidth / distance);
-  const fov =
+  const byWidth =
     (2 * Math.atan(Math.tan(horizontalHalf) / aspect) * 180) / Math.PI;
-  return Math.min(84, Math.max(34, fov));
+  const byHeight = (2 * Math.atan(halfHeight / distance) * 180) / Math.PI;
+  return Math.min(84, Math.max(34, byWidth, byHeight));
 }
 
 /* ---------------------------------------------------------------- */
@@ -165,7 +214,7 @@ export const WHEEL = {
   /** Radius of the ball track at the rim, and of the pocket centres. */
   trackRadius: 0.385,
   pocketRadius: 0.245,
-  ballRadius: 0.017,
+  ballRadius: 0.022,
   /** The head (pockets) is flat out to here; the ball track then rises. */
   headRadius: 0.355,
   rimRadius: 0.4,

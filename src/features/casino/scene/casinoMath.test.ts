@@ -15,6 +15,7 @@ import {
   reelPosition,
   reelTotalSeconds,
   SHOTS,
+  shotFor,
   viaFor,
   wheelAngle,
 } from './casinoMath';
@@ -149,6 +150,15 @@ describe('reel plans', () => {
 });
 
 describe('camera', () => {
+  it('chooses a landscape framing for wide screens only', () => {
+    expect(shotFor('roulette', 0.46)).toBe(SHOTS.roulette);
+    expect(shotFor('roulette', 2.16)).not.toBe(SHOTS.roulette);
+    expect(shotFor('slots', 2.16).halfHeight).toBeGreaterThan(
+      SHOTS.slots.halfHeight,
+    );
+    expect(shotFor('lobby', 2.16)).toBe(SHOTS.lobby);
+  });
+
   it('starts and ends exactly on the shots', () => {
     const via = viaFor('lobby', 'roulette');
     const a = cameraPose(SHOTS.lobby, SHOTS.roulette, via, 0);
@@ -159,6 +169,7 @@ describe('camera', () => {
       expect(b.look[i]).toBeCloseTo(SHOTS.roulette.look[i]!, 6);
     }
     expect(b.halfWidth).toBeCloseTo(SHOTS.roulette.halfWidth);
+    expect(b.halfHeight).toBeCloseTo(SHOTS.roulette.halfHeight);
   });
 
   it('eases: slow at both ends, never leaving the room', () => {
@@ -201,5 +212,8 @@ describe('camera', () => {
     expect(fovFor(0.46, 5, 2.5)).toBeGreaterThan(fovFor(1.8, 5, 2.5));
     expect(fovFor(0.2, 1, 5)).toBe(84);
     expect(fovFor(3, 20, 0.1)).toBe(34);
+    // In landscape the height governs, so the subject is never cropped.
+    expect(fovFor(2.2, 2, 0.6, 0.8)).toBeGreaterThan(fovFor(2.2, 2, 0.6));
+    expect(fovFor(0.46, 2, 0.6, 0.8)).toBe(fovFor(0.46, 2, 0.6));
   });
 });

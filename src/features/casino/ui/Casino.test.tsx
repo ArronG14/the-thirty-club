@@ -296,6 +296,13 @@ describe('slots', () => {
 });
 
 describe('navigation, collection and persistence', () => {
+  it('returns focus to the door she came through', () => {
+    mount();
+    fireEvent.click(screen.getByRole('button', { name: /^The Machine/ }));
+    fireEvent.click(screen.getByRole('button', { name: /Lobby/ }));
+    expect(screen.getByRole('button', { name: /^The Machine/ })).toHaveFocus();
+  });
+
   it('moves between the lobby and the games, and offers the lounge from the lobby', () => {
     mount();
     fireEvent.click(screen.getByRole('button', { name: /^Roulette/ }));

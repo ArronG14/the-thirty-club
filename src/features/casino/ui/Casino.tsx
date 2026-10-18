@@ -104,6 +104,8 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
   const entered = useRef(false);
   const firstVisit = useRef(model.state.casino.visits === 0);
   const panelRef = useRef<HTMLDivElement>(null);
+  const doors = useRef<Partial<Record<Station, HTMLButtonElement | null>>>({});
+  const returnFocus = useRef<Station | null>(null);
   const spinCount = useRef(0);
 
   useEffect(() => {
@@ -323,8 +325,17 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
 
   /* ---------------- Interface ---------------- */
 
+  // Coming back to the lobby, focus returns to the door she came through.
+  useEffect(() => {
+    if (view !== 'lobby' || !returnFocus.current) return;
+    const door = doors.current[returnFocus.current];
+    returnFocus.current = null;
+    door?.focus({ preventScroll: true });
+  }, [view]);
+
   const back = () => {
     if (working.current) return;
+    returnFocus.current = view;
     goTo('lobby');
     setRoulettePhase('betting');
     setSlotsPhase('ready');
@@ -409,7 +420,7 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
         className="casino__frame"
         inert={collection !== null || revealing !== null}
       >
-        <header className="casino__bar">
+        <header className="casino__bar" data-compact={view !== 'lobby'}>
           {view === 'lobby' ? (
             <Link className="bar__back" to="/">
               <span aria-hidden="true">‹</span> Lounge
@@ -497,6 +508,9 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
             <nav className="casino__doors" aria-label="Choose a game">
               <button
                 type="button"
+                ref={(el) => {
+                  doors.current.roulette = el;
+                }}
                 className="casino-door casino-door--roulette"
                 onClick={() => goTo('roulette')}
                 disabled={busy}
@@ -506,6 +520,9 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
               </button>
               <button
                 type="button"
+                ref={(el) => {
+                  doors.current.slots = el;
+                }}
                 className="casino-door casino-door--slots"
                 onClick={() => goTo('slots')}
                 disabled={busy}

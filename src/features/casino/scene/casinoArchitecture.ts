@@ -121,6 +121,10 @@ export async function createCasinoMaterials(
       sheen: 0.8,
       sheenRoughness: 0.55,
       sheenColor: new THREE.Color(0xc2506a),
+      // Lit from within a little: the room's glow, without more lights.
+      emissive: 0xffffff,
+      emissiveMap: velvet,
+      emissiveIntensity: 0.3,
     }),
     velvetSeat: new THREE.MeshPhysicalMaterial({
       color: 0x6a1426,
@@ -171,7 +175,7 @@ export async function createCasinoMaterials(
     crystal: new THREE.MeshPhysicalMaterial({
       color: 0xfff1d6,
       emissive: 0xffd9a0,
-      emissiveIntensity: 0.9,
+      emissiveIntensity: 0.55,
       roughness: 0.05,
       transparent: true,
       opacity: 0.85,
@@ -872,7 +876,7 @@ export function buildChandelier(scene: THREE.Object3D, m: CasinoMaterials) {
   drop.position.y = 2.95;
   drop.userData.static = false;
   g.add(drop);
-  const core = halo(g, 1.6, [0, 3.35, 0], 0.5);
+  const core = halo(g, 1.5, [0, 3.35, 0], 0.32);
   const pool = lightPool(
     g,
     [4.4, 4.4],

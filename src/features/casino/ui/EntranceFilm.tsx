@@ -12,6 +12,7 @@ export function CasinoEntranceFilm({ onDone }: { onDone(): void }) {
   const asset = CASINO_ASSETS.entranceVideo;
   const [failed, setFailed] = useState(false);
   const done = useRef(false);
+  const started = useRef(false);
 
   const finish = () => {
     if (done.current) return;
@@ -27,7 +28,7 @@ export function CasinoEntranceFilm({ onDone }: { onDone(): void }) {
   useEffect(() => {
     // If it has not started within a few seconds, give up quietly.
     const timer = setTimeout(() => {
-      if (!done.current) setFailed(true);
+      if (!done.current && !started.current) setFailed(true);
     }, 6000);
     return () => clearTimeout(timer);
   }, []);
@@ -51,7 +52,9 @@ export function CasinoEntranceFilm({ onDone }: { onDone(): void }) {
         muted
         playsInline
         preload="auto"
-        onPlaying={() => undefined}
+        onPlaying={() => {
+          started.current = true;
+        }}
         onEnded={finish}
         onError={() => setFailed(true)}
       />

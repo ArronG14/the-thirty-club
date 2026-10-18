@@ -468,12 +468,26 @@ export function buildSlots(
   }
 
   // Head: enamel body with a brass-framed window.
-  box(g, m.enamel, [1.02, 1.1, 0.72], [0, 1.55, -0.02]);
+  // The head is built round the reel window (a solid box would hide it).
+  const winW = 0.74;
+  const winH = 0.52;
+  const sideW = (1.02 - winW) / 2;
+  const top = REEL_Y + winH / 2;
+  const bottom = REEL_Y - winH / 2;
+  for (const sx of [-1, 1]) {
+    box(
+      g,
+      m.enamel,
+      [sideW, 1.1, 0.72],
+      [sx * (winW / 2 + sideW / 2), 1.55, -0.02],
+    );
+  }
+  box(g, m.enamel, [winW, 2.1 - top, 0.72], [0, (top + 2.1) / 2, -0.02]);
+  box(g, m.enamel, [winW, bottom - 1.0, 0.72], [0, (1.0 + bottom) / 2, -0.02]);
+  box(g, m.enamel, [1.02, 1.1, 0.1], [0, 1.55, -0.33]);
   for (const sx of [-1, 1]) {
     box(g, m.brassPolished, [0.03, 1.1, 0.03], [sx * 0.51, 1.55, 0.34]);
   }
-  const winW = 0.74;
-  const winH = 0.52;
   const fz = 0.352;
   box(
     g,
@@ -515,7 +529,7 @@ export function buildSlots(
       map: tex,
       emissiveMap: tex,
       emissive: 0xffffff,
-      emissiveIntensity: 0.62,
+      emissiveIntensity: 0.3,
       roughness: 0.45,
     });
     reelMaterials.push(material);
@@ -585,7 +599,7 @@ export function buildSlots(
     g.add(arrow);
   }
   const winGlow = new THREE.MeshBasicMaterial({
-    color: new THREE.Color(2.4, 1.7, 0.8),
+    color: new THREE.Color(1.0, 0.66, 0.26),
     transparent: true,
     opacity: 0,
     blending: THREE.AdditiveBlending,

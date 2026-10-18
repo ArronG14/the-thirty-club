@@ -10,6 +10,7 @@
 
 - `src/app/`: application composition and routes.
 - `src/features/entrance/`: phase 2 entrance and foyer. `domain/` holds pure countdown, stage machine, device record and butler script modules (no React). `useEntrance.ts` composes clock, record and timers. `ui/` holds presentation and CSS. `scene/` holds the lazily loaded real-time 3D entrance (ADR-007). `preview/` is development-only. The foundation placeholder view was removed when the entrance replaced it.
+- `src/features/prizes/`: the club-wide prize engine (reward types, ledger, versioned persistence, Gift Vault contract); knows no game. `src/features/casino/`: the Grand Casino (`domain/` pure roulette, slots, state and butler lines; `config/` rewards, rules and the asset registry; `scene/` the lazy 3D room and its pure motion maths; `ui/` panels, reveal and collection; `audio/` Web Audio synthesis; `dev/` development-only tools). See ADR-010.
 - `src/shared/state/`: presentation-independent Zustand connectivity store; no membership or reward authority.
 - `src/shared/pwa/`: service-worker registration and real offline/update status.
 - `src/shared/ui/`: shared semantic layout and the `useReducedMotion` hook.
@@ -201,7 +202,7 @@ End-of-message UI belongs to the player and replaces its controls. It never chan
 
 Built on the owner's explicit request, overriding AGENTS.md's "do not build the casino" for the casino only. The Gift Vault is NOT built; only its contract is.
 
-**Two features, one direction of dependency.** `src/features/prizes/` is the club-wide prize engine and knows no game: games report named counters (`roulette.wins`), a reward declares `eligibility` conditions over counters and over other rewards (`awarded` / `claimed`), and the pure ledger (`ledger.ts`) decides what is awarded. `src/features/casino/` depends on `prizes/`, never the reverse, except that `prizes/clubRewards.ts` aggregates each experience's catalogue (today only `casino/config/casinoRewards.ts`). Winning a game and receiving a unique prize are separate steps: a win bumps counters; only the ledger awards, and `grants` is keyed by reward id, so a one-time reward cannot be awarded twice and a claimed reward cannot be downgraded. Awarded rewards are `unclaimed` until Alise claims them in the reveal (or the collection sheet); the House Favour requires two *claimed* rewards, so claims can chain awards.
+**Two features, one direction of dependency.** `src/features/prizes/` is the club-wide prize engine and knows no game: games report named counters (`roulette.wins`), a reward declares `eligibility` conditions over counters and over other rewards (`awarded` / `claimed`), and the pure ledger (`ledger.ts`) decides what is awarded. `src/features/casino/` depends on `prizes/`, never the reverse, except that `prizes/clubRewards.ts` aggregates each experience's catalogue (today only `casino/config/casinoRewards.ts`). Winning a game and receiving a unique prize are separate steps: a win bumps counters; only the ledger awards, and `grants` is keyed by reward id, so a one-time reward cannot be awarded twice and a claimed reward cannot be downgraded. Awarded rewards are `unclaimed` until Alise claims them in the reveal (or the collection sheet); the House Favour requires two _claimed_ rewards, so claims can chain awards.
 
 **Persistence.** Two versioned `localStorage` records: `thirty-club:prizes` (`{version, counters, grants}`: the shared ledger a future Gift Vault reads) and `thirty-club:casino` (`{version, chips, spins, visits, soundOn}`: game-local). Both degrade to fresh state on corrupt, missing or foreign-version data, repair field by field, drop unknown reward ids and read "claimed without a timestamp" as unclaimed. `migrate()` upgrades one version at a time and refuses newer versions (they read as empty; the app does not overwrite them until the next save, an accepted single-user limitation). No migration exists yet because the schema has never changed; the mechanism is unit-tested with injected migrations. Writes happen ledger-first. Previews (`?preview=casino-*`) use in-memory stores.
 
@@ -218,9 +219,9 @@ Built on the owner's explicit request, overriding AGENTS.md's "do not build the 
 **Gift Vault contract.** `prizes/vaultContract.ts` exposes `createPrizeReader(storage, catalog)`: `rewards()`, `claimed(kind?)`, `vaultGrants()` (claimed vault codes only), `isVaultUnlocked(vaultId)`, `matchCode(vaultId, code)`. The vault must use this and not import games.
 
 **Unresolved questions.**
+
 - Unlock codes live in the client bundle, so they are discoverable. This is acceptable for a ceremonial surprise and unacceptable for anything of real value; ADR-003 still requires the deferred backend before valuable redemptions.
 - Placeholders awaiting the owner (flagged `placeholder: true`): the Croupier's Clue text, the Vault Key code `TC-0000` and vault id, and the House Favour privilege. Reward names, the chip economy, the scripts and the spin limits are provisional creative choices.
 - The Thirty Club emblem on the reels is a stand-in star-in-ring until the real emblem exists.
 - Casino opening time is still the provisional 2 pm Jamaica time in `schedule.ts` (D02).
 - Real-iPhone performance of the casino scene has not been measured (software-rendered Chromium only).
-

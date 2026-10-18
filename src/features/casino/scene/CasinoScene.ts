@@ -24,7 +24,6 @@ import {
   type QualityTier,
 } from '../../entrance/scene/sceneMath';
 import type { SceneAssetKey } from '../config/casinoAssets';
-import { REEL_LENGTH } from '../domain/slots';
 import {
   buildChandelier,
   buildFurniture,
@@ -47,9 +46,10 @@ import {
   reelPosition,
   reelTotalSeconds,
   SHOTS,
+  shotFor,
   TRAVEL_SECONDS,
-  trackHeight,
   viaFor,
+  WHEEL,
   wheelAngle,
   type ReelPlan,
   type Shot,
@@ -64,6 +64,7 @@ import {
   WHEEL_POS,
 } from './casinoStations';
 import { artTexture } from './casinoTextures';
+import { loadOptional } from './optionalTexture';
 
 export interface CasinoInput {
   /** Where the camera belongs. A change starts a cinematic move. */
@@ -102,26 +103,13 @@ export interface CasinoEvents {
 
 export type AssetUrls = Partial<Record<SceneAssetKey, string | null>>;
 
+/** Where Alise's stake is stacked on the felt (near her end of the table). */
+const TABLE_STAKE = { x: -1.4 + 0.3, z: -1.3 + 1.2 } as const;
+
 const DUST = 140;
 const WARMUP_MS = 1000;
 const SAMPLE_MS = 1500;
 const TAU = Math.PI * 2;
-
-async function loadOptional(
-  loader: THREE.TextureLoader,
-  url: string | null | undefined,
-  anisotropy: number,
-): Promise<THREE.Texture | null> {
-  if (!url) return null;
-  try {
-    const tex = await loader.loadAsync(url);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    tex.anisotropy = anisotropy;
-    return tex;
-  } catch {
-    return null; // A missing asset must never break the room.
-  }
-}
 
 interface RouletteSpin {
   plan: SpinPlan;
@@ -253,7 +241,7 @@ export class CasinoScene {
     scene.fog = new THREE.FogExp2(0x0d0507, 0.026);
     const env = casinoEnvironment(renderer);
     scene.environment = env.texture;
-    scene.environmentIntensity = 0.34;
+    scene.environmentIntensity = 0.45;
 
     const statics = new THREE.Group();
     scene.add(statics);
@@ -268,7 +256,7 @@ export class CasinoScene {
 
     // Lights: a dim hemisphere, the chandelier's pool (the one shadow
     // caster), and a spot on each station. Everything else is emissive.
-    const hemi = new THREE.HemisphereLight(0x5a2f2a, 0x0b0605, 0.5);
+    const hemi = new THREE.HemisphereLight(0x6a3530, 0x0f0807, 0.85);
     const house = new THREE.SpotLight(0xffd0a0, 26, 12, 1.0, 0.9, 1.5);
     house.position.set(0, 4.2, -1.4);
     house.target.position.set(0, 0, -1.4);
@@ -341,6 +329,9 @@ export class CasinoScene {
     this.resizeObserver.observe(canvas);
     this.resize();
 
+    // Look-development builds (see tools/capture-casino) keep full quality in
+    // software-rendered browsers; ordinary builds never set this.
+    if (import.meta.env.VITE_CASINO_LOOKDEV === '1') this.settled = true;
     if (import.meta.env.DEV) {
       if (window.location.search.includes('lookdev')) this.settled = true;
     }
@@ -365,7 +356,7 @@ export class CasinoScene {
       (window as unknown as { __casino?: CasinoScene }).__casino = this;
     if (!this.input) {
       this.station = input.station;
-      this.pose = { ...SHOTS[input.station] };
+      this.pose = { ...shotFor(input.station, this.camera.aspect) };
     } else if (input.station !== this.station) {
       this.beginTravel(input.station, input.reducedMotion);
     }
@@ -513,35 +504,17 @@ export class CasinoScene {
       this.hover = null;
       return;
     }
-    const hit = this.pick();
+    const hit = this.pick(event.clientX, event.clientY);
     this.hover = hit === 'roulette' || hit === 'slots' ? hit : null;
     this.canvas.style.cursor = this.hover ? 'pointer' : '';
   };
 
-  private pick(clientX?: number, clientY?: number) {
+  private pick(clientX: number, clientY: number) {
     const box = this.canvas.getBoundingClientRect();
-    const ndc = new THREE.Vector2();
-    if (clientX === undefined || clientY === undefined) {
-      ndc.set(this.pointer.x, -this.pointer.y);
-      // The pointer is in window space; convert to the canvas.
-      ndc.set(
-        ((((this.pointer.x + 1) / 2) * window.innerWidth - box.left) /
-          box.width) *
-          2 -
-          1,
-        -(
-          ((((this.pointer.y + 1) / 2) * window.innerHeight - box.top) /
-            box.height) *
-            2 -
-          1
-        ),
-      );
-    } else {
-      ndc.set(
-        ((clientX - box.left) / box.width) * 2 - 1,
-        -((clientY - box.top) / box.height) * 2 + 1,
-      );
-    }
+    const ndc = new THREE.Vector2(
+      ((clientX - box.left) / box.width) * 2 - 1,
+      -((clientY - box.top) / box.height) * 2 + 1,
+    );
     this.raycaster.setFromCamera(ndc, this.camera);
     const { roulette, slots } = this.parts;
     const [hit] = this.raycaster.intersectObjects(
@@ -558,9 +531,12 @@ export class CasinoScene {
     this.lastActivity = this.elapsed;
     const hit = this.pick(event.clientX, event.clientY);
     if (!hit) return;
-    if (this.station === 'lobby' && hit !== 'lever') this.events.onSelect(hit);
-    else if (this.station === 'slots' && (hit === 'lever' || hit === 'slots'))
-      if (hit === 'lever') this.events.onLever();
+    if (this.station === 'lobby') {
+      // The lever and button belong to the machine.
+      this.events.onSelect(hit === 'lever' ? 'slots' : hit);
+    } else if (this.station === 'slots' && hit === 'lever') {
+      this.events.onLever();
+    }
   };
 
   /* ------------------------------------------------------------ */
@@ -631,7 +607,7 @@ export class CasinoScene {
     const from = this.station;
     this.travel = {
       from: { ...this.pose },
-      to: SHOTS[to],
+      to: shotFor(to, this.camera.aspect),
       via: this.travel ? [] : viaFor(from, to),
       t0: this.elapsed,
       duration: reduced ? 0.0001 : TRAVEL_SECONDS,
@@ -678,7 +654,20 @@ export class CasinoScene {
     }
 
     this.grain.uniforms.time!.value = t % 10;
+    if (import.meta.env.VITE_CASINO_LOOKDEV === '1') {
+      this.renderer.info.autoReset = false;
+      this.renderer.info.reset();
+    }
     this.composer.render(dt);
+    if (import.meta.env.VITE_CASINO_LOOKDEV === '1') {
+      const { render, memory } = this.renderer.info;
+      (window as unknown as { __casinoInfo?: unknown }).__casinoInfo = {
+        calls: render.calls,
+        triangles: render.triangles,
+        textures: memory.textures,
+        geometries: memory.geometries,
+      };
+    }
     this.events.onFrame(this.anchors());
 
     if (!this.ready) {
@@ -702,17 +691,27 @@ export class CasinoScene {
         this.travel.via,
         p,
       );
-      shot = { eye: pose.eye, look: pose.look, halfWidth: pose.halfWidth };
+      shot = {
+        eye: pose.eye,
+        look: pose.look,
+        halfWidth: pose.halfWidth,
+        halfHeight: pose.halfHeight,
+      };
       if (p >= 1) {
         const arrived = this.travel.station;
         this.travel = null;
-        shot = { ...SHOTS[arrived] };
+        shot = { ...shotFor(arrived, this.camera.aspect) };
         this.events.onArrive(arrived);
       }
     } else {
-      shot = SHOTS[this.station];
+      shot = shotFor(this.station, this.camera.aspect);
     }
-    this.pose = { eye: shot.eye, look: shot.look, halfWidth: shot.halfWidth };
+    this.pose = {
+      eye: shot.eye,
+      look: shot.look,
+      halfWidth: shot.halfWidth,
+      halfHeight: shot.halfHeight,
+    };
     const idle = !this.travel && !reduced;
     this.parallax.lerp(
       idle && this.station === 'lobby' ? this.pointer : new THREE.Vector2(),
@@ -736,6 +735,35 @@ export class CasinoScene {
       cam.fov = fov;
       cam.updateProjectionMatrix();
     }
+    this.shiftForPanel(dt, reduced);
+  }
+
+  /**
+   * In landscape the game's panel sits on the right, so inside a game the
+   * picture is slid left (a view offset, not a camera move) to keep the
+   * subject clear of it.
+   */
+  private panelShift = 0;
+  private shiftForPanel(dt: number, reduced: boolean) {
+    const cam = this.camera;
+    const wanted = cam.aspect > 1.2 && this.station !== 'lobby' ? 0.34 : 0;
+    this.panelShift = reduced
+      ? wanted
+      : approach(this.panelShift, wanted, dt, 3);
+    const w = this.canvas.clientWidth;
+    const h = this.canvas.clientHeight;
+    if (this.panelShift > 0.002 && w && h) {
+      cam.setViewOffset(
+        w * (1 + this.panelShift),
+        h,
+        w * this.panelShift,
+        0,
+        w,
+        h,
+      );
+    } else if (cam.view?.enabled) {
+      cam.clearViewOffset();
+    }
   }
 
   private updateRoulette(t: number) {
@@ -750,10 +778,9 @@ export class CasinoScene {
     const { plan } = spin;
     head.rotation.y = wheelAngle(plan, local);
     const b = ballState(plan, local);
-    const lift = b.lift + 0.014 + (b.settled ? 0 : 0);
     ball.position.set(
       WHEEL_POS.x + Math.sin(b.phi) * b.radius,
-      WHEEL_POS.y + lift + 0.0 + trackHeight(0),
+      WHEEL_POS.y + WHEEL.ballRadius + b.lift,
       WHEEL_POS.z - Math.cos(b.phi) * b.radius,
     );
     if (!spin.resolved && local >= plan.ballSeconds + 0.35) {
@@ -774,9 +801,9 @@ export class CasinoScene {
     if (pocket !== undefined) this.restPocket = pocket;
     const phi = pocketAngle(this.restPocket) - this.rouletteRest;
     this.parts.roulette.ball.position.set(
-      WHEEL_POS.x + Math.sin(phi) * 0.245,
-      WHEEL_POS.y + 0.014,
-      WHEEL_POS.z - Math.cos(phi) * 0.245,
+      WHEEL_POS.x + Math.sin(phi) * WHEEL.pocketRadius,
+      WHEEL_POS.y + WHEEL.ballRadius,
+      WHEEL_POS.z - Math.cos(phi) * WHEEL.pocketRadius,
     );
   }
 
@@ -837,7 +864,7 @@ export class CasinoScene {
     if (celebrating && this.winKind) {
       const left = (this.winUntil - t) / (this.winKind === 'jackpot' ? 5 : 2.6);
       const pulse = reduced ? 0.5 : 0.5 + 0.5 * Math.sin(t * 6);
-      winGlow.opacity = Math.min(1, left * 2) * (0.35 + pulse * 0.4);
+      winGlow.opacity = Math.min(1, left * 2) * (0.1 + pulse * 0.18);
     } else {
       winGlow.opacity = approach(winGlow.opacity, 0, dt, 6);
     }
@@ -864,7 +891,7 @@ export class CasinoScene {
     this.renderer.toneMappingExposure =
       1.12 * (0.55 + 0.45 * this.dim) * (1 + (boost - 1) * 0.5);
     const { chandelier, roulette, slots } = this.parts;
-    chandelier.core.opacity = 0.5 * this.dim;
+    chandelier.core.opacity = 0.32 * this.dim;
     // Hover feedback: the pool under a station warms when pointed at.
     const hr = this.hover === 'roulette' ? 0.34 : 0.16;
     const hs = this.hover === 'slots' ? 0.3 : 0.14;
@@ -891,8 +918,6 @@ export class CasinoScene {
     };
   }
 }
-
-const TABLE_STAKE = { x: -1.4 + 0.3, z: -1.3 + 1.2 } as const;
 
 /* ---------------------------------------------------------------- */
 /* Wall layouts                                                      */
@@ -932,5 +957,3 @@ function wallSpecs(art: {
   };
   return { back, side: { left, right }, front };
 }
-
-export { REEL_LENGTH };

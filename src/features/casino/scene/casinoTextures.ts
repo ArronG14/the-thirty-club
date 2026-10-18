@@ -229,9 +229,9 @@ export function feltTexture() {
     }
   });
   ctx.fillStyle = 'rgba(236,214,153,0.8)';
-  ctx.font = `600 30px ${DISPLAY_FONT}`;
+  ctx.font = `600 26px ${DISPLAY_FONT}`;
   ctx.letterSpacing = '8px';
-  ctx.fillText('THE THIRTY CLUB', W / 2, 676);
+  ctx.fillText('THE THIRTY CLUB', W / 2, 640);
   return toTexture(felt, true, false);
 }
 
@@ -318,9 +318,9 @@ export function reelTexture(reel: number) {
   const strip = STRIPS[reel]!;
   for (let i = 0; i < REEL_LENGTH; i += 1) {
     const g = ctx.createLinearGradient(i * CELL_W, 0, (i + 1) * CELL_W, 0);
-    g.addColorStop(0, '#d8c9a4');
-    g.addColorStop(0.5, '#f4ebd6');
-    g.addColorStop(1, '#d8c9a4');
+    g.addColorStop(0, '#c4b692');
+    g.addColorStop(0.5, '#e6dabc');
+    g.addColorStop(1, '#c4b692');
     ctx.fillStyle = g;
     ctx.fillRect(i * CELL_W, 0, CELL_W, CELL_H);
     ctx.fillStyle = 'rgba(122,90,34,0.5)';

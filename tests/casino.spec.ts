@@ -76,7 +76,7 @@ test.describe('grand casino', () => {
     const reveal = page.getByRole('dialog', { name: 'The First Fortune' });
     await expect(reveal).toBeVisible({ timeout: 15_000 });
     await page.screenshot({ path: 'test-results/casino-reveal.png' });
-    await reveal.getByRole('button', { name: 'Skip' }).click();
+    await reveal.getByRole('button', { name: 'Skip', exact: true }).click();
     await reveal.getByRole('button', { name: 'Add to my collection' }).click();
     await reveal.getByRole('button', { name: 'Continue' }).click();
     await expect(reveal).toBeHidden();
