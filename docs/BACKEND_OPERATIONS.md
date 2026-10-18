@@ -121,14 +121,18 @@ No new variables. Required for the integrated release:
 
 Existing Shopping, Telegram and credential variables are unchanged.
 
-### Behaviour that changes on deploy (decision recorded, not altered by the integration)
+### Scheduler behaviour on deploy
 
-The scheduled function `concierge-dispatch` now runs only the approved PostgreSQL SMS outbox. The legacy Blobs dispatcher no longer runs, so:
+The every-minute `concierge-dispatch` function (`netlify/backend/scheduledRound.ts`) runs two independent halves. A failure in one never stops the other.
 
-- legacy scheduled messages to Alise are not sent automatically;
-- legacy Telegram notification retries do not run. A first send still happens at the moment of redemption, and the legacy console's resend still works.
+1. **PostgreSQL SMS outbox: the only scheduler of Butler SMS.** It sends only individually approved messages, and only while `SMS_SENDING_ENABLED=true` (currently `false`, so nothing sends). Drafts exist for Thursday 14:00 UK, Friday (undecided), Saturday 00:00 Jamaica and Saturday 14:00 Jamaica.
+2. **Legacy concierge retries only (`runRetries`).** These retry undelivered Departure Lounge redemption notifications to Arron (Telegram, backoff, up to 10 attempts) exactly as before; rehearsal-realm retries never contact a channel. The legacy round's other half (Alise's scheduled messages: Departure Lounge ready, in-flight, Friday) **no longer runs**, so no moment can be sent by both systems.
 
-The equivalent moments exist as PostgreSQL drafts (Thursday 14:00 UK, Friday undecided, Saturday 00:00 and 14:00 Jamaica), which send only after individual approval in `/owner` and `SMS_SENDING_ENABLED=true`. Shopping sends its SMS synchronously and does not depend on the dispatcher.
+Unchanged: immediate notifications at redemption time (Departure privileges and Shopping, both synchronous); `/api/owner/resend`; the legacy console's manual Send now, Copy and I sent it myself. Shopping's record (`live/shopping/privilege`) is outside the retry scan and is never read or written by the scheduler.
+
+`/concierge/owner` now says that nothing there sends on its own and points to `/owner`. Each legacy message shows "Planned for … · not sent automatically". The automatic-send toggle, which no longer had any effect, was removed.
+
+**Owner decision.** Each travel announcement must now be either approved as a PostgreSQL SMS in `/owner` (with sending enabled) or sent manually from the legacy console, never both. The legacy Departure message goes to Arron to forward ("manual" mode); the PostgreSQL draft goes directly to Alise by SMS from `THIRTYCLUB`. Choose one per moment.
 
 ### Release steps (each needs explicit owner approval)
 

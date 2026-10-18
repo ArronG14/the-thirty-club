@@ -34,6 +34,8 @@ type Render = 'loading' | 'fading' | 'scene' | 'poster';
 /** Seconds the CSS stand-in takes to open a door (no 3D). */
 const POSTER_OPENING_MS = 4200;
 const POSTER_OPENING_REDUCED_MS = 700;
+/** Longest the 3D ceremony may take before the letter is shown anyway. */
+const CEREMONY_WATCHDOG_MS = 12_000;
 
 export default function GiftVault({
   mode = { kind: 'member' },
@@ -78,9 +80,18 @@ export default function GiftVault({
     if (played.current === token) return;
     played.current = token;
     if (live && stage.current) {
+      // The server has already opened it: the letter must never wait on a
+      // scene that stalls. The watchdog fires only if the ceremony overruns.
+      let settled = false;
+      const finish = () => {
+        if (settled) return;
+        settled = true;
+        done.current();
+      };
+      posterTimer.current = setTimeout(finish, CEREMONY_WATCHDOG_MS);
       void stage.current
         .playOpening(opening.vault.id, opening.again)
-        .then(() => done.current());
+        .then(finish);
       return;
     }
     setPosterOpening(opening.vault.id);

@@ -551,25 +551,20 @@ export default function OwnerConsole() {
           <section>
             <h2>Messages to Alise</h2>
             <p className="owner-small">
-              {data.health.aliseDispatch === 'sms' && data.health.sms
-                ? 'Scheduled messages go to Alise by SMS; you get a copy in Telegram.'
-                : 'Manual mode: at each scheduled time, Telegram hands you the text to forward to Alise.'}{' '}
-              Rehearsal messages only ever reach you.
+              Nothing here sends on its own any more: scheduled Butler SMS are
+              now drafted and approved in the Butler’s Office (
+              <a href="/owner">/owner</a>). Use Send now, Copy or I sent it
+              myself. Rehearsal messages only ever reach you.
             </p>
             {data.messages.map((m) => {
               const dispatch = dispatchFor(m.id);
-              const disabled = Boolean(
-                data.overrides.messages?.[m.id]?.disabled,
-              );
               return (
                 <div key={m.id} className="owner-row">
                   <h4>{m.label}</h4>
                   <p>
                     {m.timing === 'manual'
                       ? 'Sent manually'
-                      : disabled
-                        ? 'Automatic sending disabled'
-                        : `Scheduled: ${when(m.sendAt)}`}
+                      : `Planned for ${when(m.sendAt)} · not sent automatically`}
                   </p>
                   <p>
                     Status:{' '}
@@ -634,33 +629,6 @@ export default function OwnerConsole() {
                     >
                       I sent it myself
                     </button>
-                    {m.timing !== 'manual' && (
-                      <button
-                        type="button"
-                        disabled={busy}
-                        onClick={() =>
-                          void act(
-                            disabled
-                              ? 'Automatic sending on'
-                              : 'Automatic sending off',
-                            async () => {
-                              const res = await api.schedule(
-                                realm,
-                                { messageId: m.id },
-                                { disabled: !disabled },
-                              );
-                              return res.ok
-                                ? { ok: true }
-                                : { ok: false, message: res.message };
-                            },
-                          )
-                        }
-                      >
-                        {disabled
-                          ? 'Enable automatic send'
-                          : 'Disable automatic send'}
-                      </button>
-                    )}
                     {dispatch && (
                       <button
                         type="button"

@@ -352,7 +352,9 @@ export class VaultScene {
         compartment,
         again,
         from: { ...this.pose },
-        t0: this.elapsed,
+        // Wall-clock: the ceremony keeps its length on a slow device rather
+        // than stretching with clamped frame steps.
+        t0: performance.now() / 1000,
         resolve,
         lastDetent: 0,
         cues: new Set(),
@@ -546,7 +548,7 @@ export class VaultScene {
     if (!busy && t - this.lastRender < 1 / 31) return;
     this.lastRender = t;
 
-    this.updateCeremony(t, reduced);
+    this.updateCeremony(reduced);
     this.updateCamera(dt, t, reduced);
     this.updateCompartments(dt, t, reduced);
 
@@ -569,10 +571,10 @@ export class VaultScene {
     this.measure(time);
   }
 
-  private updateCeremony(t: number, reduced: boolean) {
+  private updateCeremony(reduced: boolean) {
     const c = this.ceremony;
     if (!c) return;
-    const pose = openingPose(t - c.t0, reduced, c.again);
+    const pose = openingPose(performance.now() / 1000 - c.t0, reduced, c.again);
     c.pose = pose;
     const cue = (kind: Mechanism, when: boolean) => {
       if (when && !c.cues.has(kind)) {

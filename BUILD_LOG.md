@@ -571,3 +571,31 @@
   - No hosted migration, secret change, merge, push or deploy was performed.
 - **Remaining work:** GV11 owner release steps, GV08 tags and iPhone rehearsal, GV07 casino frontend adoption of the server slots API.
 - **Commit:** this integration commit on `integration/gift-vault-backend` (not pushed).
+
+## 2026-10-18 23:15 BST (Europe/London) — Claude (Opus 5.5) — Scheduler audit fix on the integration branch
+
+- **Task:** Codex's read-only audit found that replacing `concierge-dispatch` stopped the legacy travel announcements and Telegram retries. Requirement: keep PostgreSQL as the only scheduler of future Butler SMS, preserve immediate redemption notifications and legacy retries, never duplicate a scheduled message, and keep `/concierge/owner` honest.
+- **Summary:**
+  - New framework-free `netlify/backend/scheduledRound.ts`, run by `netlify/functions/concierge-dispatch.ts`, with two halves isolated by `Promise.allSettled`:
+    - (1) the approved PostgreSQL outbox, unchanged;
+    - (2) new `runRetries()` in `netlify/concierge/dispatch.ts`: the retry half of the legacy round only, live and rehearsal, with rehearsal never contacting a channel.
+  - Legacy scheduled messages to Alise are no longer sent automatically by anything.
+  - `runDispatch` is retained (tests and local) and now delegates its retries to `runRetries`.
+  - The legacy store follows `CONCIERGE_LEGACY_STORAGE` exactly as `/api/*` does. Shopping (`live/shopping/privilege`) is outside the retry scan.
+  - `/concierge/owner`: the Messages intro now says nothing sends on its own and points to `/owner`; rows read "Planned for … · not sent automatically"; the inert automatic-send toggle was removed. Manual Send now, Copy and I sent it myself are unchanged.
+  - Found while verifying: the vault ceremony was timed in clamped frame steps, so on a slow renderer it could stretch past 15 s, and intermittently it never reached the letter. It is now wall-clock timed (about 7.4 s on any device), with a 12 s watchdog that shows the letter regardless (the server has already opened the compartment).
+- **Created/modified:**
+  - created: `netlify/backend/scheduledRound.ts`, `netlify/backend/scheduledRound.test.ts`;
+  - modified: `netlify/concierge/dispatch.ts`, `netlify/functions/concierge-dispatch.ts`, `src/features/concierge/owner/OwnerConsole.tsx`, `src/features/vault/scene/VaultScene.ts`, `src/features/vault/ui/GiftVault.tsx`, `docs/BACKEND_OPERATIONS.md`, `TASKS.md`, `BUILD_LOG.md`.
+- **Checks/results:**
+  - `npm run check` PASS: 542 tests (5 new round tests: a retry still delivers after the backoff; a due legacy Departure message is NOT sent, with no dispatch record; Shopping's record is byte-identical before and after; rehearsal retries contact no channel; each half survives the other failing). The 59 existing concierge tests pass, including `runDispatch` retry, give-up and resend.
+  - Office/vault Playwright: 16 of 17 runs passed after the ceremony fix. One run failed with an unusually long duration and could not be reproduced in 12 further runs; before the fix the stall recurred in about 2 of 6 runs.
+  - `npx playwright test --workers=1` PASS 32.
+  - `npm run functions:build` PASS (the new round is in `concierge-dispatch`, every minute).
+  - The rendered `/concierge/owner` was checked headlessly against the local concierge API: new wording present, toggle count 0.
+- **Known issues / owner decisions:**
+  - Choose, per travel moment, either the approved PostgreSQL SMS (direct to Alise from THIRTYCLUB) or a manual send from the legacy console (to Arron to forward), never both.
+  - Legacy `unconfigured` notifications will be delivered by the retry round once Telegram is configured, as before.
+  - The ceremony fix exists on this integration branch only, not on `feature/gift-vault`.
+- **Remaining work:** GV11 release steps, GV08, GV07, GV09.
+- **Commit:** this commit on `integration/gift-vault-backend` (not pushed).

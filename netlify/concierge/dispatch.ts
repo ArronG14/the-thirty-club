@@ -34,9 +34,20 @@ export async function runDispatch(deps: ServiceDeps) {
     const record = await dispatchMessage(deps, 'live', messageId);
     if (record) sent.push(record);
   }
-  const retried: Record<Realm, Awaited<ReturnType<typeof retryDeliveries>>> = {
+  return { sent, retried: await runRetries(deps) };
+}
+
+/**
+ * Retries only: undelivered redemption notifications to Arron, in both
+ * realms (rehearsal never contacts a channel). Never sends Alise's scheduled
+ * messages. Once PostgreSQL is the scheduler (ADR-014), this is the whole
+ * legacy round, so no scheduled message can be sent twice.
+ */
+export async function runRetries(
+  deps: ServiceDeps,
+): Promise<Record<Realm, Awaited<ReturnType<typeof retryDeliveries>>>> {
+  return {
     live: await retryDeliveries(deps, 'live'),
     rehearsal: await retryDeliveries(deps, 'rehearsal'),
   };
-  return { sent, retried };
 }
