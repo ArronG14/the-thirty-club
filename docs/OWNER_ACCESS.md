@@ -5,12 +5,14 @@ On the Grand Entrance, tap the brass countdown clock **five times within three s
 After authentication, the **Owner · test mode** button opens the private office from every implemented room. The panel is a scrollable native modal with keyboard focus containment and Escape/Close support.
 
 - **Enter Club** skips the door and membership ceremonies and opens the lounge.
-- **Visit a room** offers the lounge, screening room and casino. Unimplemented rooms are omitted.
+- **Visit a room** offers the lounge, screening room, casino and Departure Lounge. The Departure Lounge opens the Concierge Owner Console's server-key prompt once, then starts a silent rehearsal at Thursday 22 October 14:01 UK with the travel credential still unpresented. Scan its NFC link (or enter the code) to see the boarding ceremony. The PIN alone does not authenticate the concierge service.
+- **Concierge Owner Console** opens `/concierge/owner` directly for status, credentials, release controls and rehearsal cleanup.
 - **Preview birthday unlock** starts five seconds before midnight in Jamaica (the club's explicit opening instant since ADR-012) and runs the existing door opening and membership presentation; in this preview the membership card counts as presented. It does not change the actual 24 October 2026 release date or the phone clock.
 - **Return to locked entrance** clears the test entrance/membership unlock latches and simulates the day before the birthday. It preserves test casino prizes and screening progress.
 - **Casino test controls**, inside the casino, reuse reset, completed state, next jackpot, chip top-up, forced outcomes, reward awards and record inspection. These operate exclusively on owner test data.
 - **Reset test progress** clears all owner records (including screening, casino, prizes and the optional film marker), then returns to the locked rehearsal. Alise’s records are untouched.
 - **Exit owner mode** clears the owner authorization and test records and returns to the real guest entrance and real clock. Use this before handing over your phone.
+- **Concierge rehearsal** keeps server records in the rehearsal realm and sends no Telegram or SMS. A redeemed preview card says that no notification was sent. Exit and Reset test progress also end the device's concierge rehearsal session; use the console's **Clear rehearsal records** to remove server-side rehearsal records.
 
 ## Session and storage
 

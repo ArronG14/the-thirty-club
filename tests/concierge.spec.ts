@@ -230,12 +230,11 @@ test('the owner rehearses in isolation, at in-flight time', async ({
   const card = page.getByRole('dialog');
   await card.getByLabel('Champagne').check();
   await card.getByRole('button', { name: 'Inform Arron' }).click();
-  await expect(card.getByText('Arron has been informed.')).toBeVisible();
+  await expect(
+    card.getByText('Rehearsal recorded. No notification was sent.'),
+  ).toBeVisible();
 
-  const sent = await requests(request);
-  expect(sent).toHaveLength(1);
-  expect(sent[0]?.realm).toBe('rehearsal');
-  expect(sent[0]?.text).toContain('Selection: Champagne');
+  expect(await requests(request)).toHaveLength(0);
 
   // The live journey is untouched.
   const live = await request.get('/api/owner/overview?realm=live', {

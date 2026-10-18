@@ -139,6 +139,59 @@ test('birthday preview runs the ceremony and returns to a locked rehearsal', asy
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
 });
 
+test('owner menu previews the Departure Lounge through silent NFC rehearsal', async ({
+  page,
+  request,
+  browser,
+}) => {
+  await request.post('/api/__local/reset');
+  await request.post('/api/__local/clock', { data: { now: null } });
+  await poster(page);
+  await page.goto('/');
+  await unlock(page);
+  await panel(page);
+  await page.getByRole('button', { name: 'The Departure Lounge' }).click();
+  await expect(page).toHaveURL(/\/concierge\/owner\?start=departure$/);
+  await page.getByLabel('Owner key').fill('test-owner-key-0001');
+  await page.getByRole('button', { name: 'Open the console' }).click();
+  await expect(page).toHaveURL(/\/departure$/);
+  await expect(page.getByLabel('Rehearsal')).toBeVisible();
+  await expect(page.locator('.departure')).toHaveAttribute(
+    'data-phase',
+    'credential',
+  );
+
+  // Opening the same URL as a physical tag exercises the real activation route.
+  await page.goto('/c/departure-test-token-0001');
+  await expect(page).toHaveURL(/\/departure$/);
+  await expect(
+    page.getByText('Your travel credentials are in order'),
+  ).toBeVisible();
+  await page.getByRole('button', { name: 'Enter the lounge' }).click();
+  await page
+    .getByRole('button', { name: 'Break the seal: Duty-Free Indulgence' })
+    .click();
+  await page.getByRole('button', { name: 'Inform Arron' }).click();
+  await expect(
+    page.getByText('Rehearsal recorded. No notification was sent.'),
+  ).toBeVisible();
+  const outbox = await request.get('/api/__local/outbox');
+  expect(await outbox.json()).toEqual([]);
+
+  const live = await request.get('/api/owner/overview?realm=live', {
+    headers: { 'x-owner-key': 'test-owner-key-0001' },
+  });
+  expect((await live.json()).redemptions).toEqual([]);
+  const guest = await browser.newContext();
+  const guestPage = await guest.newPage();
+  await guestPage.goto('/departure');
+  await expect(guestPage.locator('.departure')).toHaveAttribute(
+    'data-phase',
+    'closed',
+  );
+  await guest.close();
+});
+
 test('five actual touch taps work over the projected Three.js clock', async ({
   page,
 }) => {

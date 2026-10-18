@@ -23,7 +23,9 @@ export type DeliveryStatus =
   /** Retries exhausted; the owner console offers a resend. */
   | 'failed'
   /** No notification provider is configured. */
-  | 'unconfigured';
+  | 'unconfigured'
+  /** Rehearsal redemption recorded without contacting a provider. */
+  | 'simulated';
 
 export interface PublicRedemption {
   privilegeId: PrivilegeId;

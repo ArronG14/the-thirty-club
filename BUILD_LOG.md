@@ -1,5 +1,16 @@
 # Engineering journal
 
+## 2026-10-18 13:20 BST (Europe/London) — Codex — Owner menu and Departure Lounge integration
+
+- **Task:** Integrate `concierge/pre-birthday` into `main`, add the Departure Lounge and Concierge Owner Console to the PIN owner menu, preview the full concierge flow silently, preserve guest locks, test and deploy.
+- **Summary:** Fast-forwarded the two concierge branch commits onto `main` with no conflict. The new Departure Lounge menu action opens the existing server-key console with a start intent; a valid key issues a rehearsal session at 22 October 14:01 UK without presenting the travel credential. The NFC URL and manual code then run the boarding ceremony and redemption in the separate rehearsal realm. Rehearsal activations, redemptions and messages contact no Telegram or SMS provider; redeemed preview cards report `simulated` delivery. Owner Exit and Reset also end the device's concierge rehearsal. The existing owner menu layout and guest birthday rules were not changed.
+- **Created:** No new source files; added a browser regression in `tests/owner.spec.ts`.
+- **Modified:** `src/features/owner/OwnerAccess.tsx`; `src/features/concierge/{domain/contract.ts,owner/OwnerConsole.tsx,ui/DepartureLounge.tsx,ui/PrivilegeCard.tsx}`; `netlify/concierge/{channels.ts,service.ts,concierge.test.ts}`; `tests/concierge.spec.ts`; `ARCHITECTURE.md`, `TASKS.md`, `docs/{OWNER_ACCESS.md,CONCIERGE.md}`; this log. The branch merge also brought in all files listed in its earlier entry below.
+- **Checks and results:** Final `npm run check` PASS (types, ESLint, Prettier, 418 tests in 34 files, production build); `npm run test:pwa -- --workers=1` PASS (31 production Chromium tests). The new browser case covers PIN menu, server-key rehearsal, early access, NFC URL, boarding, privilege redemption, no fake-channel output, clean live records and a locked separate visitor session. Existing birthday card and ordinary-visitor lock tests passed. A first sandboxed browser run could not bind port 4173 (`EPERM`); the authorized rerun passed.
+- **Known issues:** The physical NFC tag and real iPhone/Safari have not been tested. Netlify deployment and server environment configuration are not yet confirmed as of this log entry. The concierge owner key is still required to create a server-backed rehearsal; the PIN alone is not server authorization.
+- **Remaining work:** Push `main`, inspect the actual Netlify deployment and configuration, run a hosted rehearsal on the physical device, and clear server rehearsal records afterwards.
+- **Commit:** This entry's commit (see git history); no hash was available when the entry was written.
+
 ## 2026-10-17 23:02 BST (Europe/London) — Codex — Foundation planning
 
 - **Task:** Initialise The Thirty Club from supplied Prompt 01.

@@ -81,7 +81,7 @@ export interface DispatchRecord {
   messageId: MessageId;
   status: DispatchStatus;
   /** How it went out: SMS, handed to Arron to forward, or marked by him. */
-  channel: 'sms' | 'arron-forward' | 'owner' | 'none';
+  channel: 'sms' | 'arron-forward' | 'owner' | 'none' | 'rehearsal-suppressed';
   attempts: number;
   at: string;
   updatedAt: string;
@@ -241,6 +241,7 @@ export async function recordActivation(
     const existing = await deps.store.get<ActivationRecord>(key);
     return { record: existing?.value ?? record, firstTime };
   }
+  if (realm === 'rehearsal') return { record, firstTime };
   // Informational only: a failure here never blocks Alise.
   const sent = await deps.channels.arron(
     telegramMessage(
@@ -309,19 +310,24 @@ export async function deliverRedemption(
     const entry = await deps.store.get<RedemptionRecord>(key);
     if (!entry) return null;
     const record = entry.value;
-    if (record.notification.status === 'delivered') return record;
+    if (
+      record.notification.status === 'delivered' ||
+      record.notification.status === 'simulated'
+    )
+      return record;
     const nowIso = new Date(deps.clock()).toISOString();
-    const result = await deps.channels.arron(
-      arronRequestMessage(record),
-      realm,
-    );
+    // A preview must never contact a real notification channel.
+    const result =
+      realm === 'rehearsal'
+        ? { ok: true as const }
+        : await deps.channels.arron(arronRequestMessage(record), realm);
     const attempts = record.notification.attempts + 1;
     const notification: NotificationState = result.ok
       ? {
-          status: 'delivered',
+          status: realm === 'rehearsal' ? 'simulated' : 'delivered',
           attempts,
           lastAttemptAt: nowIso,
-          deliveredAt: nowIso,
+          ...(realm === 'live' ? { deliveredAt: nowIso } : {}),
         }
       : {
           status:
@@ -385,6 +391,9 @@ async function deliverMessage(
   realm: Realm,
   messageId: MessageId,
 ): Promise<Pick<DispatchRecord, 'status' | 'channel' | 'error'>> {
+  if (realm === 'rehearsal') {
+    return { status: 'manual', channel: 'rehearsal-suppressed' };
+  }
   const { config, channels } = deps;
   const message = findMessage(messageId);
   const text = composeMessage(message, config.siteUrl);

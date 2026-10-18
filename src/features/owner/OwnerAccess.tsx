@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { ROOMS } from '../club/domain/rooms';
+import { endRehearsal } from '../concierge/client/sessionStore';
 import {
   authenticateOwner,
   clearOwnerProgress,
@@ -84,6 +85,16 @@ export default function OwnerAccess() {
                   </button>
                 ),
               )}
+              <button
+                onClick={() => go('open', '/concierge/owner?start=departure')}
+              >
+                The Departure Lounge
+              </button>
+            </div>
+            <div className="owner-actions">
+              <button onClick={() => go('open', '/concierge/owner')}>
+                Concierge Owner Console
+              </button>
             </div>
             <p>
               Casino test controls are available inside the Grand Casino. Test
@@ -94,6 +105,7 @@ export default function OwnerAccess() {
                 onClick={() => {
                   try {
                     clearOwnerProgress();
+                    endRehearsal();
                     go('locked');
                   } catch {
                     setError('Unable to reset session storage.');
@@ -106,6 +118,7 @@ export default function OwnerAccess() {
                 onClick={() => {
                   try {
                     exitOwner();
+                    endRehearsal();
                     window.location.replace('/');
                   } catch {
                     setError(

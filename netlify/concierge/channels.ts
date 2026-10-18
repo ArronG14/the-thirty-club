@@ -59,6 +59,9 @@ export function createChannels(
     telegramConfigured: telegram !== null,
     smsConfigured: twilio !== null,
     async arron(html, realm) {
+      if (realm === 'rehearsal') {
+        return { ok: true, reference: 'rehearsal-suppressed' };
+      }
       if (!telegram) {
         return {
           ok: false,
@@ -66,12 +69,8 @@ export function createChannels(
           error: 'Telegram is not configured.',
         };
       }
-      const rehearsal = realm === 'rehearsal';
-      const chatId =
-        rehearsal && telegram.rehearsalChatId
-          ? telegram.rehearsalChatId
-          : telegram.chatId;
-      const text = rehearsal ? `<b>[REHEARSAL]</b>\n${html}` : html;
+      const chatId = telegram.chatId;
+      const text = html;
       try {
         const response = await fetchImpl(
           `https://api.telegram.org/bot${telegram.botToken}/sendMessage`,

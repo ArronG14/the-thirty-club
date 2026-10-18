@@ -14,6 +14,7 @@ const DELIVERY: Record<DeliveryStatus, string> = {
   unconfigured: 'Your request is recorded. Word is on its way to Arron.',
   failed:
     'Your request is recorded, though the concierge has not yet reached Arron. Do mention it to him.',
+  simulated: 'Rehearsal recorded. No notification was sent.',
 };
 
 /**
@@ -25,12 +26,14 @@ export function PrivilegeCard({
   view,
   titleId,
   connection,
+  rehearsing,
   reducedMotion,
   onRedeem,
 }: {
   view: PrivilegeView;
   titleId: string;
   connection: Connection;
+  rehearsing: boolean;
   reducedMotion: boolean;
   onRedeem(details: { choice?: string; note?: string }): Promise<RedeemOutcome>;
 }) {
@@ -202,9 +205,11 @@ export function PrivilegeCard({
             : privilege.redeemLabel}
         </button>
         <p className="card__small">
-          {offline
-            ? 'You are offline. Your request will be kept and sent to Arron once you are connected.'
-            : 'Arron will be notified at once.'}
+          {rehearsing
+            ? 'This is a rehearsal. Your selection will be recorded without sending a notification.'
+            : offline
+              ? 'You are offline. Your request will be kept and sent to Arron once you are connected.'
+              : 'Arron will be notified at once.'}
         </p>
         <p className="card__problem" role="alert">
           {problem}

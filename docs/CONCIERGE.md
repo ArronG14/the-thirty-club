@@ -167,9 +167,10 @@ pending notifications to Arron.
 - Automated tests inject fake `fetch` and in-memory stores, and never reach
   Telegram or Twilio.
 - The local API used by `npm run dev` and Playwright has a fake outbox.
-- In production, **rehearsal realm** data is fully separate. Its notifications go
-  to `TELEGRAM_REHEARSAL_CHAT_ID`, or to Arron's chat prefixed `[REHEARSAL]`. It
-  never sends SMS to Alise. A rehearsal device can shift its own clock.
+- In production, **rehearsal realm** data is fully separate. Rehearsal
+  activations, redemptions and manual messages send no Telegram or SMS;
+  redemption delivery is recorded as `simulated`. A rehearsal device can shift
+  its own clock.
 
 ### 6. Security and abuse model (honest)
 
@@ -314,7 +315,7 @@ Set these with the **Functions** scope. None of them may have a `VITE_` prefix
 | `CREDENTIAL_MEMBERSHIP_CODE`         | yes      | The "membership number" printed on the card, e.g. `TC-3010-2410`                              |
 | `TELEGRAM_BOT_TOKEN`                 | yes      | From @BotFather                                                                               |
 | `TELEGRAM_CHAT_ID`                   | yes      | Arron's chat id                                                                               |
-| `TELEGRAM_REHEARSAL_CHAT_ID`         | no       | Rehearsal chat; without it, rehearsals go to Arron prefixed **[REHEARSAL]**                   |
+| `TELEGRAM_REHEARSAL_CHAT_ID`         | no       | Reserved; silent rehearsals do not send to this chat                                          |
 | `ALISE_DISPATCH`                     | no       | `manual` (default: Arron forwards) or `sms`                                                   |
 | `TWILIO_ACCOUNT_SID`                 | for sms  | Twilio                                                                                        |
 | `TWILIO_AUTH_TOKEN`                  | for sms  | Twilio                                                                                        |
@@ -362,9 +363,11 @@ is lost or duplicated.
 1. Deploy with every variable set, and open `/concierge/owner` on your phone.
 2. Press **Send a test notification to Arron**. Telegram should arrive within
    seconds. If it does not, nothing else will.
-3. Choose **Thursday 14:01 UK** under _Rehearse on this device_. Present the
-   tag (or the code), break the seal, redeem, and check Telegram for
-   `[REHEARSAL] … CONCIERGE REQUEST`.
+3. Choose **Thursday 14:01 UK** under _Rehearse on this device_, or use the
+   PIN owner's **The Departure Lounge** shortcut. Present the tag (or the
+   code), break the seal and redeem. The card should say **Rehearsal recorded.
+   No notification was sent.** Check that the rehearsal record appears in the
+   console and the live record is unchanged.
 4. Try **In flight**, **Friday** and **Birthday, 30 s before midnight**: the
    doors should wait for the card. Scan the membership card and watch the
    ceremony.
@@ -372,8 +375,8 @@ is lost or duplicated.
    If anything was done live by mistake, type `RESET LIVE` under _Clear live
    records_.
 
-Rehearsals use separate records (`rehearsal/…`) and a virtual clock. Their
-notifications are marked `[REHEARSAL]`. Alise is never messaged.
+Rehearsals use separate records (`rehearsal/…`) and a virtual clock. They send
+no notifications to Arron or Alise.
 
 ### The timeline, operationally
 

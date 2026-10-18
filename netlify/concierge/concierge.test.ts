@@ -549,7 +549,7 @@ describe('real channels with a fake network', () => {
     });
   });
 
-  it('marks rehearsal messages and uses the rehearsal chat when set', async () => {
+  it('suppresses rehearsal messages even when a rehearsal chat is configured', async () => {
     const fetchImpl = vi
       .fn()
       .mockResolvedValue(
@@ -559,12 +559,11 @@ describe('real channels with a fake network', () => {
       readConfig({ ...TEST_ENV, TELEGRAM_REHEARSAL_CHAT_ID: '2' }),
       fetchImpl as unknown as typeof fetch,
     );
-    await real.arron('hello', 'rehearsal');
-    const body = JSON.parse(
-      (fetchImpl.mock.calls[0] as [string, RequestInit])[1].body as string,
-    );
-    expect(body.chat_id).toBe('2');
-    expect(body.text).toContain('[REHEARSAL]');
+    expect(await real.arron('hello', 'rehearsal')).toEqual({
+      ok: true,
+      reference: 'rehearsal-suppressed',
+    });
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('sends Twilio SMS with basic auth and treats failures honestly', async () => {
@@ -790,7 +789,8 @@ describe('owner console and rehearsal isolation', () => {
       },
     });
     expect(redeemed.status).toBe(201);
-    expect(channels.outbox[0]?.realm).toBe('rehearsal');
+    expect(redeemed.body.redemption.delivery).toBe('simulated');
+    expect(channels.outbox).toEqual([]);
     expect(
       Object.keys(store.dump()).filter((k) => k.startsWith('live/')),
     ).toEqual([]);
@@ -842,7 +842,8 @@ describe('owner console and rehearsal isolation', () => {
       body: { realm: 'rehearsal', messageId: 'invitation', action: 'send' },
     });
     expect(sent.body.dispatch.status).toBe('manual');
-    expect(channels.outbox.at(-1)?.realm).toBe('rehearsal');
+    expect(sent.body.dispatch.channel).toBe('rehearsal-suppressed');
+    expect(channels.outbox).toEqual([]);
     const marked = await call('POST', '/api/owner/message', {
       owner,
       body: {

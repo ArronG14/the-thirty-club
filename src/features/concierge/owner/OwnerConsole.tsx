@@ -1,4 +1,10 @@
-import { useCallback, useEffect, useState, type FormEvent } from 'react';
+import {
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+  type FormEvent,
+} from 'react';
 import { instantInZone } from '../../club/domain/schedule';
 import {
   activeSession,
@@ -138,6 +144,7 @@ export default function OwnerConsole() {
   const [busy, setBusy] = useState(false);
   const [withCredential, setWithCredential] = useState(false);
   const [resetPhrase, setResetPhrase] = useState('');
+  const startingDeparture = useRef(false);
   const rehearsing = activeSession()?.claims.realm === 'rehearsal';
 
   const load = useCallback(async () => {
@@ -145,6 +152,24 @@ export default function OwnerConsole() {
     const result = await ownerApi(key).overview(realm);
     if (result.ok) {
       setData(result.data);
+      if (
+        new URLSearchParams(window.location.search).get('start') ===
+          'departure' &&
+        !startingDeparture.current
+      ) {
+        startingDeparture.current = true;
+        const preview = await ownerApi(key).rehearsal(
+          Date.parse('2026-10-22T13:01:00Z'),
+          [],
+        );
+        if (preview.ok) {
+          endRehearsal();
+          saveSession(preview.data.session);
+          window.location.assign('/departure');
+        } else {
+          setNotice(`Departure rehearsal: ${preview.message}`);
+        }
+      }
     } else {
       setData(null);
       setNotice(result.message);
@@ -295,7 +320,7 @@ export default function OwnerConsole() {
             <p className="owner-small">Site: {data.health.siteUrl}</p>
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || realm === 'rehearsal'}
               onClick={() =>
                 void act('Test notification', async () => {
                   const r = await api.test(realm);
@@ -305,7 +330,9 @@ export default function OwnerConsole() {
                 })
               }
             >
-              Send a test notification to Arron ({realm})
+              {realm === 'rehearsal'
+                ? 'Test notifications are suppressed in rehearsal'
+                : 'Send a test notification to Arron (live)'}
             </button>
           </section>
 
@@ -638,9 +665,8 @@ export default function OwnerConsole() {
           <section>
             <h2>Rehearse on this device</h2>
             <p className="owner-small">
-              A rehearsal uses separate records, sends notifications marked
-              [REHEARSAL] and never messages Alise. This device’s clock runs at
-              the chosen moment until you end it.
+              A rehearsal uses separate records and sends no notifications. This
+              device’s clock runs at the chosen moment until you end it.
             </p>
             {rehearsing && (
               <button

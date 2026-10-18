@@ -188,6 +188,7 @@ function Wallet({
             view={view}
             titleId={titleId}
             connection={model.connection}
+            rehearsing={model.realm === 'rehearsal'}
             reducedMotion={reducedMotion}
             onRedeem={(details) => redeem(view.privilege.id, details)}
           />
