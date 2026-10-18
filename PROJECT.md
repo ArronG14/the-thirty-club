@@ -45,6 +45,43 @@ The following eight phases are a **proposed sequence**, since the brief referenc
 
 A seven-day schedule is tight. Confirm content, backend ownership and physical logistics early; reduce optional game/3D scope before sacrificing persistence or the final device rehearsal. Exact reveal time and Jamaica/London timing remain open.
 
+## Phase 2 — The Grand Entrance (implemented, awaiting owner approval)
+
+The opening screen is the street-side entrance to the club, closed until **00:00 on 24 October 2026 in the viewer's device-local time zone**.
+
+- **Composition:** a stepped Art Deco portal in walnut and brass with a sunburst fanlight, flanked by fan sconces, framing a pair of mahogany doors. Brass rising-sun marquetry spans both leaves; a medallion on the meeting stiles carries a "30" that splits into "3" and "0" as the doors part. Above: EST. MMXXVI, THE THIRTY CLUB, PRIVATE MEMBERSHIP ◆ BY INVITATION ONLY.
+- **Timepiece:** an engine-turned dial with brass bezels and rolling number drums for days, hours, minutes and seconds, beneath the line "Alise, your table is being prepared."
+- **Butler:** a brass bell-push ("Ring for service") with a speaker grille that glows while he answers. Scripted lines, greeting by local time of day; separate repertoires for locked, final-minute, unlocked-door and foyer states. He addresses her as Alise. No live AI.
+- **Final minute:** the fanlight, door seam, threshold, sconces, wall wash and brass sheen warm continuously from 0 to 1. No flashing.
+- **Midnight:** the lock dial turns, light floods the seams, the doors swing inward, the view travels through into warm light, and the butler says: "Ah, Alise. There you are. We've been expecting you for thirty years."
+- **Late arrival:** opening after midnight shows unlocked, glowing doors and an "Enter the club" control rather than auto-playing.
+- **Foyer:** an oxblood room with chandelier light, an arch and a marble floor; the Members' Register (Alise, lifetime, effective 24 October MMXXVI); an honest notice that the lounge and rooms are still being prepared; the bell; and "Revisit the entrance". There is no navigation to rooms that do not exist.
+- **Typography:** self-hosted Bodoni Moda (display and figures), Cormorant Garamond (voice) and Jost (engraved capitals), with iOS fallbacks Bodoni 72, Didot and Futura.
+
+## Phase 2B — Cinematic entrance (implemented; device rehearsal pending)
+
+The entrance is now a real-time 3D environment, approved from a lookdev prototype (docs/ENTRANCE_ART_DIRECTION.md):
+
+- **Architecture:** a recessed Art Deco doorway in black granite, walnut and brass, with a reeded amber fanlight and fan sconces.
+- **Doors:** lacquered sapele-mahogany leaves 75 mm thick, with brass sunburst marquetry and the splitting "30" medallion.
+- **Countdown:** a brass time-lock with rolling number drums across both leaves, whose bolt withdraws at midnight.
+- **Butler:** a nacre bell-push on the jamb with a glowing speaker grille.
+- **Ground:** a polished black marble floor with reflections.
+- **Atmosphere:** filmic grading, bloom, grain, fog and dust.
+- **Midnight:** the doors swing inward and the camera passes through into the foyer.
+
+The SVG entrance remains as the instant poster and the fallback. Textures are CC0 scans from Poly Haven.
+
+## Phase 4 — The Members' Lounge (implemented; device rehearsal pending)
+
+Beyond the doors is the Members' Lounge, which replaces the foyer holding room. It is a real-time room: walnut panelling, oxblood velvet sofas, a marble fireplace beneath a brass "30" sunburst, a Deco chandelier, a brass directory board, and a curtained doorway to the Private Screening Room.
+
+- **First arrival:** the butler welcomes Alise and presents her membership card. She accepts it once; it never replays. She can revisit it from the lounge.
+- **After that:** a short greeting and one guided destination ("Your evening continues"), the Members' Directory, her card and the bell.
+- **Rooms:** they open with the membership (Screening Room) or at provisional Jamaica times (Privileges 10:00, Casino 14:00, Gift Vault 18:00), and stay open. Rooms not yet built are listed honestly as "Being prepared" and cannot be entered.
+
+See ADR-008 and `docs/lounge/`.
+
 ## Explicit non-goals
 
-Phase 1 does not implement the lounge design, invitation sequence, membership card, casino, vault, privileges, screening room, secret mechanics, backend or final branding. No live AI, public membership, multi-user SaaS, payment processing, real-money gambling, generic luxury dashboards or unnecessary framework layers. Three.js and animation libraries are deferred until a demonstrated creative need. Installation does not imply offline readiness.
+Phase 2 builds only the entrance and foyer holding room. Phase 1 does not implement the lounge design, invitation sequence, membership card, casino, vault, privileges, screening room, secret mechanics, backend or final branding. No live AI, public membership, multi-user SaaS, payment processing, real-money gambling, generic luxury dashboards or unnecessary framework layers. Three.js and animation libraries remain deferred: the entrance uses CSS, SVG and compositor-friendly transitions only. Installation does not imply offline readiness.

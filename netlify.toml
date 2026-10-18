@@ -1,0 +1,60 @@
+[build]
+  command = "npm run build"
+  publish = "dist"
+
+[build.environment]
+  NODE_VERSION = "22.13.1"
+  NPM_VERSION = "10.9.2"
+
+# No catch-all redirect: it would turn missing files into successful HTML.
+[[edge_functions]]
+  function = "spa"
+  path = "/*"
+
+# No backend exists yet. Never serve static content or the shell as an API.
+[[redirects]]
+  from = "/api"
+  to = "/404.html"
+  status = 404
+  force = true
+
+[[redirects]]
+  from = "/api/*"
+  to = "/404.html"
+  status = 404
+  force = true
+
+# Existing files shadow this non-forced error rule.
+[[redirects]]
+  from = "/assets/*"
+  to = "/404.html"
+  status = 404
+
+# Deep SPA responses set the same policy in the routing function.
+[[headers]]
+  for = "/"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/*.html"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/manifest.webmanifest"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/sw.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+[[headers]]
+  for = "/workbox-*.js"
+  [headers.values]
+    Cache-Control = "public, max-age=0, must-revalidate"
+
+# Exact immutable asset paths are generated into dist/_headers by Vite.
+# There is deliberately no /assets/* immutable rule (including for 404s).

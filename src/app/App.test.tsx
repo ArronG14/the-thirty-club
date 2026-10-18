@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { App } from './App';
 import { useConnectivityStore } from '../shared/state/connectivityStore';
 
@@ -26,20 +26,32 @@ function open(path = '/') {
 }
 
 beforeEach(() => {
+  // Fix the wall clock before the birthday; leave timers real for findBy*.
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date(2026, 9, 17, 20, 0, 0));
+  window.localStorage.clear();
   pwa.offlineReady = false;
   pwa.needRefresh = false;
   pwa.update.mockReset().mockResolvedValue(undefined);
   useConnectivityStore.setState({ isOnline: true });
 });
 
-describe('foundation routes and connectivity', () => {
-  it('renders the entrance without unfinished feature controls', () => {
+afterEach(() => {
+  vi.useRealTimers();
+});
+
+describe('routes and connectivity', () => {
+  it('renders the locked entrance with only working controls', () => {
     open();
     expect(
       screen.getByRole('heading', { name: 'The Thirty Club' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('Reserved for Alise Khera.')).toBeInTheDocument();
-    expect(screen.queryByRole('button')).not.toBeInTheDocument();
+    expect(
+      screen.getByText('Alise, your table is being prepared.'),
+    ).toBeInTheDocument();
+    expect(
+      screen.getAllByRole('button').map((button) => button.textContent),
+    ).toEqual(['Ring for service']);
   });
 
   it('provides a recovery link for an unknown route', () => {

@@ -1,0 +1,17 @@
+/* The notice on the door of a room that is not open or not ready. */
+
+.room-gate__eyebrow {
+  margin: 0;
+  font-family: var(--font-caps);
+  font-size: 0.56rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.room-gate__notice {
+  margin: 0 auto 2rem;
+  max-width: 22rem;
+  font-size: 1.15rem;
+  line-height: 1.4;
+  color: var(--ink-soft);
+}

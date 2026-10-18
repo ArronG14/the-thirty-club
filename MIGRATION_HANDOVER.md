@@ -1,5 +1,7 @@
 # The Thirty Club — audit and migration handover
 
+> Current-state note (17 October 2026): the active project is now `/Users/ag14/Documents/Projects/the-thirty-club`, on main with existing commit c02dd3e and an origin remote. The audit, original paths and migration commands below are a historical snapshot; do not run those old copy commands for the current project. Netlify repository configuration is now implemented locally (see ARCHITECTURE.md ADR-005 and README.md), but no deployment has been performed by this task. Hosting/iPhone verification remains pending.
+
 Audit: 17 October 2026, Europe/London. No relocation, new repository initialisation, commit, remote creation, push, Netlify connection/deployment or phase 2 development was performed. Existing application source/configuration is unchanged. Requested test runs regenerated ignored build/test outputs. Only .gitignore additions, journal/backlog appendices and this new report were written.
 
 ## 1. CURRENT PROJECT LOCATION
