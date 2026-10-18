@@ -83,7 +83,11 @@ describe('framing and quality', () => {
     expect(judgeFrameTime(16.7, 0)).toBe('keep');
     expect(judgeFrameTime(30, 0)).toBe('lower');
     expect(judgeFrameTime(30, 1)).toBe('lower');
-    expect(judgeFrameTime(30, 2)).toBe('fallback');
+    // At the lowest tier a slow scene still plays; only an unwatchable one
+    // gives up.
+    expect(judgeFrameTime(30, 2)).toBe('keep');
+    expect(judgeFrameTime(33.4, 2)).toBe('keep');
+    expect(judgeFrameTime(250, 2)).toBe('fallback');
   });
 
   it('sheds the expensive passes first and caps the pixel ratio', () => {

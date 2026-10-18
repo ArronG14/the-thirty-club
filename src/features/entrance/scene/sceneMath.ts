@@ -108,13 +108,23 @@ export function qualitySettings(
 export const MIN_SUSTAINED_FPS = 40;
 
 /**
+ * A mean frame interval beyond this (under 5 fps) at the lowest tier is a
+ * device that cannot show a moving scene at all.
+ */
+export const UNWATCHABLE_FRAME_MS = 200;
+
+/**
  * Given the mean frame interval of a measurement window, decide what to do:
- * keep the tier, step down, or give up and return to the poster.
+ * keep the tier, step down, or (only when even the lowest tier is
+ * unwatchable) give up and return to the poster. A scene that merely misses
+ * 40 fps at the lowest tier keeps running: a 30 fps cinematic entrance beats
+ * a still image, and a refresh cap (Low Power Mode) is not a failure.
  */
 export function judgeFrameTime(
   meanMs: number,
   tier: QualityTier,
 ): 'keep' | 'lower' | 'fallback' {
   if (meanMs <= 1000 / MIN_SUSTAINED_FPS) return 'keep';
-  return tier < 2 ? 'lower' : 'fallback';
+  if (tier < 2) return 'lower';
+  return meanMs > UNWATCHABLE_FRAME_MS ? 'fallback' : 'keep';
 }

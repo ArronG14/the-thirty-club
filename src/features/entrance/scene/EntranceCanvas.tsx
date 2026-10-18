@@ -5,6 +5,7 @@
 import { useEffect, useRef, type RefObject } from 'react';
 import type { Remaining } from '../domain/countdown';
 import type { EntranceStage } from '../domain/entranceMachine';
+import { noteEntrance } from './entranceDiagnostics';
 import {
   EntranceScene,
   type FallbackReason,
@@ -22,7 +23,7 @@ export interface EntranceCanvasProps {
   reducedMotion: boolean;
   handle: RefObject<SceneHandle | null>;
   onReady(): void;
-  onFallback(reason: FallbackReason): void;
+  onFallback(reason: FallbackReason, message?: string): void;
   onDoorTap(): void;
   onClockTap(): void;
 }
@@ -76,10 +77,8 @@ export default function EntranceCanvas(props: EntranceCanvasProps) {
 
     EntranceScene.create(canvas, {
       onReady: () => latest.current.onReady(),
-      onFallback: (reason) => {
-        if (import.meta.env.DEV)
-          console.warn('[entrance] 3D scene fell back:', reason);
-        latest.current.onFallback(reason);
+      onFallback: (reason, message) => {
+        latest.current.onFallback(reason, message);
       },
       onFrame: place,
       onDoorTap: () => latest.current.onDoorTap(),
@@ -97,9 +96,10 @@ export default function EntranceCanvas(props: EntranceCanvasProps) {
         };
       },
       (error: unknown) => {
-        if (import.meta.env.DEV)
-          console.warn('[entrance] 3D scene failed', error);
-        if (!cancelled) latest.current.onFallback('error');
+        if (cancelled) return;
+        const message = error instanceof Error ? error.message : String(error);
+        noteEntrance({ state: 'fallback', reason: 'error', message });
+        latest.current.onFallback('error', message);
       },
     );
 

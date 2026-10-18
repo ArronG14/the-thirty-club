@@ -141,8 +141,9 @@ The CSS facade dolly is disabled in scene mode. Under reduced motion there is no
 - DPR is capped at 2.
 - Rendering idles at about 30 fps when nothing moves and runs full rate during interaction, the final minute and the ceremony. requestAnimationFrame pauses when hidden.
 - Shaders are compiled with `compileAsync` before the first frame.
-- Adaptive tiers are judged on wall-clock windows (1 s warm-up, 1.5 s sample, at least 40 fps sustained): tier 1 drops the planar reflection and DPR 1.5; tier 2 drops shadows and DPR 1.2; then the scene falls back to the poster. Measurement stops once a tier holds.
-- WebGL context loss or a thrown frame also falls back.
+- Adaptive tiers are judged on wall-clock windows (1 s warm-up, 1.5 s sample, at least 40 fps sustained): tier 1 drops the planar reflection and DPR 1.5; tier 2 drops shadows and DPR 1.2. **Amended (ADR-013, 2026-10-18):** at the lowest tier a scene that merely misses 40 fps keeps playing; only frames slower than 200 ms (under 5 fps) return the poster. Frame gaps over 500 ms, a hidden page and a restored context restart the windows rather than counting as slow frames. Measurement stops once a tier holds.
+- WebGL context loss pauses rendering and waits 6 s for the context to return (iOS usually restores it); only then does the poster appear. A thrown frame or failed initialisation falls back at once.
+- Every fallback records its cause (`reason`, message, tier, mean frame time, time since first frame, context losses, DPR, viewport, canvas size) on `window.__entranceDiag` and in sessionStorage; `/?entrance-diag` shows it on screen (ADR-013).
 
 **Assets and offline.** Wood, stone and marble are CC0 Poly Haven scans, graded and re-encoded by `tools/prepare-textures.py` (requires Pillow). Only the WebP outputs (~410 KB) are committed, with credits in `scene/assets/CREDITS.md`. Brass, glass, glows and all lettering are generated at load; lettering waits for the self-hosted fonts. `webp` was added to the Workbox globs. The precache is now 30 entries (~1.47 MB), up from ~0.47 MB, so the first online visit takes longer on hotel Wi-Fi. Playwright verifies that the 3D scene loads while offline.
 
@@ -262,3 +263,11 @@ Full plan, data model and operations: `docs/CONCIERGE.md`. This record lists the
 The PIN owner's Visit a room list has a direct Departure Lounge entry. It opens the existing server-key console with a one-time `start=departure` intent; after that key is accepted, the console issues a signed rehearsal session at Thursday 22 October 14:01 UK and opens `/departure` without presenting the travel credential. This preserves the NFC and boarding ceremony for preview. The console has its own shortcut from the same menu. The PIN alone does not grant server authority. Ordinary visitors and the live realm keep their date and credential gates.
 
 Rehearsal redemptions now record `simulated` delivery without invoking a channel, and their UI says no notification was sent. Rehearsal activation notes, scheduled/manual sends and direct Telegram channel calls are suppressed. Live delivery remains unchanged. Ending or resetting PIN owner mode ends the device's concierge rehearsal session; the server's rehearsal records can be cleared in the console.
+
+## ADR-013 (2026-10-18): the 3D entrance no longer abandons a playing scene for being slow
+
+**Problem.** On an iPhone-profile WebKit the entrance rendered, then reverted to the poster seconds later. Reproduced against the previous build (`39b07d1`) in Playwright WebKit (iPhone 14 profile, DPR 3, verification skipped, so the overlay is not involved): the scene dissolved in at about 3 s and the poster returned at about 9 s.
+
+**Cause.** The performance governor stepped quality down twice (47 ms then 33.3 ms per frame, i.e. a vsync-quantised 30 fps) and then treated 30 fps at the lowest tier as failure, returning the poster. Any iPhone that delivers about 30 fps (Low Power Mode, a heavy page, a busy GPU) would do the same.
+
+**Decision.** `judgeFrameTime` falls back only when frames are unwatchable (over 200 ms). Context loss gets a recovery window. Both are shared with the lounge and casino scenes through `sceneMath`. Diagnostics and `?entrance-diag` were added. **Limits:** no real iPhone has run this; headless WebKit approximates it.

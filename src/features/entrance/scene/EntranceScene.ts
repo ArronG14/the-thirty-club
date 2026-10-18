@@ -24,6 +24,7 @@ import {
   warmEnvironment,
 } from './architecture';
 import { glowTexture, loadSceneFonts } from './canvasTextures';
+import { noteEntrance, type FallbackReason } from './entranceDiagnostics';
 import { GrainVignette } from './postfx';
 import { createMaterials } from './materials';
 import {
@@ -60,11 +61,11 @@ export interface SceneAnchors {
   labels: { x: number; y: number }[];
 }
 
-export type FallbackReason = 'performance' | 'context-lost' | 'error';
+export type { FallbackReason } from './entranceDiagnostics';
 
 export interface SceneEvents {
   onReady(): void;
-  onFallback(reason: FallbackReason): void;
+  onFallback(reason: FallbackReason, message?: string): void;
   onFrame(anchors: SceneAnchors): void;
   onDoorTap(): void;
 }
@@ -75,6 +76,10 @@ const DUST = 220;
 /** Real-time windows for judging performance (a slow device frames slowly). */
 const WARMUP_MS = 1000;
 const SAMPLE_MS = 1500;
+/** A frame gap this long is an interruption, not slowness. */
+const GAP_MS = 500;
+/** How long a lost WebGL context may take to return before the poster. */
+const CONTEXT_RESTORE_MS = 6000;
 
 const counting = (s: EntranceStage) => s === 'locked' || s === 'final-minute';
 
@@ -131,6 +136,11 @@ export class EntranceScene {
   private warmupFrom = -1;
   private sampleFrom = -1;
   private sampleFrames = 0;
+  private lastMeasured = -1;
+  private readyAt = 0;
+  private lastMeanMs: number | undefined;
+  private contextLosses = 0;
+  private lossTimer: ReturnType<typeof setTimeout> | null = null;
 
   private constructor(
     private readonly canvas: HTMLCanvasElement,
@@ -240,6 +250,8 @@ export class EntranceScene {
     this.resize();
 
     canvas.addEventListener('webglcontextlost', this.onContextLost);
+    canvas.addEventListener('webglcontextrestored', this.onContextRestored);
+    document.addEventListener('visibilitychange', this.restartMeasuring);
     canvas.addEventListener('pointerdown', this.onPointerDown);
     window.addEventListener('pointermove', this.onPointerMove, {
       passive: true,
@@ -276,6 +288,12 @@ export class EntranceScene {
     this.renderer.setAnimationLoop(null);
     this.resizeObserver.disconnect();
     this.canvas.removeEventListener('webglcontextlost', this.onContextLost);
+    this.canvas.removeEventListener(
+      'webglcontextrestored',
+      this.onContextRestored,
+    );
+    document.removeEventListener('visibilitychange', this.restartMeasuring);
+    if (this.lossTimer) clearTimeout(this.lossTimer);
     this.canvas.removeEventListener('pointerdown', this.onPointerDown);
     window.removeEventListener('pointermove', this.onPointerMove);
     const textures = new Set<THREE.Texture>();
@@ -306,10 +324,58 @@ export class EntranceScene {
     this.renderer.forceContextLoss();
   }
 
+  /**
+   * iOS can drop a WebGL context under memory pressure or when the page is
+   * backgrounded, and usually hands it back. Rendering pauses (three.js
+   * skips frames while lost); the poster is shown only if it does not return.
+   */
   private readonly onContextLost = (event: Event) => {
     event.preventDefault();
-    this.events.onFallback('context-lost');
+    this.contextLosses += 1;
+    noteEntrance({
+      state: 'running',
+      message: 'WebGL context lost; waiting for it to return',
+      contextLosses: this.contextLosses,
+    });
+    if (this.lossTimer) clearTimeout(this.lossTimer);
+    this.lossTimer = setTimeout(() => {
+      this.lossTimer = null;
+      if (!this.disposed) this.fail('context-lost', 'context not restored');
+    }, CONTEXT_RESTORE_MS);
   };
+
+  private readonly onContextRestored = () => {
+    if (this.lossTimer) clearTimeout(this.lossTimer);
+    this.lossTimer = null;
+    this.restartMeasuring();
+    noteEntrance({
+      state: 'running',
+      message: 'WebGL context restored',
+      tier: this.tier,
+      contextLosses: this.contextLosses,
+    });
+  };
+
+  /** Interruptions (hidden page, restored context) are not slow frames. */
+  private readonly restartMeasuring = () => {
+    this.warmupFrom = -1;
+    this.sampleFrom = -1;
+    this.lastMeasured = -1;
+  };
+
+  private fail(reason: FallbackReason, message?: string) {
+    noteEntrance({
+      state: 'fallback',
+      reason,
+      message,
+      tier: this.tier,
+      meanFrameMs: this.lastMeanMs,
+      msSinceReady: this.ready ? performance.now() - this.readyAt : undefined,
+      contextLosses: this.contextLosses,
+      canvas: `${this.canvas.width}x${this.canvas.height}`,
+    });
+    this.events.onFallback(reason, message);
+  }
 
   private readonly onPointerMove = (event: PointerEvent) => {
     this.pointer.set(
@@ -380,6 +446,11 @@ export class EntranceScene {
    */
   private measure(nowMs: number) {
     if (this.settled) return;
+    // A long gap is an interruption (hidden page, shader recompile), not a
+    // slow device: start the windows again.
+    if (this.lastMeasured >= 0 && nowMs - this.lastMeasured > GAP_MS)
+      this.restartMeasuring();
+    this.lastMeasured = nowMs;
     if (this.warmupFrom < 0) this.warmupFrom = nowMs;
     if (nowMs - this.warmupFrom < WARMUP_MS) return;
     if (this.sampleFrom < 0) {
@@ -390,12 +461,23 @@ export class EntranceScene {
     this.sampleFrames += 1;
     const span = nowMs - this.sampleFrom;
     if (span < SAMPLE_MS) return;
-    const verdict = judgeFrameTime(span / this.sampleFrames, this.tier);
+    this.lastMeanMs = span / this.sampleFrames;
+    const verdict = judgeFrameTime(this.lastMeanMs, this.tier);
     this.sampleFrom = -1;
     this.warmupFrom = nowMs;
     if (verdict === 'keep') this.settled = true;
     if (verdict === 'lower') this.applyTier((this.tier + 1) as QualityTier);
-    if (verdict === 'fallback') this.events.onFallback('performance');
+    if (verdict === 'fallback')
+      this.fail('performance', 'frames unwatchably slow');
+    else
+      noteEntrance({
+        state: 'running',
+        tier: this.tier,
+        meanFrameMs: this.lastMeanMs,
+        msSinceReady: performance.now() - this.readyAt,
+        message: verdict === 'lower' ? 'quality lowered' : undefined,
+        contextLosses: this.contextLosses,
+      });
   }
 
   private readonly loop = (time: number) => {
@@ -404,7 +486,10 @@ export class EntranceScene {
     } catch (error) {
       if (import.meta.env.DEV) console.warn('[entrance] frame failed', error);
       this.renderer.setAnimationLoop(null);
-      this.events.onFallback('error');
+      this.fail(
+        'error',
+        error instanceof Error ? error.message : String(error),
+      );
     }
   };
 
@@ -536,6 +621,8 @@ export class EntranceScene {
 
     if (!this.ready) {
       this.ready = true;
+      this.readyAt = performance.now();
+      noteEntrance({ state: 'running', tier: this.tier });
       this.events.onReady();
     }
     // Only sample full-rate frames, before the ceremony begins.

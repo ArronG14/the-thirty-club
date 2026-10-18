@@ -129,5 +129,6 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 | K11 | P1       | NOT STARTED | Optional: Twilio account, alphanumeric sender test to Alise's number, `ALISE_DISPATCH=sms`                                                                                                              |
 | K12 | P1       | NOT STARTED | Owner approval of concierge copy, in-flight time (PROVISIONAL 18:30 UK), Friday time (09:00 Jamaica) and membership riddle (PROVISIONAL)                                                                |
 | K13 | P1       | IMPLEMENTED | Live engraved countdown in the opened Departure Lounge letter (unit tests pass; not yet reviewed on an iPhone)                                                                                          |
+| K14 | P0       | IMPLEMENTED | 3D entrance stability on iPhone Safari: no poster for a slow-but-playing scene, context-loss recovery, `?entrance-diag` (simulated WebKit only; real iPhone check pending)                              |
 
 VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.

@@ -1,5 +1,16 @@
 # Engineering journal
 
+## 2026-10-18 17:10 BST (Europe/London) — Claude Code — iPhone Safari 3D entrance stability
+
+- **Task:** Stop the 3D entrance reverting to the poster a few seconds after rendering on iPhone Safari.
+- **Summary:** Reproduced in Playwright WebKit (iPhone 14 profile, DPR 3) against `39b07d1` with verification skipped: scene at about 3 s, poster at about 9 s. Cause: the performance governor lowered quality to tier 2 (frames at a vsync-quantised 33.3 ms, about 30 fps) and then returned the poster because 30 fps missed the 40 fps bar. The verification overlay is not involved. Fix: at the lowest tier only frames over 200 ms fall back; context loss waits 6 s for restoration (and resumes if it returns); long frame gaps, hidden pages and restored contexts restart the measuring windows; every fallback records its cause (`window.__entranceDiag`, sessionStorage, `/?entrance-diag` on-screen readout). No quality, lighting or animation change except that the lowest tier now persists instead of ending in the poster. The shared `judgeFrameTime` also applies to the lounge and casino scenes. No stale-timeout race existed (readiness is set once; no timer overrides it); the overlay does not remount the entrance (same canvas verified).
+- **Created:** `scene/entranceDiagnostics.ts` (+ test), `ui/EntranceDiagBadge.tsx`, `playwright.webkit.config.ts`, `tests/entrance-webkit.spec.ts`.
+- **Modified:** `EntranceScene.ts`, `EntranceCanvas.tsx`, `sceneMath.ts` (+ test), `Facade.tsx`, `playwright.config.ts`, `package.json` (`test:webkit`), `ARCHITECTURE.md` (ADR-013), `TASKS.md` (K14).
+- **Checks and results:** `npm run check` PASS (432 tests, build). `npx playwright test --workers=1` PASS (32). `npm run test:webkit` PASS (6): repeat visit, first visit through Enter the Club (same canvas, 30 s), owner replay, context loss and restore, context never restored (poster, reason recorded), initialisation failure (poster, reason `error`).
+- **Known issues / not verified:** No real iPhone. WebKit here is Playwright's build, not iOS Safari: GPU, memory limits and Low Power Mode differ. At tier 2 the entrance has no reflection or shadows if the phone cannot hold 40 fps.
+- **Remaining work:** Open `/?entrance-diag` on the iPhone and read the line (tier, ms/frame, reason).
+- **Commit:** see git history.
+
 ## 2026-10-18 16:05 BST (Europe/London) — Claude Code — Verification waits for "Enter the Club"
 
 - **Task:** Baseline `eeffba0`. The final verification screen now stays until Alise chooses to continue.

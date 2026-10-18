@@ -2,6 +2,11 @@ import { fiveTapGesture } from '../../owner/session';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { butlerContextFor } from '../domain/butlerScript';
 import { canRender3D } from '../scene/canRender3D';
+import {
+  diagnosticsRequested,
+  noteEntrance,
+} from '../scene/entranceDiagnostics';
+import { EntranceDiagBadge } from './EntranceDiagBadge';
 import type { SceneHandle } from '../scene/EntranceCanvas';
 import { preloadLounge } from '../../lounge/preload';
 import {
@@ -46,9 +51,15 @@ export function Facade({ model }: { model: EntranceModel }) {
   const awaiting = stage === 'awaiting-entry';
   const awaitingCard = stage === 'awaiting-credential';
   const prepared = stage === 'locked' || stage === 'final-minute';
-  const [mode, setMode] = useState<RenderMode>(() =>
-    canRender3D() ? 'loading' : 'poster',
-  );
+  const [mode, setMode] = useState<RenderMode>(() => {
+    if (canRender3D()) return 'loading';
+    noteEntrance({
+      state: 'fallback',
+      reason: 'webgl-unavailable',
+      message: 'WebGL2 probe failed',
+    });
+    return 'poster';
+  });
   const scene = useRef<SceneHandle | null>(null);
 
   // Fetch the lounge while the doors open, so the room beyond is ready.
@@ -94,6 +105,8 @@ export function Facade({ model }: { model: EntranceModel }) {
           <span>By invitation only</span>
         </p>
       </header>
+
+      {diagnosticsRequested() && <EntranceDiagBadge />}
 
       <Portal onEnter={awaiting ? enter : undefined} />
 
