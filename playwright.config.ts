@@ -5,6 +5,7 @@ export default defineConfig({
   testIgnore: [
     'screening.dev.spec.ts',
     'butlers-office.spec.ts',
+    'gift-vault.spec.ts',
     'casino.look.spec.ts',
     // WebKit with a phone profile: playwright.webkit.config.ts.
     'entrance-webkit.spec.ts',

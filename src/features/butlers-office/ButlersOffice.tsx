@@ -9,6 +9,7 @@ import type {
 } from '../../shared/concierge/types';
 import { instantToWall, wallTimeToInstant } from '../../shared/concierge/time';
 import { OfficeError, officeRequest } from './client';
+import { VaultOffice } from './VaultOffice';
 import './office.css';
 const fmtMoney = (pence: number) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
@@ -172,6 +173,7 @@ export default function ButlersOffice() {
               'privileges',
               'redemptions',
               'messages',
+              'vault',
               'history',
               'membership',
             ].map((t) => (
@@ -489,6 +491,7 @@ export default function ButlersOffice() {
                   <ActivityList events={data.activity} />
                 </>
               )}
+              {tab === 'vault' && <VaultOffice />}
               {tab === 'membership' && (
                 <section className="office-card">
                   <h2>Alise’s membership</h2>

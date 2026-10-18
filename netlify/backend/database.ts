@@ -28,8 +28,15 @@ const codes = new Set<ApiErrorCode>([
   'rate-limited',
   'conflict',
   'not-configured',
+  'vault-locked',
+  'credential-invalid',
   'server',
 ]);
+/** Gift Vault actions live in their own RPC so `ttc_action` stays untouched. */
+export const rpcFor = (action: string) =>
+  /^(vault-|owner-vault-|system-vault-|system-member-bridge$)/.test(action)
+    ? 'ttc_vault_action'
+    : 'ttc_action';
 export function database(
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,
@@ -45,7 +52,7 @@ export function database(
     ): Promise<T> {
       if (!url || !key) throw new BackendError('not-configured');
       const response = await send(
-        `${url.replace(/\/$/, '')}/rest/v1/rpc/ttc_action`,
+        `${url.replace(/\/$/, '')}/rest/v1/rpc/${rpcFor(action)}`,
         {
           method: 'POST',
           headers: {

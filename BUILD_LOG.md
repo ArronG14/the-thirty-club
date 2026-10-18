@@ -508,3 +508,48 @@
 - **Checks/results:** Netlify confirmed all four variable writes. The candidate is clean, pushed, and includes published main. Private bootstrap credentials have 0600 permissions. Earlier combined 490 tests, two owner browser checks and Function bundles passed.
 - **Known issues/remaining work:** Dedicated-project `SUPABASE_SERVICE_ROLE_KEY` must be added privately by the owner before authenticated hosted APIs can operate. No merge to main, application deployment, scheduled approval or real SMS has been performed. Shopping's direct notification path will not be exercised during verification.
 - **Commit:** This configuration checkpoint commit; no application behavior changes.
+
+## 2026-10-18 20:47 BST (Europe/London) — Claude (Opus 5.5) — The Private Gift Vault (ADR-015)
+
+- **Task:** Build the Private Gift Vault on the PostgreSQL backend: compartments, NFC treasure-hunt verification, cinematic opening, owner controls and preview. Continued after the first session was interrupted by a full disk.
+- **Summary:** Isolated worktree `../the-thirty-club-vault`, branch `feature/gift-vault`, created from `origin/codex/backend-butlers-office` (`f6c4222`); the original checkout's uncommitted desk work was not touched. Added migration `20261019090000_gift_vault.sql` (`ttc_vaults` plus a separate `ttc_vault_action` RPC; `ttc_action` unchanged). The new RPC gives:
+  - states LOCKED → READY → OPENED, with atomic, idempotent opening under a row lock;
+  - SHA-256-looked-up NFC tokens and backup codes, and failure rate limits;
+  - the server birthday time-lock (24 Oct 00:00 Jamaica), lazy scheduled readiness and a casino release;
+  - a read-only preview and tag verification.
+
+  `netlify/backend/vault.ts` adds the member and owner routes and the membership bridge (live concierge session → v1 member cookie). Frontend `src/features/vault/`:
+  - `/v/<token>` → `/vault`, with the key held across reloads and the membership prompt;
+  - a lazy Three.js deposit chamber: curved brass box bank, round vault door, compass floor, oculus;
+  - the dial, bolt and door ceremony with synthesised sound, the envelope and letter;
+  - the CSS chamber fallback and reduced motion.
+
+  The Butler's Office gains a vault tab: create/edit, triggers, ready/lock/unlock, NFC URL with a self-contained QR encoder, backup codes, rotation and Preview. The Gift Vault room now opens with the birthday membership; the provisional 18:00 Jamaica schedule was removed and the lounge announcement reworded.
+
+- **Created:** `supabase/migrations/20261019090000_gift_vault.sql`, `netlify/backend/vault.ts`, `netlify/backend/vault.test.ts`, `src/features/vault/**`, `src/features/butlers-office/{VaultOffice.tsx,qr.ts,qr.test.ts}`, `tests/gift-vault.spec.ts`, `docs/GIFT_VAULT.md`.
+- **Modified:**
+  - backend: `netlify/backend/{api,database,database.test}.ts`, `build/butlersOfficeLocalApi.ts` (local-only time-lock switch, bridge secret);
+  - app: `src/shared/concierge/types.ts`, `src/app/App.tsx`, `src/features/butlers-office/{ButlersOffice.tsx,office.css}`;
+  - club: `src/features/club/{domain/rooms.ts,domain/schedule.ts,ui/RoomGate.tsx}` and its tests, `src/features/lounge/ui/Lounge.test.tsx`;
+  - other: `src/features/concierge/ui/CredentialArrival.tsx` (resume at the vault when a key is held), `tests/entrance-poster.spec.ts`, Playwright configs;
+  - docs: `ARCHITECTURE.md`, `TASKS.md`, `PROJECT.md`, `docs/CONCIERGE_API_CONTRACT.md`.
+- **Checks/results (final run):**
+  - `npm run check` PASS: strict types, ESLint, Prettier, 536 tests in 43 files (including 27 vault backend tests, 38 existing database tests, vault maths, held key and QR round-trip), production build;
+  - `npx playwright test -c playwright.office.config.ts` PASS: 5 tests (2 existing office tests and 3 vault tests: full NFC journey with reload, membership, interrupted ceremony, re-scan and location edit after opening; preview immutability; malformed link);
+  - `npx playwright test --workers=1` PASS: 32 existing production regressions, after updating three tests (one Playwright, two unit) to the intended room opening and the reworded announcement;
+  - visual review in the in-app browser and headless captures at 390×844 and 1280×800.
+- **Fixes from verification:**
+  - a CSS-fallback ceremony could hang when the 3D scene finished loading mid-ceremony;
+  - a scene created after an NFC scan built the door already open;
+  - lighting: bloom, seam and wash glare, a dark entry shot, house lights now dim on approach, the cornice glare;
+  - the poster order and clipping, the portrait close-up framing, the status footer deferred during close-ups;
+  - an inaccurate Butler line;
+  - example locations removed from the bundled owner-form placeholders.
+- **Known issues:**
+  - `RoomGate.test.tsx` "admits an inducted member to the screening room" failed once in about ten full parallel unit runs: the lazy Screening Room chunk had not resolved within `findByText`'s 1 s. It is pre-existing and load-sensitive, with no screening code changed, and was left unweakened.
+  - Casino-triggered availability is not live: the casino frontend plays slots locally and never calls `POST /api/v1/casino/slots/play` (GV07).
+  - Software-rendered Chromium falls back to the CSS chamber at large viewports, as designed. There is no iPhone measurement.
+  - `npm run functions:build` was not rerun.
+  - The disk had 3.0 GB free after removing the npm cache and unused Playwright browser builds.
+- **Remaining work:** GV08 (owner approves and applies the migration to the hosted project, merge and deploy, programme NTAG tags, iPhone Safari rehearsal), GV07, GV09 (copy approval).
+- **Commit:** see `git log` on `feature/gift-vault` (not pushed, not merged).

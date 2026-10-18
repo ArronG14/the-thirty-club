@@ -188,10 +188,12 @@ describe('the lounge as the club’s hub', () => {
     expect(status(1)).toBe('You are here');
     expect(status(2)).toBe('Open');
     expect(status(3)).toBe('Opens at 2 pm');
-    expect(status(4)).toBe('Opens at 6 pm');
+    // The Gift Vault opens with the membership, all day.
+    expect(status(4)).toBe('Open');
+    expect(within(rows[4]!).getByRole('button')).toBeInTheDocument();
     expect(status(5)).toBe('Opens at 10 am');
     // Locked and unbuilt rooms offer nothing to press.
-    for (const i of [1, 3, 4, 5]) {
+    for (const i of [1, 3, 5]) {
       expect(within(rows[i]!).queryByRole('button')).toBeNull();
     }
     expect(

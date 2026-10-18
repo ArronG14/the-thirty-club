@@ -20,6 +20,21 @@ const CredentialArrival = lazy(
 const ShoppingPrivilege = lazy(
   () => import('../features/concierge/ui/ShoppingPrivilege'),
 );
+const VaultKeyArrival = lazy(() =>
+  import('../features/vault/ui/VaultRoutes').then((m) => ({
+    default: m.VaultKeyArrival,
+  })),
+);
+const VaultRoute = lazy(() =>
+  import('../features/vault/ui/VaultRoutes').then((m) => ({
+    default: m.VaultRoute,
+  })),
+);
+const VaultPreviewRoute = lazy(() =>
+  import('../features/vault/ui/VaultRoutes').then((m) => ({
+    default: m.VaultPreviewRoute,
+  })),
+);
 const OwnerConsole = lazy(
   () => import('../features/concierge/owner/OwnerConsole'),
 );
@@ -73,6 +88,30 @@ export function App() {
           element={
             <Suspense fallback={<Arriving />}>
               <ButlersOffice />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/owner/vault-preview/:id"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <VaultPreviewRoute />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/vault"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <VaultRoute />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/v/:token"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <VaultKeyArrival />
             </Suspense>
           }
         />

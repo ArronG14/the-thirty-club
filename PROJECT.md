@@ -78,7 +78,7 @@ Beyond the doors is the Members' Lounge, which replaces the foyer holding room. 
 
 - **First arrival:** the butler welcomes Alise and presents her membership card. She accepts it once; it never replays. She can revisit it from the lounge.
 - **After that:** a short greeting and one guided destination ("Your evening continues"), the Members' Directory, her card and the bell.
-- **Rooms:** they open with the membership (Screening Room) or at provisional Jamaica times (Privileges 10:00, Casino 14:00, Gift Vault 18:00), and stay open. Rooms not yet built are listed honestly as "Being prepared" and cannot be entered.
+- **Rooms:** they open with the membership (Screening Room) or at provisional Jamaica times (Privileges 10:00, Casino 14:00); the Gift Vault opens with the birthday membership (ADR-015), and stay open. Rooms not yet built are listed honestly as "Being prepared" and cannot be entered.
 
 See ADR-008 and `docs/lounge/`.
 

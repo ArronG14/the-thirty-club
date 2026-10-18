@@ -87,6 +87,7 @@ describe('room registry', () => {
       'lounge',
       'screening-room',
       'casino',
+      'gift-vault',
     ]);
   });
 
@@ -202,6 +203,11 @@ describe('room availability', () => {
       'screening-room',
     );
     record = stampRoom(record, 'screening-room', 'completedAt', 'x');
+    // The Gift Vault opens with the membership and stays open all day.
+    expect(recommendedRoom(roomViews(MORNING, record))?.room.id).toBe(
+      'gift-vault',
+    );
+    record = stampRoom(record, 'gift-vault', 'completedAt', 'x');
     // Privileges opens at 10 am; the casino not until 2 pm.
     expect(recommendedRoom(roomViews(MORNING, record))).toBeNull();
     expect(nextOpening(roomViews(MORNING, record))?.room.id).toBe('privileges');
@@ -233,13 +239,18 @@ describe('the butler in the lounge', () => {
     expect(briefing.kind).toBe('invitation');
     expect(briefing.destination?.room.id).toBe('screening-room');
     expect(briefing.lines).toEqual([
+      'A word before we begin, Alise: the Gift Vault is open to you all day. Its compartments will make themselves known in their own good time.',
       'Before we begin the festivities, Alise, a number of rather important people have requested an audience with you. They are waiting in the Private Screening Room. I have asked them to behave.',
     ]);
-    expect(briefing.introduces).toEqual(['screening-room']);
+    expect(briefing.introduces).toEqual(['screening-room', 'gift-vault']);
   });
 
   it('greets a returning member briefly and does not repeat the introduction', () => {
-    const record = markAnnounced(member(MORNING), ['screening-room'], 'x');
+    const record = markAnnounced(
+      member(MORNING),
+      ['screening-room', 'gift-vault'],
+      'x',
+    );
     const briefing = loungeBriefing({
       views: roomViews(MORNING, record),
       record,
@@ -253,7 +264,11 @@ describe('the butler in the lounge', () => {
   });
 
   it('announces rooms that opened since he last spoke, exactly once', () => {
-    let record = markAnnounced(member(MORNING), ['screening-room'], 'x');
+    let record = markAnnounced(
+      member(MORNING),
+      ['screening-room', 'gift-vault'],
+      'x',
+    );
     const views = roomViews(NIGHT, record);
     const briefing = loungeBriefing({
       views,
@@ -261,7 +276,7 @@ describe('the butler in the lounge', () => {
       hour: 21,
       arrival: 'present',
     });
-    expect(briefing.introduces).toEqual(['casino', 'gift-vault', 'privileges']);
+    expect(briefing.introduces).toEqual(['casino', 'privileges']);
     expect(briefing.lines).toContain(
       'A small announcement, Alise: the Grand Casino has opened its doors.',
     );
@@ -271,8 +286,13 @@ describe('the butler in the lounge', () => {
 
   it('promises the later rooms when nothing is open to recommend', () => {
     const record = stampRoom(
-      markAnnounced(member(MORNING), ['screening-room'], 'x'),
-      'screening-room',
+      stampRoom(
+        markAnnounced(member(MORNING), ['screening-room', 'gift-vault'], 'x'),
+        'screening-room',
+        'completedAt',
+        'y',
+      ),
+      'gift-vault',
       'completedAt',
       'y',
     );

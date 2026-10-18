@@ -19,7 +19,6 @@ export interface WallClock {
 export const ROOM_SCHEDULE = {
   privileges: { date: '2026-10-24', time: '10:00' },
   casino: { date: '2026-10-24', time: '14:00' },
-  'gift-vault': { date: '2026-10-24', time: '18:00' },
 } as const satisfies Record<string, WallClock>;
 
 /** UTC offset of `zone` at `instant`, in milliseconds (east positive). */

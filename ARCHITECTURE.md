@@ -10,6 +10,7 @@
 
 - `src/app/`: application composition and routes.
 - `src/features/entrance/`: phase 2 entrance and foyer. `domain/` holds pure countdown, stage machine, device record and butler script modules (no React). `useEntrance.ts` composes clock, record and timers. `ui/` holds presentation and CSS. `scene/` holds the lazily loaded real-time 3D entrance (ADR-007). `preview/` is development-only. The foundation placeholder view was removed when the entrance replaced it.
+- `src/features/vault/`: the Private Gift Vault (ADR-015): `client/` (v1 API, held NFC key, announcements), `domain/` (Butler lines), `useGiftVault.ts` (journey), `scene/` (lazy 3D chamber and its pure maths), `ui/` (room, letter, CSS chamber, routes), `audio/`. Server: `netlify/backend/vault.ts` and `ttc_vault_action`. Owner controls: `src/features/butlers-office/VaultOffice.tsx`.
 - `src/features/prizes/`: the club-wide prize engine (reward types, ledger, versioned persistence, Gift Vault contract); knows no game. `src/features/casino/`: the Grand Casino (`domain/` pure roulette, slots, state and butler lines; `config/` rewards, rules and the asset registry; `scene/` the lazy 3D room and its pure motion maths; `ui/` panels, reveal and collection; `audio/` Web Audio synthesis; `dev/` development-only tools). See ADR-010.
 - `src/shared/state/`: presentation-independent Zustand connectivity store; no membership or reward authority.
 - `src/shared/pwa/`: service-worker registration and real offline/update status.
@@ -56,6 +57,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-008 (2026-10-18): Members' Lounge, room registry and membership record, recorded below.
 - ADR-010 (2026-10-18): Grand Casino, shared prize engine and Gift Vault contract, recorded below.
 - ADR-012 (2026-10-18): the Concierge — pre-birthday journey, Netlify Functions + Blobs backend, Telegram notifications, NFC credentials and the membership-card gate; amends ADR-006 (Jamaica midnight). Recorded below; full design in docs/CONCIERGE.md. (ADR-011 is the PIN owner test mode, recorded below by another agent.)
+- ADR-015 (2026-10-18): the Private Gift Vault on PostgreSQL, NFC credentials, membership bridge and owner preview; amends ADR-008 (the vault room opens with the membership). Recorded below; full design in docs/GIFT_VAULT.md.
 
 ## Open questions
 
@@ -287,3 +289,23 @@ The dedicated project has six applied migrations, mirrored exactly in `supabase/
 The owner can explicitly approve future transactional claim notifications to Arron through a persistent policy; the initial policy is disabled. Every scheduled Alise message requires individual approval. Both paths additionally require the global SMS switch. Callback URLs carry both message and attempt identifiers, and signed old-attempt callbacks cannot corrupt a newer retry. Ambiguous external sends remain held for provider reconciliation. Service-only RLS policies and revoked browser-role RPC/table privileges were checked on the dedicated hosted project.
 
 Owner operations use an eight-hour opaque cookie session and Alise uses a single-use high-entropy invitation with a thirty-day session. A local PostgreSQL adapter is available only in the build tooling for browser rehearsals; it cannot contact providers. The existing Casino engine is reused server-side for reward-authoritative play outcomes; wiring those outcomes into the Casino UI is the documented frontend integration task.
+
+## The Private Gift Vault (ADR-015, 2026-10-18)
+
+Full design, API and operations: `docs/GIFT_VAULT.md`.
+
+**Authority.** The vault is built on the PostgreSQL backend of ADR-014, not on Netlify Blobs: a new table `ttc_vaults` and a separate service-role-only RPC `ttc_vault_action` (`supabase/migrations/20261019090000_gift_vault.sql`), leaving `ttc_action` and every privilege, slots, SMS and Shopping path unchanged. The server alone decides availability, credential validity, the birthday time-lock (24 Oct 00:00 America/Jamaica, `ttc_vault_opens_at()`), and whether a clue (READY) or gift location (OPENED) may be returned. States LOCKED → READY → OPENED; OPENED is permanent; opening takes a row lock so concurrent scans open once; repeat scans are idempotent. The physical present's identity is never stored: only a free-text location.
+
+**Credentials and identity.** Each compartment has a 256-bit NFC token (in `/v/<token>`) and a backup code, compared by SHA-256 hash and rotatable; failed guesses are rate-limited per IP. A key is proof of finding the tag, never of identity: opening also requires a v1 member cookie. Because Alise holds no v1 invitation, `POST /api/v1/auth/member/concierge` exchanges her existing live-realm concierge session (ADR-012, HMAC-verified server-side with `CONCIERGE_SESSION_SECRET`) for one; rehearsal-realm sessions are refused.
+
+**Room access (amends ADR-008).** The room's unlock rule is `membership` (open from the birthday induction, all day), replacing the provisional 18:00 Jamaica schedule, which was removed from `schedule.ts`. Compartments keep independent availability (manual, scheduled instant, casino reward). The lounge announces the vault once alongside the induction.
+
+**Navigation.** `/v/<token>` holds the key in `localStorage` (6 h expiry) and the history entry, then replaces itself with `/vault`, a route outside RoomGate so an NFC scan in a fresh Safari context reaches the vault directly; `/rooms/gift-vault` is the lounge's way in. The server commits the opening before the ceremony, so interrupted animations cannot corrupt progression.
+
+**Owner.** Extends the Butler's Office (`/owner`, existing secure session) with a vault tab; no second admin system. Preview (`/owner/vault-preview/:id`) uses one read-only owner GET and makes no member call, so it cannot mutate state, consume credentials, notify or grant anything.
+
+**Presentation.** A lazily loaded Three.js chamber reusing the entrance's helpers, scans, post-processing, quality tiers and fallback rules; the CSS chamber is poster and complete fallback.
+
+**Casino.** Server contract only: a server-recorded slots jackpot releases compartments bound to `casino.vault-key-one`. The casino frontend still plays slots locally and never calls the server play API, so the trigger is not live (see `docs/GIFT_VAULT.md`).
+
+**Open questions.** Applying the migration to the hosted project and deployment (owner approval); real NFC/iPhone rehearsal; owner approval of Butler and letter wording; who connects the casino frontend to the server play API. ADR numbering: an unpublished desk draft in the original checkout also uses ADR-014; this record is ADR-015 to avoid colliding with either.

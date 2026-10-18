@@ -13,6 +13,11 @@ import {
 } from './auth.ts';
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
+import {
+  bridgeMemberSession,
+  releaseCasinoVaults,
+  vaultRoute,
+} from './vault.ts';
 const statuses: Record<string, number> = {
   invalid: 400,
   unauthorised: 401,
@@ -26,6 +31,8 @@ const statuses: Record<string, number> = {
   'rate-limited': 429,
   conflict: 409,
   'not-configured': 503,
+  'vault-locked': 409,
+  'credential-invalid': 404,
   server: 500,
 };
 const messages: Record<string, string> = {
@@ -42,6 +49,8 @@ const messages: Record<string, string> = {
   'rate-limited': 'Please wait before trying again.',
   conflict: 'The record has changed or this action is unavailable.',
   'not-configured': 'The Butler’s Office is awaiting server configuration.',
+  'vault-locked': 'This compartment has not yet been prepared.',
+  'credential-invalid': 'This key is not recognised by the vault.',
   server: 'The Butler is momentarily unavailable. Please try again.',
 };
 export interface ApiDeps {
@@ -97,7 +106,7 @@ export function createBackendApi({ db, env }: ApiDeps) {
       }
       if (
         request.method === 'POST' &&
-        ['/auth/owner', '/auth/member'].includes(path)
+        ['/auth/owner', '/auth/member', '/auth/member/concierge'].includes(path)
       ) {
         const rate = await db.action<{ allowed: boolean }>(
           null,
@@ -122,6 +131,9 @@ export function createBackendApi({ db, env }: ApiDeps) {
             'system-session-create',
             { hash: hashToken(token) },
           );
+        } else if (path === '/auth/member/concierge') {
+          v.keys(body, []);
+          session = await bridgeMemberSession(request, db, env, token);
         } else {
           v.keys(body, ['token']);
           const invite = v.text(body.token, 43, 43);
@@ -212,6 +224,8 @@ export function createBackendApi({ db, env }: ApiDeps) {
           stops: outcome.stops,
           outcome: outcome.evaluation.class,
         });
+        if (result.outcome === 'jackpot' || ctx.jackpotPaid)
+          await releaseCasinoVaults(db, 'jackpot');
         return respond(result, result.duplicate ? 200 : 201);
       }
       if (route === 'GET /owner/overview')
@@ -302,6 +316,18 @@ export function createBackendApi({ db, env }: ApiDeps) {
           }),
         );
       }
+      const vault = await vaultRoute({
+        route,
+        path,
+        method: request.method,
+        body,
+        session,
+        db,
+        env,
+        origin: url.origin,
+        ip,
+      });
+      if (vault) return respond(vault.data, vault.status);
       throw new BackendError('not-found');
     } catch (error) {
       const known =

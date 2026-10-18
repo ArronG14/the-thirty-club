@@ -88,7 +88,7 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
   Not VERIFIED: its acceptance includes iPhone performance and Safari rendering, which have not been measured. `npm run check` as a single command currently stops at `format:check` because Codex's in-progress `EXPERIENCE_BLUEPRINT.md` is not Prettier-formatted; that file was deliberately not touched.
 
 - **L02 iPhone lounge rehearsal — NOT STARTED:** frame rate and tiers, the entrance → lounge hand-off on device, label projection with safe areas, Safari `inert`/focus behaviour, VoiceOver through the ceremony and directory.
-- **L03 owner approval — NOT STARTED:** butler lounge copy, card wording ("Founding member · Lifetime", "No. 1 of 1"), the provisional unlock hours (privileges 10:00, casino 14:00, gift vault 18:00 Jamaica time, in `club/domain/schedule.ts`) and room order.
+- **L03 owner approval — NOT STARTED:** butler lounge copy, card wording ("Founding member · Lifetime", "No. 1 of 1"), the provisional unlock hours (privileges 10:00, casino 14:00 Jamaica time; the gift vault now opens with the membership, ADR-015, in `club/domain/schedule.ts`) and room order.
 - **S01 Private Screening Room — IMPLEMENTED (superseded by Prompt 05 below):** The guided destination is registered and built. The directory and butler offer it automatically; all-message completion stamps the club record. See Prompt 05 below.
 - **Lounge polish candidates — NOT STARTED (optional):** modelled side walls/paintings for the directory and screening shots, baked lighting, an in-scene butler presence, ambient sound with a silent default.
 
@@ -147,3 +147,17 @@ VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does no
 - **BF06 — VERIFIED:** Permanent backend compatibility with published Shopping (`7a1f815`): additive conflicts resolved on the backend branch; Shopping implementation unchanged; combined check passes 490 tests, Functions bundles and two owner browser rehearsals.
 - **BF07 — IN PROGRESS:** Guided Netlify access/configuration and permanent backend deployment. Owner password/hash generated privately using the existing script; SMS remains disabled; hosted verification awaits configuration and deployment.
 - **BF07 configuration checkpoint — IN PROGRESS:** Netlify access authorized; production Functions URL/site URL, secret owner hash and SMS-off flag configured. Owner's next action is to add the dedicated Supabase service-role key privately; merge/deploy/hosted checks follow.
+
+## The Private Gift Vault (ADR-015, docs/GIFT_VAULT.md)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                                                                                                                          |
+| ---- | -------- | ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| GV01 | P0       | VERIFIED    | PostgreSQL vault (`ttc_vaults`, `ttc_vault_action`): LOCKED → READY → OPENED, atomic idempotent opening, NFC tokens and backup codes, rate limits, birthday time-lock, location secrecy (27 backend tests) |
+| GV02 | P0       | VERIFIED    | Membership bridge `POST /api/v1/auth/member/concierge`: live concierge session → v1 member cookie; rehearsal and forged sessions refused                                                                   |
+| GV03 | P0       | VERIFIED    | Butler's Office vault tab: create/edit, clue and location, triggers, ready/lock/unlock, NFC URL, QR, backup code, rotation, non-destructive preview and tag test (Playwright)                              |
+| GV04 | P0       | IMPLEMENTED | 3D chamber, ceremony, letter, CSS fallback, reduced motion, sound. Reviewed in software-rendered Chromium only; real iPhone frame rate and tier tuning not measured                                        |
+| GV05 | P0       | VERIFIED    | NFC deep link `/v/<token>` → `/vault`: key held across reloads and the membership prompt, re-scan idempotent, interrupted ceremony recovers, revisit (Playwright, phone-sized Chromium)                    |
+| GV06 | P0       | IMPLEMENTED | Gift Vault room opens with the birthday membership (replaces provisional 18:00 Jamaica); compartments keep independent availability                                                                        |
+| GV07 | P1       | BLOCKED     | Casino-triggered availability end to end: server release exists and is tested; the casino frontend must adopt `POST /api/v1/casino/slots/play` (casino/desk owners; vouchers side effect)                  |
+| GV08 | P0       | NOT STARTED | Owner: approve and apply migration `20261019090000_gift_vault.sql` to the hosted project, deploy the merged branch, program real NTAG tags, rehearse on the actual iPhone in Safari                        |
+| GV09 | P1       | NOT STARTED | Owner approval of Butler and letter wording in `vault/domain/vaultScript.ts` and `VaultLetter.tsx`                                                                                                         |

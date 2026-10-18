@@ -211,3 +211,116 @@
     padding: 1rem;
   }
 }
+
+/* ---------- The Private Gift Vault ---------- */
+.office-hint {
+  color: #c7af7e;
+  font-size: 0.9rem;
+}
+.office-notice {
+  background: #2a2a1a;
+  color: #f1e7d4;
+  padding: 0.8rem;
+  border-radius: 0.25rem;
+}
+.office-vault__list {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+.office-vault__card {
+  border: 1px solid #a88d554d;
+  border-radius: 0.5rem;
+  padding: 1rem;
+  background: #120f0c;
+  display: grid;
+  gap: 0.8rem;
+}
+.office-vault__card[data-state='ready'] {
+  border-color: #d8b878;
+  box-shadow: 0 0 18px rgb(216 184 120 / 0.15);
+}
+.office-vault__card[data-state='opened'] {
+  border-color: #7d9a6a;
+}
+.office-vault__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+}
+.office-vault__head h3 {
+  margin: 0;
+}
+.office-vault__state {
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #e3c78d;
+}
+.office-vault__facts {
+  display: grid;
+  grid-template-columns: minmax(7rem, max-content) 1fr;
+  gap: 0.45rem 1rem;
+  margin: 0;
+  font-size: 0.92rem;
+}
+.office-vault__facts dt {
+  color: #c7af7e;
+}
+.office-vault__facts dd {
+  margin: 0;
+  min-width: 0;
+}
+.office-vault__text {
+  white-space: pre-wrap;
+}
+.office-vault__url,
+.office-vault__code {
+  font-size: 0.85rem;
+  word-break: break-all;
+  user-select: all;
+}
+.office-vault__code {
+  font-size: 1.05rem;
+  letter-spacing: 0.12em;
+}
+.office-vault__qr {
+  margin: 0;
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.office-vault__qr svg {
+  width: min(100%, 15rem);
+  height: auto;
+  border-radius: 0.3rem;
+}
+.office-vault__qr figcaption {
+  color: #c7af7e;
+  font-size: 0.85rem;
+}
+.office-vault__when {
+  border: 1px solid #a88d554d;
+  border-radius: 0.4rem;
+  padding: 0.8rem 0.8rem 0;
+  margin: 0 0 1rem;
+}
+.office-button-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid #e3c78d;
+  border-radius: 0.3rem;
+  color: #f3dca5;
+  text-decoration: none;
+}
+@media (max-width: 420px) {
+  .office-vault__facts {
+    grid-template-columns: 1fr;
+  }
+  .office-vault__facts dd {
+    margin-bottom: 0.4rem;
+  }
+}
