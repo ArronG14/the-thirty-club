@@ -159,3 +159,7 @@ Do not expose provider errors, secrets, SQL or stack traces to member clients. S
 ## Gift Vault (additive)
 
 The vault adds `POST /auth/member/concierge`, `GET /vaults`, `POST /vaults/open` and owner routes under `/owner/vaults`, plus error codes `vault-locked` and `credential-invalid`. They are specified in `docs/GIFT_VAULT.md`, with types (MemberVault, MemberVaultList, VaultOpenInput, VaultOpenResult, VaultInput, OwnerVault, OwnerVaultList, VaultPreview, VaultVerifyResult) in the same shared TypeScript file. Existing routes are unchanged.
+
+## Correspondence Desk (additive)
+
+Member routes `GET /correspondence`, `GET /correspondence/summary` and `POST /correspondence/:id/{open,thank,reply}`, and owner routes under `/owner/correspondence`, are specified in `docs/CORRESPONDENCE_DESK.md`. Types (LetterInput, LetterSms, MemberLetter, MemberLetterReply, CorrespondenceSummary, OwnerLetter, OwnerLetterReply, OwnerCorrespondence) are in the same shared TypeScript file. `ScheduledMessage.category` gains `correspondence-alise` and `correspondence-arron`. The frontend now consumes an owner invitation from the fragment `/correspondence#invitation=<token>`, removing it from the address bar before the exchange. Existing routes are unchanged.

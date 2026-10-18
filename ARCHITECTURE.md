@@ -58,6 +58,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-010 (2026-10-18): Grand Casino, shared prize engine and Gift Vault contract, recorded below.
 - ADR-012 (2026-10-18): the Concierge — pre-birthday journey, Netlify Functions + Blobs backend, Telegram notifications, NFC credentials and the membership-card gate; amends ADR-006 (Jamaica midnight). Recorded below; full design in docs/CONCIERGE.md. (ADR-011 is the PIN owner test mode, recorded below by another agent.)
 - ADR-015 (2026-10-18): the Private Gift Vault on PostgreSQL, NFC credentials, membership bridge and owner preview; amends ADR-008 (the vault room opens with the membership). Recorded below; full design in docs/GIFT_VAULT.md.
+- ADR-016 (2026-10-19): the Correspondence Desk — owner-scheduled letters published by the existing every-minute round, Butler SMS through the existing outbox. Recorded below; full design in docs/CORRESPONDENCE_DESK.md.
 
 ## Open questions
 
@@ -309,3 +310,19 @@ Full design, API and operations: `docs/GIFT_VAULT.md`.
 **Casino.** Server contract only: a server-recorded slots jackpot releases compartments bound to `casino.vault-key-one`. The casino frontend still plays slots locally and never calls the server play API, so the trigger is not live (see `docs/GIFT_VAULT.md`).
 
 **Open questions.** Applying the migration to the hosted project and deployment (owner approval); real NFC/iPhone rehearsal; owner approval of Butler and letter wording; who connects the casino frontend to the server play API. ADR numbering: an unpublished desk draft in the original checkout also uses ADR-014; this record is ADR-015 to avoid colliding with either.
+
+## The Correspondence Desk (ADR-016, 2026-10-19)
+
+Full design, API and operations: `docs/CORRESPONDENCE_DESK.md`. Branch `feature/correspondence-desk` from `integration/gift-vault-backend` `bccce30`; not merged or deployed.
+
+**Authority.** PostgreSQL, through a separate service-role-only RPC `ttc_correspondence_action` and new tables `ttc_letters` and `ttc_letter_replies` (migration `20261020090000_correspondence_desk.sql`). `ttc_action` and `ttc_vault_action` are untouched. The only change to an existing object is the widened `ttc_messages.category` CHECK, which adds `correspondence-alise` and `correspondence-arron`. The server alone publishes (its clock), records openings and thanks, and stores messages. Letters are `draft → scheduled → published`, with `opened_at` and `thanked_at` as stamps; SMS state lives only in the outbox, so a failed SMS never affects a letter.
+
+**One scheduler.** Due letters are published by the existing every-minute `concierge-dispatch` round, before its outbox half, using `FOR UPDATE SKIP LOCKED`. They are also published lazily on any correspondence read. The invitation is queued in the same transaction, with a unique reference, so it is queued exactly once. No new scheduled function exists.
+
+**SMS.** Invitations, thank-you replies and notifications to Arron are approved outbox messages, gated by the existing `SMS_SENDING_ENABLED` switch. The existing claim/backoff/uncertain/callback handling is reused unchanged. `recipientFor` maps each category to exactly one phone; an unknown category fails rather than defaulting. Wording is centralised in `src/shared/correspondence/templates.ts`. An SMS to Alise still unsent after six hours is marked failed; owner retry requeues only failed or cancelled messages, never uncertain ones.
+
+**Member identity.** A v1 member cookie, the existing live-concierge bridge, or a one-time owner invitation link (`/correspondence#invitation=`, the fragment consumption anticipated by the API contract). No membership-card entry is offered, because presenting the card before 24 October would complete the birthday card ceremony early. `/correspondence` is outside RoomGate and writes no club record, so it opens before the birthday and unlocks nothing.
+
+**Presentation.** CSS and SVG only (no Three.js, no new dependency), transform and opacity motion, reduced-motion cross-fades. Lazy route chunks; the arrival notice is lazy too.
+
+**Open questions.** Owner approval of the six-hour expiry, the reply rate limits, the default salutation and the Butler's on-screen lines. An authorised real SMS exchange and an iPhone rehearsal remain release gates.

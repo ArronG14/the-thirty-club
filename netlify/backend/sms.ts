@@ -4,6 +4,17 @@ import { BackendError, type Database } from './database.ts';
 interface ClaimedMessage extends ScheduledMessage {
   claimId: string;
 }
+/** Every outbox category goes to exactly one known phone. */
+export function recipientFor(
+  category: ScheduledMessage['category'],
+  env: NodeJS.ProcessEnv,
+): string | undefined {
+  if (category === 'scheduled-alise' || category === 'correspondence-alise')
+    return env.ALISE_PHONE;
+  if (category === 'transactional-arron' || category === 'correspondence-arron')
+    return env.ARRON_PHONE;
+  return undefined;
+}
 export async function processMessages(
   db: Database,
   env: NodeJS.ProcessEnv,
@@ -29,9 +40,18 @@ export async function processMessages(
       'system-message-claim',
     );
     if (!item) break;
-    const to =
-      item.category === 'scheduled-alise' ? env.ALISE_PHONE : env.ARRON_PHONE;
+    const to = recipientFor(item.category, env);
     let result: Record<string, unknown>;
+    if (!to) {
+      await db.action(null, 'system', 'system-message-result', {
+        id: item.id,
+        claimId: item.claimId,
+        state: 'failed',
+        error: 'No recipient is defined for this message category.',
+      });
+      processed++;
+      continue;
+    }
     try {
       const response = await send(
         `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(env.TWILIO_ACCOUNT_SID)}/Messages.json`,
@@ -42,7 +62,7 @@ export async function processMessages(
             'content-type': 'application/x-www-form-urlencoded',
           },
           body: new URLSearchParams({
-            To: to!,
+            To: to,
             MessagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID,
             Body: item.body,
             StatusCallback: `${env.CONCIERGE_SITE_URL.replace(/\/$/, '')}/api/v1/twilio/status?messageId=${item.id}&claimId=${item.claimId}`,

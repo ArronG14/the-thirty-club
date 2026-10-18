@@ -13,6 +13,7 @@ import {
   EntranceLetter,
   MembershipPrompt,
 } from '../../concierge/ui/EntranceConcierge';
+import { CorrespondenceNoticeSlot } from '../../correspondence/ui/noticeSlot';
 import type { EntranceModel } from '../useEntrance';
 import { Portal } from './Portal';
 import { ServiceBell } from './ServiceBell';
@@ -126,6 +127,7 @@ export function Facade({ model }: { model: EntranceModel }) {
               : 'Alise, your table is ready.'}
         </p>
         {stage === 'locked' && <EntranceLetter now={now} />}
+        {stage === 'locked' && <CorrespondenceNoticeSlot />}
         {awaitingCard && <MembershipPrompt onPresented={presentMembership} />}
         {awaiting && (
           <button type="button" className="facade__enter" onClick={enter}>

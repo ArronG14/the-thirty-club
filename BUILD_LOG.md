@@ -599,3 +599,35 @@
   - The ceremony fix exists on this integration branch only, not on `feature/gift-vault`.
 - **Remaining work:** GV11 release steps, GV08, GV07, GV09.
 - **Commit:** this commit on `integration/gift-vault-backend` (not pushed).
+
+## 2026-10-19 00:06 BST (Europe/London) — Claude (Opus 5.5) — The Correspondence Desk (ADR-016)
+
+- **Task:** An owner-controlled correspondence service: Arron writes, schedules and sends letters from `/owner`; the Butler publishes them, sends the invitation SMS, answers thanks and passes Alise's messages to Arron.
+- **Isolation:** New worktree `../the-thirty-club-correspondence`, branch `feature/correspondence-desk`, from `integration/gift-vault-backend` `bccce30`. The integration worktree and the original checkout (including its uncommitted `/api/desk` work) were not modified. `node_modules` is an APFS clone of the integration worktree's (identical lockfile) because the disk had 2.2 GB free.
+- **Summary:**
+  - Migration `20261020090000_correspondence_desk.sql`: `ttc_letters`, `ttc_letter_replies` and a separate RPC `ttc_correspondence_action`, plus a widened `ttc_messages.category` CHECK (`correspondence-alise`, `correspondence-arron`). RLS, service-only grants and policies.
+  - Publication runs inside the existing every-minute round, before the outbox (`FOR UPDATE SKIP LOCKED`), and lazily on any correspondence read. It queues the invitation in the same transaction, chosen by the delivery hour in the letter's zone (morning, afternoon, evening or night).
+  - Thanks are recorded once and queue one reply SMS to Alise. Her messages are stored and queue a notification to Arron in the agreed format. Limits: idempotency keys, an identical message within 10 minutes counts once, 5 per 10 minutes, 40 per day.
+  - Every SMS is an approved outbox message, still gated by `SMS_SENDING_ENABLED`. Unsent SMS to Alise expire to `failed` after six hours. An invitation not yet sent when she opens the letter is cancelled. Owner retry only from `failed` or `cancelled`. `recipientFor` maps categories to phones explicitly.
+  - Owner Console tab _correspondence_: compose, edit, delete draft, preview (real presentation, inert), schedule with London/Jamaica (UTC storage, UK equivalent shown, template named), Send now and delete with inline confirmations, cancel delivery, delivery and SMS history, and the inbox of Alise's messages. Membership tab: _Copy correspondence link_ (one-time `/correspondence#invitation=`).
+  - Member: `/correspondence` collection and `/correspondence/:id` letter (envelope, splitting wax seal, flap and sheet, laid paper, drop cap, reduced-motion cross-fade). ✉️ Thank the Butler and 🎩 Butler, A Word. The Butler's arrival notice appears at the locked entrance and in the lounge after induction (singular and plural; Later per session). The pages are outside RoomGate and write no club record.
+- **Decision found during verification:** the Desk does **not** offer the membership-card prompt (as Shopping does). Presenting the card before 24 October records it on the server, and the entrance would then skip the birthday card ceremony. Identity is the v1 cookie, the existing live-concierge bridge, or Arron's one-time introduction link.
+- **Created:** `supabase/migrations/20261020090000_correspondence_desk.sql`, `netlify/backend/correspondence.ts`, `netlify/backend/correspondence.test.ts`, `src/shared/correspondence/templates.ts`, `src/features/correspondence/**` (client, domain, ui, test), `src/features/butlers-office/{CorrespondenceDesk.tsx,deskText.ts,desk.css}`, `tests/correspondence.spec.ts`, `playwright.correspondence.config.ts`, `docs/CORRESPONDENCE_DESK.md`.
+- **Modified:**
+  - backend: `netlify/backend/{api,database,sms,scheduledRound}.ts`, `netlify/functions/concierge-dispatch.ts`, `build/butlersOfficeLocalApi.ts` (local-only `__local/correspondence-due`);
+  - frontend: `src/shared/concierge/types.ts`, `src/app/App.tsx`, `src/features/butlers-office/ButlersOffice.tsx`, `src/features/entrance/ui/Facade.tsx`, `src/features/lounge/ui/Lounge.tsx`;
+  - tooling: `package.json` (`test:correspondence`), `playwright.config.ts` (ignore the new spec);
+  - docs: `ARCHITECTURE.md`, `TASKS.md`, `docs/CONCIERGE_API_CONTRACT.md`, `docs/BACKEND_OPERATIONS.md`.
+- **Checks/results:**
+  - `npm run check` PASS: strict types, ESLint, Prettier, **578 tests in 46 files** (28 new backend tests on PGlite with every real migration, 8 new component/unit tests; all existing database, vault, round, concierge and Shopping suites pass), production build.
+  - `npx playwright test -c playwright.correspondence.config.ts` PASS 3: the full owner → member → owner journey with SMS off; the entrance notice and Later; a refused reused introduction, no card entry, 401 for a stranger.
+  - `npx playwright test -c playwright.office.config.ts` PASS 5 (existing office and vault).
+  - `npx playwright test --workers=1` PASS 32 production regressions.
+  - `npm run functions:build` PASS: `api` and `concierge-dispatch` (every minute) both contain the Desk code.
+  - Visual review of 390×844 captures: envelope, mid-opening, letter, replies, owner desk and inbox, entrance notice.
+- **Known issues:**
+  - The office login rate limit (8 per 15 minutes per address, shared by owner and member sign-ins) made the Desk spec collide with the vault spec on one local server. It now has its own config and server.
+  - No real SMS was sent or tested; Twilio is faked in tests. No iPhone, Safari or installed-PWA run.
+  - The six-hour expiry, limits, default salutation and Butler lines await owner approval.
+- **Remaining work:** CD04 (apply the migration after the Gift Vault one, merge after the backend release, deploy), CD05 (authorised controlled SMS exchange), CD06 (iPhone rehearsal; send the introduction link), CD07 (copy approval).
+- **Commit:** this commit on `feature/correspondence-desk` (not pushed, not merged).

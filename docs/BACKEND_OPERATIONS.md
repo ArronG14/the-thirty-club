@@ -154,3 +154,7 @@ Unchanged: immediate notifications at redemption time (Departure privileges and 
 7. On the day: make compartments ready (manually or by schedule). The room is open from the birthday induction.
 
 **Rollback.** Redeploy the previous production deploy (`277eaa7`) from Netlify's deploy list. The vault table can stay in place, unused, because the old code never touches it. Blobs data is untouched throughout.
+
+## Correspondence Desk release (branch `feature/correspondence-desk`, after the integrated release)
+
+Migration `20261020090000_correspondence_desk.sql` is **not applied** to the hosted project. It needs owner approval and must be applied after `20261019090000_gift_vault.sql`. It adds two tables and their functions (service-only grants, RLS) and widens the `ttc_messages.category` CHECK. Existing rows are unaffected, and the deployed API returns `not-configured`/`server` for correspondence routes until it exists. No new environment variables: it uses `SUPABASE_*`, `SMS_SENDING_ENABLED`, the Twilio variables, `ALISE_PHONE` and `ARRON_PHONE`. The exact procedure is in the BUILD_LOG entry of 2026-10-19 and in `docs/CORRESPONDENCE_DESK.md`.
