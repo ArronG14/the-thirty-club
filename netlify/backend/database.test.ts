@@ -853,3 +853,38 @@ describe('Twilio callback races', () => {
     ).toBe(newSid);
   });
 });
+
+it('starts a fresh bounded attempt cycle only after owner editing and reapproval', async () => {
+  const input = {
+    label: 'Rescheduled message',
+    body: 'Revised correspondence',
+    sendAt: '2026-10-19T10:00:00Z',
+    timezone: 'Europe/London',
+  };
+  const created = (await owner('owner-message-create', input)) as {
+    message: { id: string };
+  };
+  await pg.query(
+    "update public.ttc_messages set state='failed',attempts=5,provider_sid=$2,claim_id=gen_random_uuid() where id=$1",
+    [created.message.id, `SM${'6'.repeat(32)}`],
+  );
+  const edited = (await owner('owner-message-update', {
+    ...input,
+    id: created.message.id,
+  })) as {
+    message: { state: string; attempts: number; providerSid: string | null };
+  };
+  expect(edited.message).toMatchObject({
+    state: 'draft',
+    attempts: 0,
+    providerSid: null,
+  });
+  await owner('owner-message-approve', { id: created.message.id });
+  await pg.query(
+    "update public.ttc_messages set send_at=now()-interval '1 minute',next_attempt_at=now() where id=$1",
+    [created.message.id],
+  );
+  expect(await db.action(null, 'system', 'system-message-claim')).toMatchObject(
+    { id: created.message.id, state: 'sending', attempts: 1 },
+  );
+});

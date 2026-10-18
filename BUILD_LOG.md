@@ -460,3 +460,21 @@
 - **Deployment status / blockers:** Code and Functions are locally verified. Supabase schema is applied. Netlify CLI is not logged in; no application deployment performed. Owner is configuring server environment variables. Real Twilio delivery, hosted browser redemption and physical iPhone/Safari/Home Screen verification are not claimed. Legacy data copy/cutover requires Netlify access and a write freeze. Casino frontend must adopt the documented server-play API. No real sends are authorized by this log.
 - **Remaining work:** Owner follows exact environment/deploy steps in `docs/BACKEND_OPERATIONS.md`, deploys the reviewed branch, integrates the frontend Desk/Casino where assigned, performs the hosted beauty rehearsal and approves any real message separately.
 - **Commits:** Phase A `1486f9ae50ab26e38dd0dfcf6b82a73d10ba6667`; this implementation entry is included in the Phase B commit reported in the handoff.
+
+## 2026-10-18 17:22 BST (Europe/London) — Codex — Final backend publication
+
+- **Task:** Complete the reviewable branch and deployment handoff.
+- **Summary:** Published Phase B commit `05250c763fc9f97cd8b73314fd5161b235ec5361`. Included the local PostgreSQL rehearsal plugin registration in Vite in this follow-up so a clean checkout can run the already-verified office suite. Updated operations instructions with a direct branch comparison link.
+- **Modified:** `vite.config.ts`, `docs/BACKEND_OPERATIONS.md`, `BUILD_LOG.md`.
+- **Checks/results:** All final implementation checks recorded above ran with this Vite registration present: 472 tests, 32 existing browser regressions, 2 office browser tests and both Netlify bundles passed. Final formatting and Git whitespace/status checks passed.
+- **Known issues:** GitHub connector rejected PR creation with HTTP 403 (`Resource not accessible by integration`); no PR was created. The feature branch is successfully pushed and directly reviewable. No app deployment or real message was attempted.
+- **Remaining work:** Owner configuration, manual PR creation/merge and the hosted/device verification described in operations documentation. No additional production credentials are needed for completed local work.
+- **Commit:** This final handoff commit; hash reported with Phase A and Phase B in the final response.
+
+### Final rescheduling recovery check — 2026-10-18 17:25 BST (Europe/London) — Codex
+
+- **Task/summary:** Final review found that editing an exhausted scheduled SMS retained its five-attempt counter, allowing approval without a future send. Added a sixth migration to reset the bounded cycle and invalidate old send identifiers only when the owner edits an unsent scheduled draft. Saving still removes approval.
+- **Modified:** Sixth migration, `netlify/backend/database.test.ts`, API contract/operations/architecture/task documentation and this log.
+- **Checks/results:** Focused PostgreSQL/API/time suites PASS **41 tests**, including the exhausted-message edit/reapproval/claim regression. Migration applied to the dedicated hosted project; no provider call. Final `npm run check` PASS: **473 tests in 38 files**, strict types, ESLint, Prettier and production build. Final hosted security advisor again returned no findings. Existing 32 browser regressions and 2 mobile office tests remain the unchanged UI verification.
+- **Known issues/remaining work:** Production credentials, deployment, legacy copy and hosted/device rehearsal remain as recorded above. No real SMS.
+- **Commit:** Included in the final unpublished handoff commit before its first push; Phase A and Phase B history are preserved.

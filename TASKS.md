@@ -135,8 +135,8 @@ VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does no
 
 ## Backend foundation and Butler's Office (ADR-014)
 
-- **BF01 — VERIFIED:** Dedicated Supabase project provisioned in London; API contract/shared types committed separately as `1486f9a`. Five migrations applied and hosted database security/rehearsal queries passed.
-- **BF02 — VERIFIED:** PostgreSQL migrations, revocable sessions, atomic beauty/voucher redemption, mobile owner dashboard and approved Twilio outbox. Local checks: 472 unit/integration tests, 32 existing browser regressions, 2 office browser tests and Netlify Function bundles. Hosted application/provider verification remains BF03.
+- **BF01 — VERIFIED:** Dedicated Supabase project provisioned in London; API contract/shared types committed separately as `1486f9a`. Six migrations applied and hosted database security/rehearsal queries passed.
+- **BF02 — VERIFIED:** PostgreSQL migrations, revocable sessions, atomic beauty/voucher redemption, mobile owner dashboard and approved Twilio outbox. Local checks: 473 unit/integration tests, 32 existing browser regressions, 2 office browser tests and Netlify Function bundles. Hosted application/provider verification remains BF03.
 - **BF03 — BLOCKED:** Hosted Netlify deployment awaits owner-configured credentials. No hosted browser redemption or real SMS claimed; sending remains disabled. Exact setup/release steps are in docs/BACKEND_OPERATIONS.md.
 
 - **BF04 — IMPLEMENTED:** Casino API awards exactly ten vouchers on the first actual server play, validates subsequent grants and deducts claims atomically. Casino frontend integration is documented for its owner; visuals were preserved.

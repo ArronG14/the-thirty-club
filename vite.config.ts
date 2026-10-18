@@ -1,3 +1,4 @@
+import { butlersOfficeLocalApi } from './build/butlersOfficeLocalApi.ts';
 import { screeningPreviewMedia } from './build/screeningPreviewMedia.ts';
 import { conciergeLocalApi } from './build/conciergeLocalApi.ts';
 import { defineConfig } from 'vitest/config';
@@ -10,6 +11,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     screeningPreviewMedia(),
+    butlersOfficeLocalApi(),
     conciergeLocalApi(),
     react(),
     tailwindcss(),
