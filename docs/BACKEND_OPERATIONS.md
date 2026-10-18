@@ -84,3 +84,69 @@ For local reproduction from the feature branch, run `npm ci`, `npm run check`, `
 The backend candidate incorporates main `7a1f815`, including Shopping. Its existing `/api/concierge/shopping` route, Blobs records, overlay and `butler:shopping` command are preserved. Keep `CONCIERGE_LEGACY_STORAGE` blank during initial deployment. Sonnet's isolated worktree is not part of the deployment source.
 
 Shopping's direct SMS behavior belongs to its existing implementation; `SMS_SENDING_ENABLED` gates the new PostgreSQL outbox. During deployment verification, do not submit a real Shopping claim, execute the announcement command, approve messages or enable the outbox. Use owner/session/read-only API checks first. The original project checkout contains separate unpublished `/api/desk` work: deploy the reviewed Git branch rather than that dirty checkout.
+
+## Integrated release: main + permanent backend + Gift Vault (branch `integration/gift-vault-backend`)
+
+Merge order (both merges conflict-free): `origin/main` `277eaa7` (production, including the live Shopping Privilege) → `codex/backend-butlers-office` `f6c4222` → `feature/gift-vault` `870edb9`. Every Shopping file, `netlify/concierge/api.ts`, the Blobs store and the legacy owner console are byte-identical to production `main`.
+
+**One application, two stores until an explicit cutover.**
+
+- PostgreSQL is authoritative for everything under `/api/v1/*`: the Butler's Office, beauty and drink privileges, vouchers, the SMS outbox and the Gift Vault.
+- The pre-birthday concierge (`/api/concierge/*`: Departure Lounge credentials, privileges and the already-redeemed Shopping Privilege) stays on Netlify Blobs while `CONCIERGE_LEGACY_STORAGE` is blank.
+- **Do not set `CONCIERGE_LEGACY_STORAGE=postgres` without first running the copy procedure above.** Switching early would hide Shopping's existing redemption record and reopen a single-use privilege.
+
+### Supabase migrations (project `fzndcjzenodcixmuvfsb`)
+
+| Migration                                                                                          | Hosted status (per backend log)       |
+| -------------------------------------------------------------------------------------------------- | ------------------------------------- |
+| `20261018160101_backend_foundation.sql` … `20261018162436_reset_edited_message_attempts.sql` (six) | Applied                               |
+| `20261019090000_gift_vault.sql`                                                                    | **Not applied; needs owner approval** |
+
+The vault migration is additive: a new table and new functions with service-only grants and RLS. It alters no existing table or function. Apply it with the Supabase CLI or dashboard before or with the deploy. The deployed API returns `not-configured`/`server` for vault routes until it exists, and every other route is unaffected. Afterwards, re-run the Supabase security advisor.
+
+### Netlify environment (Functions scope)
+
+No new variables. Required for the integrated release:
+
+| Variable                                                                                                | Used by                                       | Status per backend log                               |
+| ------------------------------------------------------------------------------------------------------- | --------------------------------------------- | ---------------------------------------------------- |
+| `SUPABASE_URL`                                                                                          | v1 API, vault                                 | Set                                                  |
+| `SUPABASE_SERVICE_ROLE_KEY`                                                                             | v1 API, vault                                 | **Owner must add privately**                         |
+| `OWNER_PASSWORD_HASH`                                                                                   | `/owner` sign-in                              | Set                                                  |
+| `CONCIERGE_SITE_URL` = `https://30.ag14.co`                                                             | Twilio callbacks; vault NFC URLs              | Set                                                  |
+| `CONCIERGE_SESSION_SECRET`                                                                              | legacy concierge; **vault membership bridge** | Existing (must be the same value the live site uses) |
+| `SMS_SENDING_ENABLED` = `false`                                                                         | PostgreSQL outbox                             | Set                                                  |
+| `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_MESSAGING_SERVICE_SID`, `ARRON_PHONE`, `ALISE_PHONE` | outbox                                        | Per backend log                                      |
+| `CONCIERGE_LEGACY_STORAGE`                                                                              | legacy store selector                         | **Leave blank**                                      |
+
+Existing Shopping, Telegram and credential variables are unchanged.
+
+### Behaviour that changes on deploy (decision recorded, not altered by the integration)
+
+The scheduled function `concierge-dispatch` now runs only the approved PostgreSQL SMS outbox. The legacy Blobs dispatcher no longer runs, so:
+
+- legacy scheduled messages to Alise are not sent automatically;
+- legacy Telegram notification retries do not run. A first send still happens at the moment of redemption, and the legacy console's resend still works.
+
+The equivalent moments exist as PostgreSQL drafts (Thursday 14:00 UK, Friday undecided, Saturday 00:00 and 14:00 Jamaica), which send only after individual approval in `/owner` and `SMS_SENDING_ENABLED=true`. Shopping sends its SMS synchronously and does not depend on the dispatcher.
+
+### Release steps (each needs explicit owner approval)
+
+1. Add `SUPABASE_SERVICE_ROLE_KEY` privately. Confirm `CONCIERGE_LEGACY_STORAGE` is blank and `SMS_SENDING_ENABLED=false`.
+2. Apply `20261019090000_gift_vault.sql` to the hosted project and run the security advisor.
+3. Review the integration branch. Merge it into `main` and push; Netlify builds the published deploy from `main`. Do not deploy `dist` alone.
+4. Smoke tests, read-only first:
+   - `GET /api/v1/auth/session` returns JSON 401;
+   - `/owner` sign-in shows every tab, including _vault_;
+   - `GET /api/concierge/shopping` with Alise's session still reports the existing redemption;
+   - do not POST a Shopping claim.
+5. In `/owner` → vault: create the real compartments (clue and location), write each NFC URL to an NTAG213/215 sticker with an iPhone NFC writer app, and print the backup codes.
+6. Rehearse on the actual iPhone **before** 24 October:
+   - scan a tag while signed in to the office (tag test, nothing changes);
+   - run Preview for each compartment.
+
+   A real member opening is refused until 24 Oct 00:00 Jamaica by design.
+
+7. On the day: make compartments ready (manually or by schedule). The room is open from the birthday induction.
+
+**Rollback.** Redeploy the previous production deploy (`277eaa7`) from Netlify's deploy list. The vault table can stay in place, unused, because the old code never touches it. Blobs data is untouched throughout.

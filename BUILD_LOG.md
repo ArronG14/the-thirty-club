@@ -553,3 +553,21 @@
   - The disk had 3.0 GB free after removing the npm cache and unused Playwright browser builds.
 - **Remaining work:** GV08 (owner approves and applies the migration to the hosted project, merge and deploy, programme NTAG tags, iPhone Safari rehearsal), GV07, GV09 (copy approval).
 - **Commit:** see `git log` on `feature/gift-vault` (not pushed, not merged).
+
+## 2026-10-18 21:40 BST (Europe/London) — Claude (Opus 5.5) — Gift Vault + permanent backend integration
+
+- **Task:** Prepare one coherent application: production `main` + the Supabase backend + the Gift Vault, without disturbing the live Shopping Privilege.
+- **Summary:** New worktree `../the-thirty-club-integration`, branch `integration/gift-vault-backend`, from `origin/main` `277eaa7`. Merged `origin/codex/backend-butlers-office` (`f6c4222`), then `feature/gift-vault` (`870edb9`); both merges were conflict-free. Shopping implementation files, `netlify/concierge/{api,blobStore,channels}.ts` and the legacy owner console are byte-identical to `origin/main`. `/owner` holds every backend tab plus _vault_; the legacy `/concierge/owner` console remains for the Blobs concierge. Added the integrated release runbook to `docs/BACKEND_OPERATIONS.md` (migrations, environment, the dispatcher behaviour change, release and rollback steps).
+- **Created/modified:** two merge commits; `docs/BACKEND_OPERATIONS.md`, `TASKS.md`, `BUILD_LOG.md`.
+- **Checks/results:**
+  - `npm run check` PASS (strict types, ESLint, Prettier, 537 tests in 43 files including 27 vault backend, 38 database and the Shopping suites, production build);
+  - `npx playwright test -c playwright.office.config.ts` PASS 5 (office redemption and SMS drafting; vault NFC journey with membership, reload, interrupted ceremony, re-scan and location edit; preview immutability; malformed link);
+  - `npx playwright test --workers=1` PASS 32 production regressions;
+  - `npm run functions:build` (Netlify CLI 27.13.0) PASS: `api` (`/api/*`, vault code present) and `concierge-dispatch` (every minute).
+- **Known issues / decisions for the owner:**
+  - Inherited from the backend branch: `concierge-dispatch` now runs only the approved PostgreSQL SMS outbox, so legacy Blobs scheduled messages and Telegram retries stop. Shopping is unaffected because it sends synchronously.
+  - `CONCIERGE_LEGACY_STORAGE` must stay blank until the documented copy, or Shopping's redemption record would be hidden.
+  - The original checkout's local `main` (`49142ef`, unpublished) carries another agent's separate `/api/desk` PostgreSQL design (its own ADR-014 and migrations). It is not part of this integration and competes with the backend chosen here; it needs a coordination decision before any of it is merged.
+  - No hosted migration, secret change, merge, push or deploy was performed.
+- **Remaining work:** GV11 owner release steps, GV08 tags and iPhone rehearsal, GV07 casino frontend adoption of the server slots API.
+- **Commit:** this integration commit on `integration/gift-vault-backend` (not pushed).
