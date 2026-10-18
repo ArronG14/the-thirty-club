@@ -12,7 +12,7 @@ import {
   vi,
 } from 'vitest';
 import { createBackendApi } from './api.ts';
-import { BackendError, type Database } from './database.ts';
+import { BackendError, rpcFor, type Database } from './database.ts';
 import { hashToken, newToken, passwordMatches } from './auth.ts';
 import { scryptSync, createHmac } from 'node:crypto';
 import { processMessages, validTwilioSignature } from './sms.ts';
@@ -35,7 +35,7 @@ const db: Database = {
   ) {
     try {
       const result = await pg.query<{ result: T }>(
-        'select public.ttc_action($1,$2,$3,$4::jsonb) as result',
+        `select public.${rpcFor(action)}($1,$2,$3,$4::jsonb) as result`,
         [actor, role, action, JSON.stringify(input)],
       );
       return result.rows[0]!.result;

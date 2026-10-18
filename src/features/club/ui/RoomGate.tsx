@@ -19,12 +19,14 @@ const ROOM_VIEWS: Partial<
 > = {
   'screening-room': lazy(() => import('../../screening/ui/ScreeningRoom')),
   casino: lazy(() => import('../../casino/ui/Casino')),
+  'gift-vault': lazy(() => import('../../vault/ui/VaultRoutes')),
 };
 
 /** What the door says while a lazily loaded room is being prepared. */
 const PREPARING: Partial<Record<RoomId, string>> = {
   'screening-room': 'Preparing your private screening…',
   casino: 'Preparing the tables…',
+  'gift-vault': 'Unlocking the vault door…',
 };
 
 /**

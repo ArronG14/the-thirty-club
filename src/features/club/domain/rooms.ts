@@ -101,12 +101,11 @@ export const ROOMS: readonly RoomDefinition[] = [
   {
     id: 'gift-vault',
     name: 'The Gift Vault',
-    unlock: {
-      kind: 'scheduled',
-      at: instantInZone(ROOM_SCHEDULE['gift-vault']),
-    },
+    // Opens with the birthday membership (from 24 October 00:00 Jamaica,
+    // ADR-012). Each compartment keeps its own server-side availability.
+    unlock: { kind: 'membership' },
     sequence: 3,
-    built: false,
+    built: true,
     path: '/rooms/gift-vault',
     butler: {
       invitation:
@@ -114,7 +113,7 @@ export const ROOMS: readonly RoomDefinition[] = [
       reminder:
         'The Gift Vault remains unopened, Alise. I check on it hourly. It has not budged.',
       announcement:
-        'Forgive the interruption, Alise. The Gift Vault is now open.',
+        'A word before we begin, Alise: the Gift Vault is open to you all day. Its compartments will make themselves known in their own good time.',
     },
   },
   {

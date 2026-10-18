@@ -155,3 +155,7 @@ interface ApiError {
 | 500  | `server`: unexpected failure; retain the original idempotency key when retrying                                 |
 
 Do not expose provider errors, secrets, SQL or stack traces to member clients. Show a recoverable connection error on network failure. The additive owner policy endpoint returns `200 { transactionalSmsApproved: boolean }` and requires an owner session and the same mutation headers. Full response types (Session, PrivilegeInput, Privilege, Redemption, RedeemInput, RedeemResult, RewardBalance, RewardTransaction, SlotPlayResult, ScheduledMessageInput, ScheduledMessage, DeliveryLog, ActivityEvent, OwnerOverview) are defined in the shared TypeScript file committed with this contract.
+
+## Gift Vault (additive)
+
+The vault adds `POST /auth/member/concierge`, `GET /vaults`, `POST /vaults/open` and owner routes under `/owner/vaults`, plus error codes `vault-locked` and `credential-invalid`. They are specified in `docs/GIFT_VAULT.md`, with types (MemberVault, MemberVaultList, VaultOpenInput, VaultOpenResult, VaultInput, OwnerVault, OwnerVaultList, VaultPreview, VaultVerifyResult) in the same shared TypeScript file. Existing routes are unchanged.

@@ -5,6 +5,7 @@ import { activeSession, saveSession } from '../client/sessionStore';
 import { matchesOfflineMembership } from '../client/offlineMembership';
 import { markMembershipOffline } from '../client/membership';
 import { destinationFor, isPlausibleToken } from '../domain/credentials';
+import { heldKey } from '../../vault/client/pendingKey';
 import { WaxSeal } from './Artwork';
 import './departure.css';
 
@@ -47,6 +48,11 @@ export default function CredentialArrival({
       if (result.ok) {
         saveSession(result.data.session);
         const credential = result.data.credential;
+        // A vault key found before the card was presented: resume at the vault.
+        if (heldKey()) {
+          navigate('/vault', { replace: true });
+          return;
+        }
         if (credential === 'membership') {
           navigate('/', {
             replace: true,

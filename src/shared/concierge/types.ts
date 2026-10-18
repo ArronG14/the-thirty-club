@@ -130,10 +130,90 @@ export type ApiErrorCode =
   | 'rate-limited'
   | 'conflict'
   | 'not-configured'
+  | 'vault-locked'
+  | 'credential-invalid'
   | 'server';
 export interface ApiError {
   error: ApiErrorCode;
   message: string;
   requestId: string;
   redemption?: Redemption;
+}
+
+/* ------------------------------------------------------------------ */
+/* The Private Gift Vault. See docs/GIFT_VAULT.md.                      */
+/* No field anywhere names or describes the physical present.          */
+/* ------------------------------------------------------------------ */
+export type VaultState = 'locked' | 'ready' | 'opened';
+export type VaultTrigger = 'manual' | 'scheduled' | 'casino';
+/** The member's view. `clue` only once READY; `giftLocation` only once OPENED. */
+export interface MemberVault {
+  /** Stable id, e.g. `vault-003`. */
+  id: string;
+  /** The engraved compartment number. */
+  number: number;
+  state: VaultState;
+  clue: string | null;
+  giftLocation: string | null;
+  readyAt: ISODateTime | null;
+  openedAt: ISODateTime | null;
+}
+export interface MemberVaultList {
+  /** False before the birthday time-lock; every compartment then reads LOCKED. */
+  open: boolean;
+  opensAt: ISODateTime;
+  vaults: MemberVault[];
+}
+export interface VaultOpenInput {
+  /** The token from the NFC tag's URL (43 characters). */
+  credential?: string;
+  /** The printed backup code, any case or spacing. */
+  code?: string;
+}
+export interface VaultOpenResult {
+  vault: MemberVault;
+  alreadyOpened: boolean;
+}
+export interface VaultInput {
+  displayNumber: number;
+  clue: string;
+  giftLocation: string;
+  trigger: VaultTrigger;
+  availableAt: ISODateTime | null;
+  casinoRewardId: string | null;
+}
+export interface OwnerVault {
+  id: string;
+  slug: string;
+  number: number;
+  clue: string;
+  giftLocation: string;
+  trigger: VaultTrigger;
+  availableAt: ISODateTime | null;
+  casinoRewardId: string | null;
+  state: VaultState;
+  nfcToken: string;
+  /** The URL to write onto the NFC sticker. */
+  nfcUrl: string;
+  backupCode: string;
+  readyAt: ISODateTime | null;
+  openedAt: ISODateTime | null;
+  openedVia: 'nfc' | 'code' | 'owner' | null;
+  createdAt: ISODateTime;
+  updatedAt: ISODateTime;
+}
+export interface OwnerVaultList {
+  opensAt: ISODateTime;
+  vaults: OwnerVault[];
+}
+/** Read-only rehearsal payload: nothing about the real compartment changes. */
+export interface VaultPreview {
+  vault: MemberVault;
+  ready: MemberVault;
+  opened: MemberVault;
+}
+export interface VaultVerifyResult {
+  vaultId: string;
+  number: number;
+  state: VaultState;
 }
