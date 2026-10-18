@@ -114,6 +114,9 @@ export default function OwnerAccess() {
               >
                 Reset test progress
               </button>
+              <button onClick={() => window.location.assign('/?verify=replay')}>
+                Replay first-visit verification
+              </button>
               <button
                 onClick={() => {
                   try {

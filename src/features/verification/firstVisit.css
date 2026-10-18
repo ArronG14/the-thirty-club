@@ -1,0 +1,206 @@
+/* First-visit verification: black, burgundy and champagne gold. */
+.fv {
+  --fv-gold: #e9d39b;
+  --fv-gold-dim: #c4a46a;
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: max(1.5rem, env(safe-area-inset-top)) 1.5rem
+    max(1.5rem, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(ellipse at 50% 38%, #3a0f1d 0%, #1a0710 45%, #000 85%), #000;
+  color: var(--fv-gold);
+  text-align: center;
+  opacity: 1;
+  animation: fv-in 900ms ease-out both;
+}
+.fv[data-leaving='true'] {
+  opacity: 0;
+  transition: opacity 900ms ease-in-out;
+  pointer-events: none;
+}
+.fv__inner {
+  display: grid;
+  justify-items: center;
+  gap: 1.4rem;
+  width: min(100%, 24rem);
+}
+.fv__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.2rem, 6.4vw, 2.1rem);
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+.fv__sub {
+  margin: 0.6rem 0 0;
+  font-size: 0.64rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: var(--fv-gold-dim);
+}
+.fv__head::after {
+  content: '';
+  display: block;
+  width: 5rem;
+  height: 1px;
+  margin: 1rem auto 0;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    var(--fv-gold-dim),
+    transparent
+  );
+}
+.fv-scanner {
+  width: min(62vw, 15rem);
+  height: auto;
+  animation: fv-in 700ms ease-out both;
+}
+.fv-ring,
+.fv-lens {
+  fill: none;
+  stroke: var(--fv-gold-dim);
+  stroke-width: 0.8;
+}
+.fv-ring--outer {
+  stroke-width: 1.6;
+}
+.fv-lens {
+  fill: rgb(10 2 5 / 0.6);
+}
+.fv-ticks line {
+  stroke: var(--fv-gold-dim);
+  stroke-width: 0.8;
+  opacity: 0.8;
+}
+.fv-face {
+  fill: none;
+  stroke: var(--fv-gold);
+  stroke-width: 0.7;
+  opacity: 0.25;
+  transition: opacity 600ms ease;
+}
+.fv-face circle {
+  fill: var(--fv-gold);
+  stroke: none;
+}
+.fv-scanner[data-active='true'] .fv-face {
+  opacity: 0.9;
+}
+.fv-brackets {
+  fill: none;
+  stroke: var(--fv-gold);
+  stroke-width: 1.2;
+}
+.fv-sweep {
+  opacity: 0;
+}
+.fv-scanner[data-active='true'] .fv-sweep {
+  opacity: 1;
+  animation: fv-sweep 1.8s ease-in-out infinite alternate;
+}
+.fv-ticks {
+  transform-origin: 100px 100px;
+}
+.fv-scanner[data-active='true'] .fv-ticks {
+  animation: fv-turn 24s linear infinite;
+}
+.fv__foot {
+  display: grid;
+  gap: 0.7rem;
+  min-height: 5.5rem;
+  align-content: start;
+}
+.fv__caption {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.3em;
+  text-indent: 0.3em;
+  text-transform: uppercase;
+  animation: fv-in 600ms ease-out both;
+}
+.fv__result {
+  display: grid;
+  gap: 0.5rem;
+  animation: fv-in 800ms ease-out both;
+}
+.fv__confirmed {
+  margin: 0;
+  font-size: 0.7rem;
+  letter-spacing: 0.34em;
+  text-indent: 0.34em;
+  text-transform: uppercase;
+  color: var(--fv-gold-dim);
+}
+.fv__name {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.9rem, 10vw, 2.6rem);
+  letter-spacing: 0.2em;
+  text-indent: 0.2em;
+  text-transform: uppercase;
+}
+.fv__rank {
+  margin: 0;
+  font-size: 0.72rem;
+  letter-spacing: 0.26em;
+  text-indent: 0.26em;
+  text-transform: uppercase;
+}
+.fv__access {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  letter-spacing: 0.32em;
+  text-indent: 0.32em;
+  text-transform: uppercase;
+  animation: fv-in 700ms ease-out both;
+}
+.fv__quote {
+  margin: 0;
+  font-style: italic;
+  font-size: clamp(1rem, 4.4vw, 1.15rem);
+  line-height: 1.4;
+  color: var(--ivory, #f4ebdd);
+  animation: fv-in 900ms ease-out 400ms both;
+}
+@keyframes fv-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes fv-sweep {
+  from {
+    transform: translateY(0);
+  }
+  to {
+    transform: translateY(200px);
+  }
+}
+@keyframes fv-turn {
+  to {
+    transform: rotate(360deg);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .fv,
+  .fv *,
+  .fv-scanner {
+    animation-duration: 1ms !important;
+    animation-delay: 0s !important;
+    animation-iteration-count: 1 !important;
+  }
+  .fv[data-leaving='true'] {
+    transition-duration: 250ms;
+  }
+  .fv-scanner[data-active='true'] .fv-sweep {
+    transform: translateY(100px);
+  }
+}

@@ -1,5 +1,16 @@
 # Engineering journal
 
+## 2026-10-18 15:20 BST (Europe/London) — Claude Code — First-visit cinematic identity verification
+
+- **Task:** Theatrical full-screen verification shown once, on a first visit to the entrance.
+- **Summary:** `FirstVisitCinematic` renders in a portal above the app from `main.tsx`; the entrance stays mounted and loads underneath, and `#root` is `inert` while the overlay plays. Five beats (about 6.2 s minimum) hold on the verification beat until fonts and the 3D entrance chunk are ready, capped at 10 s; failed loads count as ready. Completion is stored in `localStorage` (`thirty-club:first-visit-verified`). Owner mode bypasses it; `/?verify=replay` and an owner-menu button replay it. Reduced motion shortens the holds and removes the sweep and rotation. No camera, no biometrics, no real authentication. Entrance, routes, access logic and all other rooms are unchanged.
+- **Created:** `src/features/verification/{firstVisit.ts,FirstVisitCinematic.tsx,firstVisit.css,firstVisit.test.tsx}`, `tests/first-visit.spec.ts`.
+- **Modified:** `src/main.tsx`, `src/features/owner/OwnerAccess.tsx` (one button), `playwright.config.ts` (existing suites start as already-verified), `TASKS.md` (formatting).
+- **Checks and results:** `npm run check` PASS (429 tests, build). `npx playwright test --workers=1` PASS (32 tests including the new first-visit flow). Viewed in the in-app browser at 390×844; no flash of the entrance beneath (overlay and entrance commit together).
+- **Known issues:** Not run on a real iPhone or Safari. A visitor whose storage is unreadable skips the sequence. The cinematic is skipped on routes other than `/`.
+- **Remaining work:** Real iPhone check.
+- **Commit:** see git history.
+
 ## 2026-10-18 14:10 BST (Europe/London) — Claude Code — Live countdown in the concierge letter
 
 - **Task:** Add a live engraved countdown to the opened Departure Lounge letter.

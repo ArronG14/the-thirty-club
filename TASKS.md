@@ -128,6 +128,6 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 | K10 | P0       | NOT STARTED | Full rehearsal on the real iPhone (Safari) and hosted site: Thursday, in-flight, Friday, birthday card ceremony; then clear rehearsal/live test records                                                 |
 | K11 | P1       | NOT STARTED | Optional: Twilio account, alphanumeric sender test to Alise's number, `ALISE_DISPATCH=sms`                                                                                                              |
 | K12 | P1       | NOT STARTED | Owner approval of concierge copy, in-flight time (PROVISIONAL 18:30 UK), Friday time (09:00 Jamaica) and membership riddle (PROVISIONAL)                                                                |
-| K13 | P1       | IMPLEMENTED | Live engraved countdown in the opened Departure Lounge letter (unit tests pass; not yet reviewed on an iPhone) |
+| K13 | P1       | IMPLEMENTED | Live engraved countdown in the opened Departure Lounge letter (unit tests pass; not yet reviewed on an iPhone)                                                                                          |
 
 VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.

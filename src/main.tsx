@@ -2,6 +2,7 @@ import { lazy, StrictMode, Suspense } from 'react';
 import { createRoot } from 'react-dom/client';
 import { BrowserRouter } from 'react-router';
 import { App } from './app/App';
+import { FirstVisitCinematic } from './features/verification/FirstVisitCinematic';
 import './styles/global.css';
 
 // DEV-MENU (remove with src/dev): statically false, so absent from production.
@@ -16,6 +17,7 @@ createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
       <App />
+      <FirstVisitCinematic />
       {DevMenu && (
         <Suspense fallback={null}>
           <DevMenu />
