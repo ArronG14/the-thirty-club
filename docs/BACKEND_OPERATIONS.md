@@ -78,3 +78,9 @@ A scheduled message more than 30 minutes late is failed for review. Edit its dat
 7. Only after explicit owner approval, enable `SMS_SENDING_ENABLED=true` and redeploy. No real SMS has been sent during development. Keep the switch false throughout deployment verification if messaging approval is still pending.
 
 For local reproduction from the feature branch, run `npm ci`, `npm run check`, `npm run functions:build` and `npm run test:office`. The Functions build script pins Netlify CLI 27.13.0, the version verified for this change.
+
+## Shopping compatibility during permanent deployment
+
+The backend candidate incorporates main `7a1f815`, including Shopping. Its existing `/api/concierge/shopping` route, Blobs records, overlay and `butler:shopping` command are preserved. Keep `CONCIERGE_LEGACY_STORAGE` blank during initial deployment. Sonnet's isolated worktree is not part of the deployment source.
+
+Shopping's direct SMS behavior belongs to its existing implementation; `SMS_SENDING_ENABLED` gates the new PostgreSQL outbox. During deployment verification, do not submit a real Shopping claim, execute the announcement command, approve messages or enable the outbox. Use owner/session/read-only API checks first. The original project checkout contains separate unpublished `/api/desk` work: deploy the reviewed Git branch rather than that dirty checkout.

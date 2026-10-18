@@ -141,3 +141,8 @@ VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does no
 
 - **BF04 — IMPLEMENTED:** Casino API awards exactly ten vouchers on the first actual server play, validates subsequent grants and deducts claims atomically. Casino frontend integration is documented for its owner; visuals were preserved.
 - **BF05 — IMPLEMENTED:** Guarded legacy Blobs-to-PostgreSQL copy and verification tool. Actual source data cutover awaits Netlify access and a brief write freeze.
+
+| S01 | P0 | IMPLEMENTED | Shopping Privilege (`/?concierge=shopping`, `/api/concierge/shopping`, `npm run butler:shopping`). Checks passed locally; not deployed, no real Twilio/iPhone run |
+
+- **BF06 — VERIFIED:** Permanent backend compatibility with published Shopping (`7a1f815`): additive conflicts resolved on the backend branch; Shopping implementation unchanged; combined check passes 490 tests, Functions bundles and two owner browser rehearsals.
+- **BF07 — IN PROGRESS:** Guided Netlify access/configuration and permanent backend deployment. Owner password/hash generated privately using the existing script; SMS remains disabled; hosted verification awaits configuration and deployment.

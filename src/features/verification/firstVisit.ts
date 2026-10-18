@@ -58,6 +58,11 @@ export function shouldPlayVerification(
   owner: boolean = ownerActive,
 ): boolean {
   if (window.location.pathname !== '/') return false;
+  // A direct Shopping Privilege link goes straight to the Butler.
+  if (
+    new URLSearchParams(window.location.search).get('concierge') === 'shopping'
+  )
+    return false;
   const replay = consumeReplayRequest(storage);
   if (owner && !replay) return false;
   if (replay) return true;

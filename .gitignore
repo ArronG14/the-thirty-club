@@ -22,3 +22,5 @@ Thumbs.db
 .AppleDouble/
 .LSOverride
 supabase/.temp/
+
+.butler-shopping-sent

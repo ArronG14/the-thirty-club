@@ -36,7 +36,7 @@ export interface ConciergeApi {
 
 const TIMEOUT_MS = 15_000;
 
-async function call<T>(
+export async function call<T>(
   path: string,
   init: { method: 'GET' | 'POST'; body?: unknown; session?: string },
 ): Promise<ApiResult<T>> {

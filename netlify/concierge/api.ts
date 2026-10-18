@@ -41,6 +41,7 @@ import type {
 import { anonymise, secretsEqual, signSession, verifySession } from './auth.ts';
 import { telegramMessage } from './channels.ts';
 import { configHealth } from './config.ts';
+import { readShopping, requestShopping } from './shopping.ts';
 import {
   conciergeState,
   deliverRedemption,
@@ -316,6 +317,45 @@ async function redeem(deps: ServiceDeps, request: Request, ip: string) {
   });
 }
 
+async function shoppingSession(deps: ServiceDeps, request: Request) {
+  const { claims } = await sessionFrom(deps, request);
+  if (!claims) {
+    return fail(401, 'unauthorised', 'Please present your membership first.');
+  }
+  if (
+    !claims.scopes.includes('membership') &&
+    !claims.scopes.includes('departure')
+  ) {
+    return fail(403, 'forbidden', 'Please present your membership first.');
+  }
+  return claims;
+}
+
+async function shoppingState(deps: ServiceDeps, request: Request) {
+  const claims = await shoppingSession(deps, request);
+  if (claims instanceof Response) return claims;
+  return json(200, await readShopping(deps, claims.realm));
+}
+
+async function shoppingRequest(
+  deps: ServiceDeps,
+  request: Request,
+  ip: string,
+) {
+  const claims = await shoppingSession(deps, request);
+  if (claims instanceof Response) return claims;
+  if (await overLimit(deps, 'redeem', ip)) return limited();
+  await countHit(deps, 'redeem', ip);
+  const body = await readBody(request);
+  const outcome = await requestShopping(deps, claims.realm, {
+    amount: body.amount,
+    idempotencyKey: body.idempotencyKey,
+  });
+  return 'body' in outcome
+    ? json(outcome.status, outcome.body)
+    : json(outcome.status, { error: outcome.error, message: outcome.message });
+}
+
 // ---------- Owner routes ----------
 
 async function ownerAuthorised(
@@ -535,6 +575,10 @@ export function createConciergeApi(deps: ServiceDeps) {
           return await activate(deps, request, ip);
         case 'POST /api/concierge/redeem':
           return await redeem(deps, request, ip);
+        case 'GET /api/concierge/shopping':
+          return await shoppingState(deps, request);
+        case 'POST /api/concierge/shopping':
+          return await shoppingRequest(deps, request, ip);
       }
       if (url.pathname.startsWith('/api/owner/')) {
         const refused = await ownerAuthorised(deps, request, ip);
