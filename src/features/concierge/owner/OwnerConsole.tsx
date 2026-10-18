@@ -154,6 +154,23 @@ export default function OwnerConsole() {
       setData(result.data);
       if (
         new URLSearchParams(window.location.search).get('start') ===
+          'shopping' &&
+        !startingDeparture.current
+      ) {
+        // Isolated test: a rehearsal session never touches Alise's records.
+        startingDeparture.current = true;
+        const preview = await ownerApi(key).rehearsal(Date.now(), [
+          'membership',
+        ]);
+        if (preview.ok) {
+          endRehearsal();
+          saveSession(preview.data.session);
+          window.location.assign('/?concierge=shopping');
+        } else {
+          setNotice(`Shopping rehearsal: ${preview.message}`);
+        }
+      } else if (
+        new URLSearchParams(window.location.search).get('start') ===
           'departure' &&
         !startingDeparture.current
       ) {

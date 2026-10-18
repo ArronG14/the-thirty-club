@@ -1,6 +1,6 @@
 import OwnerAccess from '../features/owner/OwnerAccess';
 import { lazy, Suspense } from 'react';
-import { Route, Routes } from 'react-router';
+import { Route, Routes, useSearchParams } from 'react-router';
 import { RoomGate } from '../features/club/ui/RoomGate';
 import { RehearsalRibbon } from '../features/concierge/ui/RehearsalRibbon';
 import { Entrance } from '../features/entrance/ui/Entrance';
@@ -12,6 +12,9 @@ const DepartureLounge = lazy(
 );
 const CredentialArrival = lazy(
   () => import('../features/concierge/ui/CredentialArrival'),
+);
+const ShoppingPrivilege = lazy(
+  () => import('../features/concierge/ui/ShoppingPrivilege'),
 );
 const OwnerConsole = lazy(
   () => import('../features/concierge/owner/OwnerConsole'),
@@ -32,6 +35,8 @@ const ScreeningPreview = import.meta.env.DEV
 
 export function App() {
   useConnectivity();
+  const [params, setParams] = useSearchParams();
+  const shopping = params.get('concierge') === 'shopping';
   const preview = import.meta.env.DEV
     ? new URLSearchParams(window.location.search).get('preview')
     : null;
@@ -46,6 +51,17 @@ export function App() {
     <AppShell>
       <OwnerAccess />
       <RehearsalRibbon />
+      {shopping && (
+        <Suspense fallback={null}>
+          <ShoppingPrivilege
+            onClose={() => {
+              const next = new URLSearchParams(params);
+              next.delete('concierge');
+              setParams(next, { replace: true });
+            }}
+          />
+        </Suspense>
+      )}
       <Routes>
         <Route path="/" element={<Entrance />} />
         <Route path="/rooms/:roomId" element={<RoomGate />} />

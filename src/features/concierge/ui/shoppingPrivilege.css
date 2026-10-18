@@ -1,0 +1,160 @@
+/* The Shopping Privilege: the Butler at the Concierge Desk. Brass on dark. */
+.shop {
+  position: fixed;
+  inset: 0;
+  z-index: 900;
+  display: grid;
+  place-items: center;
+  overflow-y: auto;
+  padding: var(--gutter-top) var(--gutter-right) var(--gutter-bottom)
+    var(--gutter-left);
+  background:
+    radial-gradient(120% 80% at 50% 0%, rgb(74 20 36 / 0.55), transparent 60%),
+    linear-gradient(180deg, #0b0b0d, #15100e 70%, #0b0b0d);
+  color: var(--ivory);
+  animation: shop-in 0.8s ease both;
+}
+.shop__frame {
+  position: relative;
+  display: grid;
+  justify-items: center;
+  gap: 1rem;
+  width: 100%;
+  max-width: 24rem;
+  margin: auto;
+  padding: 2.4rem 1.4rem 1.6rem;
+  border: 1px solid rgb(201 160 84 / 0.55);
+  box-shadow:
+    inset 0 0 0 4px #0b0b0d,
+    inset 0 0 0 5px rgb(201 160 84 / 0.3),
+    0 24px 60px -20px rgb(0 0 0 / 0.9);
+  background: rgb(20 14 12 / 0.82);
+  text-align: center;
+}
+.shop__seal {
+  width: 3rem;
+  height: 3rem;
+}
+.shop__eyebrow {
+  margin: 0;
+  font-family: var(--font-caps);
+  font-size: 0.58rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--champagne-bright);
+}
+.shop__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.5rem, 7vw, 1.9rem);
+  line-height: 1.15;
+  color: var(--champagne-bright);
+}
+.shop__lines {
+  display: grid;
+  gap: 0.8rem;
+  min-height: 2rem;
+}
+.shop__line {
+  margin: 0;
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: clamp(1.05rem, 4.6vw, 1.25rem);
+  line-height: 1.4;
+  color: var(--ink-soft);
+  animation: shop-line 0.9s ease both;
+}
+.shop__form {
+  display: grid;
+  gap: 0.8rem;
+  width: 100%;
+  animation: shop-line 0.9s 3.6s ease both;
+}
+.shop__label {
+  font-family: var(--font-caps);
+  font-size: 0.58rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.shop__field {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0 0.9rem;
+  border: 1px solid rgb(201 160 84 / 0.6);
+  border-radius: 3px;
+  background: rgb(0 0 0 / 0.4);
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  color: var(--champagne-bright);
+}
+.shop__field:focus-within {
+  border-color: var(--champagne-bright);
+  box-shadow: 0 0 0 2px rgb(233 211 155 / 0.25);
+}
+.shop__field input {
+  flex: 1;
+  min-width: 0;
+  min-height: 56px;
+  border: 0;
+  background: none;
+  color: var(--ivory);
+  font: inherit;
+  /* 16px minimum keeps iOS Safari from zooming the page on focus. */
+  font-size: max(1.5rem, 16px);
+  outline: none;
+}
+.shop__note {
+  margin: 0;
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: 1.05rem;
+  line-height: 1.4;
+  color: var(--champagne-bright);
+}
+.shop__status {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: center;
+  animation: shop-line 0.9s 3.8s ease both;
+}
+.shop__badge {
+  padding: 0.7rem 1.1rem;
+  border: 1px solid var(--champagne);
+  border-radius: 2px;
+  font-family: var(--font-caps);
+  font-size: 0.7rem;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: var(--champagne-bright);
+  background: rgb(201 160 84 / 0.1);
+}
+.shop__amount {
+  font-family: var(--font-text);
+  font-style: italic;
+  color: var(--ink-faint);
+}
+.shop .quiet-button {
+  color: var(--ink-faint);
+}
+@keyframes shop-in {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes shop-line {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .shop,
+  .shop__line,
+  .shop__form,
+  .shop__status {
+    animation: none;
+  }
+}

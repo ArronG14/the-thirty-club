@@ -434,3 +434,15 @@
   - K11: optional Twilio.
   - K12: copy and time approvals.
 - **Commit:** `9b4fb5d` (feature, on branch `concierge/pre-birthday`, rebased onto `6ebc301`); this log entry is committed immediately after it. See git history.
+
+## 2026-10-18 17:40 BST — Claude (Sonnet 5.5) — Shopping Privilege (no Supabase)
+
+- **Task:** Surprise Shopping Privilege: SMS announcement, deep link `/?concierge=shopping`, Butler UI, hidden server-side £100 ceiling, SMS to Arron. Built on branch `feature/shopping-privilege` (separate worktree) so it cannot collide with the Supabase/desk work.
+- **Summary:** One new concierge route, `GET/POST /api/concierge/shopping`, using the existing session, rate limit, Netlify Blobs store (create-if-new, so single use is genuinely enforced) and Twilio channel. Amount parsed to integer pence server-side; the ceiling exists only in `netlify/concierge/shopping.ts`. Success is returned only after Twilio accepts the SMS to `ARRON_PHONE`; on failure nothing is recorded and she may retry. Test mode is the existing rehearsal realm (`/concierge/owner?start=shopping`, owner key required): separate records, SMS to Arron marked `[TEST — NOT REAL]`, never to Alise. `npm run butler:shopping` sends the announcement (confirmation prompt, `--dry-run`, once-only marker).
+- **Created:** `netlify/concierge/shopping.ts`, `shopping.test.ts`, `src/features/concierge/client/shoppingApi.ts`, `ui/ShoppingPrivilege.tsx`, `ui/shoppingPrivilege.css`, `tools/butler-shopping.mjs`.
+- **Modified:** `netlify/concierge/api.ts`, `client/api.ts` (export `call`), `App.tsx`, `firstVisit.ts` (cinematic skipped for the shopping link), `OwnerConsole.tsx` (`?start=shopping`), `package.json`, `.gitignore`.
+- **Checks:** `npm run check` PASS (454 tests, 17 new). Browser check at 375×812 against the dev server with fake channels: rehearsal start, Butler intro, £150 refused with the Butler's wording, £75 accepted, AWAITING SETTLEMENT, fake SMS outbox correct. `dist/` contains no ceiling or refusal copy.
+- **Not verified:** No Netlify deploy, no real Twilio call, no iPhone/Safari run, no Playwright suite run. `npm run butler:shopping` was only dry-run, and only up to the missing-variables check (local `.env` has no Twilio values).
+- **Known limits:** Single use is per realm, not per identity: the first valid request wins. Anyone holding a membership session on the live realm can use it. The live link carries no secret; a device with no session must present the membership card number first.
+- **Remaining:** Deploy approval; set env vars; iPhone test; send announcement.
+- **Commit:** see git history on `feature/shopping-privilege`.

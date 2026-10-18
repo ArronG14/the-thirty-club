@@ -132,3 +132,18 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 | K14 | P0       | IMPLEMENTED | 3D entrance stability on iPhone Safari: no poster for a slow-but-playing scene, context-loss recovery, `?entrance-diag` (simulated WebKit only; real iPhone check pending)                              |
 
 VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.
+
+## Butler's desk — Supabase, redemption API and owner office
+
+The Departure Lounge concierge (K01–K14) stays as built. This table is the separate PostgreSQL desk (ADR-014).
+
+| ID  | Priority | Status      | Task / acceptance                                                                                                                                                         |
+| --- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| B10 | P0       | IMPLEMENTED | API contract (`docs/CONCIERGE_API_CONTRACT.md`) and shared types (`src/shared/desk/contract.ts`), committed before the server                                             |
+| B11 | P0       | IMPLEMENTED | Supabase migration for members, privileges, redemptions, balances, SMS, activity and future NFC tokens. The hosted project is not created yet                             |
+| B12 | P0       | NOT STARTED | Desk API: member session, privileges, idempotent redemption, balances, owner fulfilment                                                                                   |
+| B13 | P0       | NOT STARTED | Butler's Office at `/owner`: SMS login, privileges, pending redemptions, scheduled messages, deliveries, activity                                                         |
+| B14 | P0       | NOT STARTED | Twilio Messaging Service sender THIRTYCLUB, scheduled worker, retries that cannot undo a redemption                                                                       |
+| B15 | P0       | NOT STARTED | Focused tests: auth, amounts, duplicates, concurrency, fulfilment, balances, SMS failure, schedule idempotency                                                            |
+| B16 | P0       | NOT STARTED | Apply the migration to the dedicated Supabase project and set Netlify environment variables. Not production verification until a real redemption is fulfilled on the host |
+| S01 | P0       | IMPLEMENTED | Shopping Privilege (`/?concierge=shopping`, `/api/concierge/shopping`, `npm run butler:shopping`). Checks passed locally; not deployed, no real Twilio/iPhone run         |
