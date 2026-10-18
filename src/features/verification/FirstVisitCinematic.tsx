@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useReducedMotion } from '../../shared/ui/useReducedMotion';
 import {
@@ -99,7 +99,7 @@ const CAPTIONS: Partial<Record<Beat, string>> = {
   verify: 'Verifying membership credentials',
 };
 
-function Sequence({ onDone }: { onDone(): void }) {
+function Sequence({ onEnter, onDone }: { onEnter(): void; onDone(): void }) {
   const reduced = useReducedMotion();
   const [beat, setBeat] = useState(0);
   const [ready, setReady] = useState(false);
@@ -122,12 +122,17 @@ function Sequence({ onDone }: { onDone(): void }) {
     // Hold on the verification beat until the entrance is ready: the
     // sequence extends itself rather than revealing a half-loaded scene.
     if (lastVerify && !ready) return;
-    const timer = setTimeout(() => {
-      if (beat < BEATS.length - 1) setBeat(beat + 1);
-      else setLeaving(true);
-    }, hold);
+    // The last beat stays until the visitor chooses to enter.
+    if (beat >= BEATS.length - 1) return;
+    const timer = setTimeout(() => setBeat(beat + 1), hold);
     return () => clearTimeout(timer);
   }, [beat, name, lastVerify, ready, reduced]);
+
+  const enter = useRef<HTMLButtonElement>(null);
+  const stage = BEATS.indexOf(name);
+  useEffect(() => {
+    if (stage === 4) enter.current?.focus();
+  }, [stage]);
 
   useEffect(() => {
     if (!leaving) return;
@@ -135,7 +140,6 @@ function Sequence({ onDone }: { onDone(): void }) {
     return () => clearTimeout(timer);
   }, [leaving, onDone, reduced]);
 
-  const stage = BEATS.indexOf(name);
   return (
     <div
       className="fv"
@@ -170,6 +174,18 @@ function Sequence({ onDone }: { onDone(): void }) {
               <p className="fv__quote">
                 “Ah, Mrs Gill. We’ve been expecting you.”
               </p>
+              <button
+                ref={enter}
+                type="button"
+                className="fv__enter"
+                disabled={!ready || leaving}
+                onClick={() => {
+                  onEnter();
+                  setLeaving(true);
+                }}
+              >
+                Enter the Club
+              </button>
             </>
           )}
         </div>
@@ -194,12 +210,7 @@ export function FirstVisitCinematic() {
 
   if (!playing) return null;
   return createPortal(
-    <Sequence
-      onDone={() => {
-        markVerified();
-        setPlaying(false);
-      }}
-    />,
+    <Sequence onEnter={markVerified} onDone={() => setPlaying(false)} />,
     document.body,
   );
 }

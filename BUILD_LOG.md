@@ -1,5 +1,15 @@
 # Engineering journal
 
+## 2026-10-18 16:05 BST (Europe/London) — Claude Code — Verification waits for "Enter the Club"
+
+- **Task:** Baseline `eeffba0`. The final verification screen now stays until Alise chooses to continue.
+- **Summary:** The last beat no longer auto-dismisses. An "Enter the Club" champagne-gold button (breathing glow, none under reduced motion) is focused when it appears; activating it records completion in `localStorage`, fades the overlay and reveals the already-mounted entrance. Completion is no longer recorded when the animation ends, so a refresh before clicking replays it. The verifying beat still waits for entrance readiness (10 s cap), so the button is enabled on arrival. The overlay only dismisses; it never touches the doors. The app stays `inert` until dismissal. Owner bypass and `?verify=replay` unchanged.
+- **Modified:** `src/features/verification/{FirstVisitCinematic.tsx,firstVisit.css,firstVisit.test.tsx}`, `tests/first-visit.spec.ts`.
+- **Checks and results:** `npm run check` PASS (429 tests, build). Full `npx playwright test --workers=1`: 31 passed; the first-visit spec failed on a 30 s test timeout, then PASSED alone after raising its timeouts (it runs two full sequences).
+- **Known issues:** On this Mac the software-rendered 3D scene beneath slowed the overlay's timers noticeably, so the sequence ran longer in some Playwright runs. Not tried on a real iPhone or Safari.
+- **Remaining work:** Real iPhone check.
+- **Commit:** see git history.
+
 ## 2026-10-18 15:20 BST (Europe/London) — Claude Code — First-visit cinematic identity verification
 
 - **Task:** Theatrical full-screen verification shown once, on a first visit to the entrance.

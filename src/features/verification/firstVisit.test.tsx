@@ -1,4 +1,4 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { FirstVisitCinematic } from './FirstVisitCinematic';
@@ -95,15 +95,24 @@ describe('the cinematic', () => {
     }
   };
 
-  it('runs the sequence, records completion, then leaves', async () => {
+  it('stays on the final screen, records nothing, until Enter is chosen', async () => {
     play();
     expect(screen.getByText('Private membership authentication')).toBeTruthy();
     expect(document.getElementById('root')?.hasAttribute('inert')).toBe(true);
-    await advance(5_000);
+    await advance(6_000);
     expect(screen.getByText('Alise Gill')).toBeTruthy();
-    await advance(2_500);
-    expect(screen.queryByRole('status')).toBeNull();
+    const enter = screen.getByRole('button', { name: 'Enter the Club' });
+    expect(document.activeElement).toBe(enter);
+    // No automatic dismissal, however long she lingers.
+    await advance(30_000);
+    expect(screen.getByRole('button', { name: 'Enter the Club' })).toBeTruthy();
+    expect(window.localStorage.getItem(VERIFIED_KEY)).toBeNull();
+    expect(document.getElementById('root')?.hasAttribute('inert')).toBe(true);
+
+    fireEvent.click(enter);
     expect(window.localStorage.getItem(VERIFIED_KEY)).not.toBeNull();
+    await advance(1_200);
+    expect(screen.queryByRole('status')).toBeNull();
     expect(document.getElementById('root')?.hasAttribute('inert')).toBe(false);
   });
 
@@ -124,7 +133,8 @@ describe('the cinematic', () => {
       await advance(8_000);
       expect(screen.getByText('Verifying membership credentials')).toBeTruthy();
       await advance(2_100 + 6_000);
-      expect(screen.queryByRole('status')).toBeNull();
+      const enter = screen.getByRole('button', { name: 'Enter the Club' });
+      expect((enter as HTMLButtonElement).disabled).toBe(false);
     } finally {
       Reflect.deleteProperty(document, 'fonts');
     }
