@@ -309,3 +309,9 @@ Full design, API and operations: `docs/GIFT_VAULT.md`.
 **Casino.** Server contract only: a server-recorded slots jackpot releases compartments bound to `casino.vault-key-one`. The casino frontend still plays slots locally and never calls the server play API, so the trigger is not live (see `docs/GIFT_VAULT.md`).
 
 **Open questions.** Applying the migration to the hosted project and deployment (owner approval); real NFC/iPhone rehearsal; owner approval of Butler and letter wording; who connects the casino frontend to the server play API. ADR numbering: an unpublished desk draft in the original checkout also uses ADR-014; this record is ADR-015 to avoid colliding with either.
+
+### Release integration questions (18 October 2026)
+
+The release candidate carries ADR-014 and ADR-015 without changing their storage boundaries. `CONCIERGE_LEGACY_STORAGE` must stay blank while Shopping's redeemed record remains only in Netlify Blobs. The new scheduled worker intentionally omits legacy scheduled messages and retains legacy notification retries. Arron must choose whether each upcoming travel announcement is sent manually from the legacy console or approved through the PostgreSQL outbox before deployment. The global `SMS_SENDING_ENABLED` switch controls only that outbox; the existing Shopping POST and explicit legacy Send now paths retain their own behavior.
+
+The divergent local `main` desk draft defines separate `public.members`, `public.privileges`, and `public.scheduled_messages` tables while the integrated backend uses `ttc_*` tables. No desk migration from that checkout belongs in this candidate without a schema reconciliation. The Correspondence feature starts at `bccce30` but its final schema and overlap will be assessed only from a completed committed ref. See `docs/RELEASE_CANDIDATE_2026-10-18.md` for merge order and gates.
