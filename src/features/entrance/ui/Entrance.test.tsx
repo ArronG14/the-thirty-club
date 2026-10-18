@@ -378,6 +378,39 @@ describe('the letter on the step (Phase One)', () => {
     expect(screen.queryByRole('dialog')).toBeNull();
   });
 
+  it('counts down live in the open letter to 14:00 UK, whatever the device zone', () => {
+    // 13:00 UTC is 14:00 BST: 1 day, 2 hours, 3 minutes, 4 seconds before.
+    vi.setSystemTime(
+      new Date(THURSDAY_2PM_UK - (26 * 3600 + 3 * 60 + 4) * 1000),
+    );
+    open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'A letter has been left for you' }),
+    );
+    const clock = screen.getByRole('timer', { name: 'Time until opening' });
+    expect(clock).toHaveTextContent('1 day, 2 hours, 3 minutes, 4 seconds');
+    advance(1_000);
+    expect(clock).toHaveTextContent('1 day, 2 hours, 3 minutes, 3 seconds');
+  });
+
+  it('turns the open letter into the unlocked state at zero', () => {
+    vi.setSystemTime(new Date(THURSDAY_2PM_UK - 2_000));
+    open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'A letter has been left for you' }),
+    );
+    expect(
+      screen.getByRole('timer', { name: 'Time until opening' }),
+    ).toHaveTextContent('0 days, 0 hours, 0 minutes, 2 seconds');
+    advance(2_100);
+    expect(
+      screen.queryByRole('timer', { name: 'Time until opening' }),
+    ).toBeNull();
+    expect(
+      screen.getByRole('link', { name: 'Proceed to the Departure Lounge' }),
+    ).toHaveAttribute('href', '/departure');
+  });
+
   it('leads to the Departure Lounge from Thursday at two, UK time', () => {
     vi.setSystemTime(new Date(THURSDAY_2PM_UK + 60_000));
     open(undefined, undefined, absentCard);

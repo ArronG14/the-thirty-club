@@ -22,6 +22,7 @@ import {
   UK_ZONE,
 } from '../domain/time';
 import { WaxSeal } from './Artwork';
+import { LetterCountdown } from './LetterCountdown';
 import { ConciergeLetter, PaperSheet } from './Paper';
 import './departure.css';
 import './entranceConcierge.css';
@@ -31,7 +32,9 @@ export function EntranceLetter({ now }: { now: number }) {
   const [opener, setOpener] = useState<HTMLElement | null>(null);
   const titleId = useId();
   const opensAt = instantOf(DEPARTURE_LOUNGE_OPENS);
-  const ready = now >= opensAt;
+  // The letter's own clock can reach the hour before the entrance's does.
+  const [elapsed, setElapsed] = useState(false);
+  const ready = elapsed || now >= opensAt;
 
   return (
     <>
@@ -91,6 +94,11 @@ export function EntranceLetter({ now }: { now: number }) {
                 <span>{describeInstant(opensAt, UK_ZONE)}</span>
                 <span>In {describeCountdown(now, opensAt)}</span>
               </p>
+              <LetterCountdown
+                target={opensAt}
+                now={Date.now}
+                onElapsed={() => setElapsed(true)}
+              />
             </ConciergeLetter>
           )}
         </PaperSheet>

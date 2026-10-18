@@ -1,5 +1,16 @@
 # Engineering journal
 
+## 2026-10-18 14:10 BST (Europe/London) — Claude Code — Live countdown in the concierge letter
+
+- **Task:** Add a live engraved countdown to the opened Departure Lounge letter.
+- **Summary:** New `LetterCountdown` counts days, hours, minutes and seconds to 22 October 2026, 14:00 Europe/London (13:00 UTC), reusing `instantOf`, `remainingUntil`, `msUntilNextTick` and `pad`. It owns its one-second timer, so only it rerenders. At zero it tells `EntranceLetter`, which switches to the existing unlocked letter and link. Birthday countdown, concierge unlock logic and Gift Vault untouched. No animation was added, so reduced motion is respected by construction.
+- **Created:** `src/features/concierge/ui/LetterCountdown.tsx`.
+- **Modified:** `EntranceConcierge.tsx`, `entranceConcierge.css`, `src/features/entrance/ui/Entrance.test.tsx` (2 tests: live ticking, unlock at zero).
+- **Checks and results:** `npm run check` PASS (420 tests in 34 files, production build). Playwright and `test:pwa` not run.
+- **Known issues:** Not visually reviewed on an iPhone or in a browser; layout at 390px is by CSS design only.
+- **Remaining work:** Visual check on iPhone.
+- **Commit:** see git history.
+
 ## 2026-10-18 13:20 BST (Europe/London) — Codex — Owner menu and Departure Lounge integration
 
 - **Task:** Integrate `concierge/pre-birthday` into `main`, add the Departure Lounge and Concierge Owner Console to the PIN owner menu, preview the full concierge flow silently, preserve guest locks, test and deploy.
