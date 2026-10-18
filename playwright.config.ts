@@ -12,6 +12,9 @@ export default defineConfig({
     'entrance-webkit.spec.ts',
   ],
   fullyParallel: false,
+  // Software-rendered 3D scenes contend for the same GPU in CI; parallel
+  // workers can time out before the entrance finishes opening.
+  workers: 1,
   use: {
     baseURL: 'http://127.0.0.1:4173',
     ...devices['Desktop Chrome'],

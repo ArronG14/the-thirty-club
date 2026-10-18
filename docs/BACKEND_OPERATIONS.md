@@ -101,8 +101,9 @@ Merge order (both merges conflict-free): `origin/main` `277eaa7` (production, in
 | -------------------------------------------------------------------------------------------------- | ------------------------------------- |
 | `20261018160101_backend_foundation.sql` … `20261018162436_reset_edited_message_attempts.sql` (six) | Applied                               |
 | `20261019090000_gift_vault.sql`                                                                    | **Not applied; needs owner approval** |
+| `20261020090000_correspondence_desk.sql`                                                           | **Not applied; needs owner approval** |
 
-The vault migration is additive: a new table and new functions with service-only grants and RLS. It alters no existing table or function. Apply it with the Supabase CLI or dashboard before or with the deploy. The deployed API returns `not-configured`/`server` for vault routes until it exists, and every other route is unaffected. Afterwards, re-run the Supabase security advisor.
+The vault migration is additive: a new table and new functions with service-only grants and RLS. It alters no existing table or function. Correspondence adds two tables and a separate RPC, and widens the existing message category check without removing either existing category. Apply Vault first, Correspondence second, and only then deploy the consolidated candidate. The deployed API returns `not-configured`/`server` for new routes until their migrations exist. Afterwards, re-run the Supabase security advisor. The full combined review is in `docs/RELEASE_CANDIDATE_2026-10-19.md`.
 
 ### Netlify environment (Functions scope)
 
@@ -134,7 +135,9 @@ Unchanged: immediate notifications at redemption time (Departure privileges and 
 
 **Owner decision.** Each travel announcement must now be either approved as a PostgreSQL SMS in `/owner` (with sending enabled) or sent manually from the legacy console, never both. The legacy Departure message goes to Arron to forward ("manual" mode); the PostgreSQL draft goes directly to Alise by SMS from `THIRTYCLUB`. Choose one per moment.
 
-### Release steps (each needs explicit owner approval)
+### Earlier Vault-only release steps (superseded by the consolidated checklist)
+
+The candidate now includes Correspondence too. Use the sequential checklist in `docs/RELEASE_CANDIDATE_2026-10-19.md` for the combined release. The following Vault steps remain useful for the hardware rehearsal after the combined deployment.
 
 1. Add `SUPABASE_SERVICE_ROLE_KEY` privately. Confirm `CONCIERGE_LEGACY_STORAGE` is blank and `SMS_SENDING_ENABLED=false`.
 2. Apply `20261019090000_gift_vault.sql` to the hosted project and run the security advisor.
@@ -155,6 +158,6 @@ Unchanged: immediate notifications at redemption time (Departure privileges and 
 
 **Rollback.** Redeploy the previous production deploy (`277eaa7`) from Netlify's deploy list. The vault table can stay in place, unused, because the old code never touches it. Blobs data is untouched throughout.
 
-## Correspondence Desk release (branch `feature/correspondence-desk`, after the integrated release)
+## Correspondence Desk in the consolidated candidate
 
-Migration `20261020090000_correspondence_desk.sql` is **not applied** to the hosted project. It needs owner approval and must be applied after `20261019090000_gift_vault.sql`. It adds two tables and their functions (service-only grants, RLS) and widens the `ttc_messages.category` CHECK. Existing rows are unaffected, and the deployed API returns `not-configured`/`server` for correspondence routes until it exists. No new environment variables: it uses `SUPABASE_*`, `SMS_SENDING_ENABLED`, the Twilio variables, `ALISE_PHONE` and `ARRON_PHONE`. The exact procedure is in the BUILD_LOG entry of 2026-10-19 and in `docs/CORRESPONDENCE_DESK.md`.
+Migration `20261020090000_correspondence_desk.sql` is **not applied** to the hosted project. It needs owner approval and must be applied after `20261019090000_gift_vault.sql`, before deploying this consolidated candidate. It adds two tables and their functions (service-only grants, RLS) and widens the `ttc_messages.category` CHECK. Existing rows were preserved in a disposable upgrade rehearsal. No new environment variables: it uses `SUPABASE_*`, `SMS_SENDING_ENABLED`, the Twilio variables, `ALISE_PHONE` and `ARRON_PHONE`. The exact combined procedure is in `docs/RELEASE_CANDIDATE_2026-10-19.md` and feature details are in `docs/CORRESPONDENCE_DESK.md`.

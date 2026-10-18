@@ -332,3 +332,7 @@ Full design, API and operations: `docs/CORRESPONDENCE_DESK.md`. Branch `feature/
 **Presentation.** CSS and SVG only (no Three.js, no new dependency), transform and opacity motion, reduced-motion cross-fades. Lazy route chunks; the arrival notice is lazy too.
 
 **Open questions.** Owner approval of the six-hour expiry, the reply rate limits, the default salutation and the Butler's on-screen lines. An authorised real SMS exchange and an iPhone rehearsal remain release gates.
+
+### Local consolidation decision (19 October 2026)
+
+The completed Correspondence commit `a3f8a1b` is merged only into `codex/release-candidate-correspondence-2026-10-19` from the prior candidate `9bea495`. The reviewed migration order is the six already-hosted backend migrations, then Gift Vault `20261019090000`, then Correspondence `20261020090000`, before deploying the combined code. The old Shopping path remains Blobs-backed while `CONCIERGE_LEGACY_STORAGE` is blank. The divergent local `main` desk schema is excluded. Disposable upgrade/role checks and release gates are recorded in `docs/RELEASE_CANDIDATE_2026-10-19.md`; hosted changes remain owner actions.
