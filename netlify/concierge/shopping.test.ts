@@ -148,4 +148,21 @@ describe('Shopping Privilege', () => {
     expect((await call('GET', live)).body.status).toBe('available');
     expect((await ask(live, '25')).status).toBe(201);
   });
+
+  it('explains a too-short owner key without accepting it', async () => {
+    const short = createConciergeApi({
+      store,
+      config: readConfig({ ...TEST_ENV, CONCIERGE_OWNER_KEY: '1414' }),
+      channels,
+      clock: () => 0,
+    });
+    const response = await short(
+      new Request(`${ORIGIN}/api/owner/overview`, {
+        headers: { 'x-owner-key': '1414' },
+      }),
+      '203.0.113.9',
+    );
+    expect(response.status).toBe(503);
+    expect((await response.json()).message).toMatch(/16 characters/);
+  });
 });

@@ -303,7 +303,11 @@ export default function OwnerConsole() {
       </p>
 
       {!data ? (
-        <p>Loading…</p>
+        notice ? (
+          <p>The console could not be opened. Press Refresh to try again.</p>
+        ) : (
+          <p>Loading…</p>
+        )
       ) : (
         <>
           <section>

@@ -363,7 +363,16 @@ async function ownerAuthorised(
   request: Request,
   ip: string,
 ): Promise<Response | null> {
-  if (!deps.config.ownerKey) return notConfigured();
+  if (!deps.config.ownerKey) {
+    // Say why, without revealing anything: a short key is ignored on purpose.
+    return deps.config.env.CONCIERGE_OWNER_KEY?.trim()
+      ? fail(
+          503,
+          'not-configured',
+          'CONCIERGE_OWNER_KEY is set but shorter than the 16 characters required, so it is ignored. Set a longer key and redeploy.',
+        )
+      : notConfigured();
+  }
   if (await overLimit(deps, 'owner', ip)) return limited();
   const key = request.headers.get('x-owner-key');
   if (await secretsEqual(key, deps.config.ownerKey)) return null;
