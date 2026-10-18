@@ -500,3 +500,11 @@
 - **Known issues:** GitHub connector still returns 403 for PR creation; direct comparison link is provided. Netlify CLI has no authenticated account, so browser authorization is initiated. Existing Shopping owns its direct SMS behavior; production verification will not POST a Shopping claim or execute its announcement command. `SMS_SENDING_ENABLED=false` remains required for the permanent backend; no messages or policy approvals were enabled.
 - **Remaining work:** Owner authorizes Netlify access, then configure only the required environment safely, review/merge the candidate and verify the actual deployed owner/API/Functions. No production deployment or real SMS occurred during this preparation.
 - **Commit:** This compatibility merge commit; reported in the handoff.
+
+## 2026-10-18 17:41 BST (Europe/London) — Codex — Production backend configuration started
+
+- **Task/summary:** Netlify browser authorization completed. Identified the existing `thirty-club` site by its `30.ag14.co` custom domain and `ArronG14/the-thirty-club` main-branch binding. Configured production Functions `SUPABASE_URL`, `CONCIERGE_SITE_URL`, the privately generated `OWNER_PASSWORD_HASH` (marked secret), and `SMS_SENDING_ENABLED=false`. No secret values were printed, committed or sent in chat.
+- **Modified:** This journal and TASKS.md; external production Functions environment only. Source/Shopping worktrees remain untouched.
+- **Checks/results:** Netlify confirmed all four variable writes. The candidate is clean, pushed, and includes published main. Private bootstrap credentials have 0600 permissions. Earlier combined 490 tests, two owner browser checks and Function bundles passed.
+- **Known issues/remaining work:** Dedicated-project `SUPABASE_SERVICE_ROLE_KEY` must be added privately by the owner before authenticated hosted APIs can operate. No merge to main, application deployment, scheduled approval or real SMS has been performed. Shopping's direct notification path will not be exercised during verification.
+- **Commit:** This configuration checkpoint commit; no application behavior changes.

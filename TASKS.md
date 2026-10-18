@@ -146,3 +146,4 @@ VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does no
 
 - **BF06 — VERIFIED:** Permanent backend compatibility with published Shopping (`7a1f815`): additive conflicts resolved on the backend branch; Shopping implementation unchanged; combined check passes 490 tests, Functions bundles and two owner browser rehearsals.
 - **BF07 — IN PROGRESS:** Guided Netlify access/configuration and permanent backend deployment. Owner password/hash generated privately using the existing script; SMS remains disabled; hosted verification awaits configuration and deployment.
+- **BF07 configuration checkpoint — IN PROGRESS:** Netlify access authorized; production Functions URL/site URL, secret owner hash and SMS-off flag configured. Owner's next action is to add the dedicated Supabase service-role key privately; merge/deploy/hosted checks follow.
