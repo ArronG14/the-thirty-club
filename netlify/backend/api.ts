@@ -13,6 +13,7 @@ import {
 } from './auth.ts';
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
+import { correspondenceRoute } from './correspondence.ts';
 import {
   bridgeMemberSession,
   releaseCasinoVaults,
@@ -328,6 +329,16 @@ export function createBackendApi({ db, env }: ApiDeps) {
         ip,
       });
       if (vault) return respond(vault.data, vault.status);
+      const desk = await correspondenceRoute({
+        route,
+        path,
+        method: request.method,
+        body,
+        session,
+        db,
+        env,
+      });
+      if (desk) return respond(desk.data, desk.status);
       throw new BackendError('not-found');
     } catch (error) {
       const known =

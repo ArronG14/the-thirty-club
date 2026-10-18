@@ -1,0 +1,108 @@
+/* The Butler's arrival notice: a card of laid paper near the top of the
+ * screen, clear of the door controls and the lounge dock. */
+.cd-notice {
+  position: fixed;
+  z-index: 30;
+  top: calc(var(--gutter-top) + 0.5rem);
+  left: 50%;
+  width: min(calc(100vw - var(--gutter-left) - var(--gutter-right)), 26rem);
+  box-sizing: border-box;
+  transform: translateX(-50%);
+  display: grid;
+  grid-template-columns: 2.8rem 1fr;
+  gap: 0.4rem 0.9rem;
+  align-items: start;
+  padding: 1rem 1.1rem 0.9rem;
+  border: 1px solid rgb(196 164 106 / 0.55);
+  border-radius: 4px;
+  color: var(--ivory);
+  background: linear-gradient(
+    180deg,
+    rgb(36 26 24 / 0.94),
+    rgb(18 13 11 / 0.96)
+  );
+  box-shadow: 0 24px 40px -20px rgb(0 0 0 / 0.95);
+  -webkit-backdrop-filter: blur(6px);
+  backdrop-filter: blur(6px);
+  animation: cd-notice-arrive 0.8s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.cd-notice__seal {
+  width: 2.8rem;
+  height: 2.8rem;
+}
+.cd-notice__line {
+  margin: 0;
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: 1.12rem;
+  line-height: 1.45;
+}
+.cd-notice__actions {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 0.6rem;
+}
+.cd-notice__go {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 1rem;
+  border: 1px solid #8c6c36;
+  border-radius: 3px;
+  color: #2a1a0c;
+  background: linear-gradient(180deg, #efd9a6 0%, #c9a96c 46%, #a2814a 100%);
+  font-family: var(--font-text);
+  font-weight: 600;
+  font-size: 1.05rem;
+  text-decoration: none;
+}
+.cd-notice__later {
+  min-height: 44px;
+  padding: 0 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--champagne-bright);
+  font-family: var(--font-caps);
+  font-size: 0.56rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.cd-notice__go:focus-visible,
+.cd-notice__later:focus-visible {
+  outline: 2px solid var(--champagne-bright);
+  outline-offset: 2px;
+}
+.cd-notice .seal {
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+}
+@keyframes cd-notice-arrive {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -12px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cd-notice {
+    animation: cd-notice-fade 0.3s ease both;
+  }
+  @keyframes cd-notice-fade {
+    from {
+      opacity: 0;
+    }
+  }
+}
+.cd-notice .seal__mark {
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 600;
+}
+.cd-notice .seal__mark--shadow {
+  fill: #000;
+  fill-opacity: 0.35;
+}

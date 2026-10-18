@@ -6,6 +6,7 @@ export default defineConfig({
     'screening.dev.spec.ts',
     'butlers-office.spec.ts',
     'gift-vault.spec.ts',
+    'correspondence.spec.ts',
     'casino.look.spec.ts',
     // WebKit with a phone profile: playwright.webkit.config.ts.
     'entrance-webkit.spec.ts',

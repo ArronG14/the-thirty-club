@@ -5,6 +5,7 @@ import { readdir, readFile } from 'node:fs/promises';
 import { resolve } from 'node:path';
 import { scryptSync } from 'node:crypto';
 import { createBackendApi } from '../netlify/backend/api.ts';
+import { publishDueLetters } from '../netlify/backend/correspondence.ts';
 import { TEST_ENV } from '../netlify/concierge/testing.ts';
 import {
   BackendError,
@@ -59,7 +60,15 @@ async function initialize() {
       SMS_SENDING_ENABLED: 'false',
     },
   });
-  return { api, setGate };
+  // LOCAL ONLY: brings every scheduled letter's moment forward and runs the
+  // round's publication step, as the every-minute dispatch would.
+  const deliverDue = async () => {
+    await pg.exec(
+      "update public.ttc_letters set deliver_at=now()-interval '1 minute' where state='scheduled'",
+    );
+    return publishDueLetters(db);
+  };
+  return { api, setGate, deliverDue };
 }
 export function butlersOfficeLocalApi(): Plugin {
   let ready: ReturnType<typeof initialize> | null = null;
@@ -89,7 +98,12 @@ export function butlersOfficeLocalApi(): Plugin {
       for (const [key, value] of Object.entries(req.headers))
         if (typeof value === 'string') headers.set(key, value);
       ready ??= initialize();
-      const { api: handler, setGate } = await ready;
+      const { api: handler, setGate, deliverDue } = await ready;
+      if (url.pathname === '/api/v1/__local/correspondence-due') {
+        res.statusCode = 200;
+        res.end(JSON.stringify(await deliverDue()));
+        return;
+      }
       if (url.pathname === '/api/v1/__local/vault-gate') {
         await setGate(
           (JSON.parse(body || '{}') as { open?: boolean }).open === true,

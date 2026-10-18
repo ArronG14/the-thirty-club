@@ -32,11 +32,18 @@ const codes = new Set<ApiErrorCode>([
   'credential-invalid',
   'server',
 ]);
-/** Gift Vault actions live in their own RPC so `ttc_action` stays untouched. */
+/**
+ * Gift Vault and Correspondence Desk actions live in their own RPCs so
+ * `ttc_action` stays untouched.
+ */
 export const rpcFor = (action: string) =>
   /^(vault-|owner-vault-|system-vault-|system-member-bridge$)/.test(action)
     ? 'ttc_vault_action'
-    : 'ttc_action';
+    : /^(correspondence-|owner-correspondence-|system-correspondence-)/.test(
+          action,
+        )
+      ? 'ttc_correspondence_action'
+      : 'ttc_action';
 export function database(
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,

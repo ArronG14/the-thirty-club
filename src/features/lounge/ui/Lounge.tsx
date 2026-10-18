@@ -33,6 +33,7 @@ import type { LoungeFocus } from '../scene/loungeMath';
 import { Directory } from './Directory';
 import { MembershipCard } from './MembershipCard';
 import { Sheet } from './Sheet';
+import { CorrespondenceNoticeSlot } from '../../correspondence/ui/noticeSlot';
 import './lounge.css';
 
 const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
@@ -416,6 +417,10 @@ export function Lounge({
             onEnter={enter}
           />
         </Sheet>
+      )}
+      {/* Never during the induction or over an open sheet. */}
+      {inducted && !overlay && (
+        <CorrespondenceNoticeSlot delayMs={welcomed ? 9000 : 3000} />
       )}
     </section>
   );

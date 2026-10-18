@@ -35,6 +35,16 @@ const VaultPreviewRoute = lazy(() =>
     default: m.VaultPreviewRoute,
   })),
 );
+const CorrespondenceCollection = lazy(() =>
+  import('../features/correspondence/ui/CorrespondenceRoom').then((m) => ({
+    default: m.CorrespondenceCollection,
+  })),
+);
+const CorrespondenceLetter = lazy(() =>
+  import('../features/correspondence/ui/CorrespondenceRoom').then((m) => ({
+    default: m.CorrespondenceLetter,
+  })),
+);
 const OwnerConsole = lazy(
   () => import('../features/concierge/owner/OwnerConsole'),
 );
@@ -112,6 +122,22 @@ export function App() {
           element={
             <Suspense fallback={<Arriving />}>
               <VaultKeyArrival />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/correspondence"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <CorrespondenceCollection />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/correspondence/:id"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <CorrespondenceLetter />
             </Suspense>
           }
         />

@@ -58,6 +58,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-010 (2026-10-18): Grand Casino, shared prize engine and Gift Vault contract, recorded below.
 - ADR-012 (2026-10-18): the Concierge — pre-birthday journey, Netlify Functions + Blobs backend, Telegram notifications, NFC credentials and the membership-card gate; amends ADR-006 (Jamaica midnight). Recorded below; full design in docs/CONCIERGE.md. (ADR-011 is the PIN owner test mode, recorded below by another agent.)
 - ADR-015 (2026-10-18): the Private Gift Vault on PostgreSQL, NFC credentials, membership bridge and owner preview; amends ADR-008 (the vault room opens with the membership). Recorded below; full design in docs/GIFT_VAULT.md.
+- ADR-016 (2026-10-19): the Correspondence Desk — owner-scheduled letters published by the existing every-minute round, Butler SMS through the existing outbox. Recorded below; full design in docs/CORRESPONDENCE_DESK.md.
 
 ## Open questions
 
@@ -314,4 +315,20 @@ Full design, API and operations: `docs/GIFT_VAULT.md`.
 
 The release candidate carries ADR-014 and ADR-015 without changing their storage boundaries. `CONCIERGE_LEGACY_STORAGE` must stay blank while Shopping's redeemed record remains only in Netlify Blobs. The new scheduled worker intentionally omits legacy scheduled messages and retains legacy notification retries. Arron must choose whether each upcoming travel announcement is sent manually from the legacy console or approved through the PostgreSQL outbox before deployment. The global `SMS_SENDING_ENABLED` switch controls only that outbox; the existing Shopping POST and explicit legacy Send now paths retain their own behavior.
 
-The divergent local `main` desk draft defines separate `public.members`, `public.privileges`, and `public.scheduled_messages` tables while the integrated backend uses `ttc_*` tables. No desk migration from that checkout belongs in this candidate without a schema reconciliation. The Correspondence feature starts at `bccce30` but its final schema and overlap will be assessed only from a completed committed ref. See `docs/RELEASE_CANDIDATE_2026-10-18.md` for merge order and gates.
+The divergent local `main` desk draft defines separate `public.members`, `public.privileges`, and `public.scheduled_messages` tables while the integrated backend uses `ttc_*` tables. No desk migration from that checkout belongs in this candidate without a schema reconciliation. The completed Correspondence feature started at `bccce30` and is being integrated from committed `a3f8a1b` in a separate release worktree. See `docs/RELEASE_CANDIDATE_2026-10-18.md` for the earlier audit and merge order.
+
+## The Correspondence Desk (ADR-016, 2026-10-19)
+
+Full design, API and operations: `docs/CORRESPONDENCE_DESK.md`. Branch `feature/correspondence-desk` from `integration/gift-vault-backend` `bccce30`; integrated only into the isolated local release candidate, not deployed.
+
+**Authority.** PostgreSQL, through a separate service-role-only RPC `ttc_correspondence_action` and new tables `ttc_letters` and `ttc_letter_replies` (migration `20261020090000_correspondence_desk.sql`). `ttc_action` and `ttc_vault_action` are untouched. The only change to an existing object is the widened `ttc_messages.category` CHECK, which adds `correspondence-alise` and `correspondence-arron`. The server alone publishes (its clock), records openings and thanks, and stores messages. Letters are `draft → scheduled → published`, with `opened_at` and `thanked_at` as stamps; SMS state lives only in the outbox, so a failed SMS never affects a letter.
+
+**One scheduler.** Due letters are published by the existing every-minute `concierge-dispatch` round, before its outbox half, using `FOR UPDATE SKIP LOCKED`. They are also published lazily on any correspondence read. The invitation is queued in the same transaction, with a unique reference, so it is queued exactly once. No new scheduled function exists.
+
+**SMS.** Invitations, thank-you replies and notifications to Arron are approved outbox messages, gated by the existing `SMS_SENDING_ENABLED` switch. The existing claim/backoff/uncertain/callback handling is reused unchanged. `recipientFor` maps each category to exactly one phone; an unknown category fails rather than defaulting. Wording is centralised in `src/shared/correspondence/templates.ts`. An SMS to Alise still unsent after six hours is marked failed; owner retry requeues only failed or cancelled messages, never uncertain ones.
+
+**Member identity.** A v1 member cookie, the existing live-concierge bridge, or a one-time owner invitation link (`/correspondence#invitation=`, the fragment consumption anticipated by the API contract). No membership-card entry is offered, because presenting the card before 24 October would complete the birthday card ceremony early. `/correspondence` is outside RoomGate and writes no club record, so it opens before the birthday and unlocks nothing.
+
+**Presentation.** CSS and SVG only (no Three.js, no new dependency), transform and opacity motion, reduced-motion cross-fades. Lazy route chunks; the arrival notice is lazy too.
+
+**Open questions.** Owner approval of the six-hour expiry, the reply rate limits, the default salutation and the Butler's on-screen lines. An authorised real SMS exchange and an iPhone rehearsal remain release gates.

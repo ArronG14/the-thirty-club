@@ -10,6 +10,7 @@ import type {
 import { instantToWall, wallTimeToInstant } from '../../shared/concierge/time';
 import { OfficeError, officeRequest } from './client';
 import { VaultOffice } from './VaultOffice';
+import { CorrespondenceDesk } from './CorrespondenceDesk';
 import './office.css';
 const fmtMoney = (pence: number) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
@@ -170,6 +171,7 @@ export default function ButlersOffice() {
           <nav className="office-tabs" aria-label="Office sections">
             {[
               'overview',
+              'correspondence',
               'privileges',
               'redemptions',
               'messages',
@@ -367,9 +369,13 @@ export default function ButlersOffice() {
                     {data.messages.map((m) => (
                       <article className="office-card" key={m.id}>
                         <p className="office-eyebrow">
-                          {m.category === 'scheduled-alise'
-                            ? 'To Alise'
-                            : 'To Arron'}{' '}
+                          {m.category === 'correspondence-alise'
+                            ? 'Correspondence · To Alise'
+                            : m.category === 'correspondence-arron'
+                              ? 'Correspondence · To Arron'
+                              : m.category === 'scheduled-alise'
+                                ? 'To Alise'
+                                : 'To Arron'}{' '}
                           · {m.state}
                         </p>
                         <h3>{m.label}</h3>
@@ -492,6 +498,7 @@ export default function ButlersOffice() {
                 </>
               )}
               {tab === 'vault' && <VaultOffice />}
+              {tab === 'correspondence' && <CorrespondenceDesk />}
               {tab === 'membership' && (
                 <section className="office-card">
                   <h2>Alise’s membership</h2>
@@ -521,6 +528,21 @@ export default function ButlersOffice() {
                         <textarea readOnly value={invitation.token} rows={3} />
                       </label>
                       <p>Expires {date(invitation.expiresAt)}</p>
+                      <p>
+                        Or send Alise this one-time link: it signs her in to her
+                        correspondence on the device that opens it.
+                      </p>
+                      <button
+                        onClick={() =>
+                          void run(async () => {
+                            await navigator.clipboard.writeText(
+                              `${window.location.origin}/correspondence#invitation=${invitation.token}`,
+                            );
+                          })
+                        }
+                      >
+                        Copy correspondence link
+                      </button>
                       <button
                         onClick={() =>
                           void run(async () => {
