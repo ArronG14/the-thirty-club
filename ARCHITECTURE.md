@@ -271,3 +271,11 @@ Rehearsal redemptions now record `simulated` delivery without invoking a channel
 **Cause.** The performance governor stepped quality down twice (47 ms then 33.3 ms per frame, i.e. a vsync-quantised 30 fps) and then treated 30 fps at the lowest tier as failure, returning the poster. Any iPhone that delivers about 30 fps (Low Power Mode, a heavy page, a busy GPU) would do the same.
 
 **Decision.** `judgeFrameTime` falls back only when frames are unwatchable (over 200 ms). Context loss gets a recovery window. Both are shared with the lounge and casino scenes through `sceneMath`. Diagnostics and `?entrance-diag` were added. **Limits:** no real iPhone has run this; headless WebKit approximates it.
+
+## ADR-014 (2026-10-18): PostgreSQL authority and Butler's Office
+
+The owner selected Supabase and Netlify Functions for the production backend. Dedicated Supabase project **The Thirty Club**, London (`fzndcjzenodcixmuvfsb`), replaces Blobs as authority for new v1 members, privileges, monetary claims, vouchers and SMS outbox. `/api/v1` is isolated from existing cinematic/rehearsal interfaces. PostgreSQL transactions, unique constraints and row locks enforce idempotency, single-use claims and nonnegative balances. Tables have RLS and no anonymous/authenticated Data API access; only server service-role calls execute the restricted RPCs. No service-role key enters a Vite variable.
+
+Opaque hashed database sessions are revocable: owner password checked with scrypt server-side, member single-use random invitation exchange. Cookies are HttpOnly/Secure/SameSite Strict; mutations require same-origin checks and a custom header. The cinematic verification, owner rehearsal PIN, device clock and legacy signed rehearsal sessions grant no v1 authority. Contract: `docs/CONCIERGE_API_CONTRACT.md`; shared types: `src/shared/concierge/types.ts`.
+
+SMS uses the existing Twilio Messaging Service, approval records, a global disabled-by-default switch and transactional outbox. A valid claim commits before dispatch. Definite failures retry with backoff; ambiguous delivery is held for reconciliation to avoid duplicate sends. Room unlocks do not consume SMS state. Existing Casino visuals remain intact; authoritative plays/outcomes have a documented API integration point.

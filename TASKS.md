@@ -132,3 +132,9 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 | K14 | P0       | IMPLEMENTED | 3D entrance stability on iPhone Safari: no poster for a slow-but-playing scene, context-loss recovery, `?entrance-diag` (simulated WebKit only; real iPhone check pending)                              |
 
 VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.
+
+## Backend foundation and Butler's Office (ADR-014)
+
+- **BF01 — IMPLEMENTED:** Dedicated Supabase project provisioned in London; v1 contract and shared types prepared for the frontend agent. Contract commit precedes implementation.
+- **BF02 — IN PROGRESS:** PostgreSQL migrations, sessions, atomic beauty/voucher redemption, owner dashboard, approval-based Twilio outbox and focused tests.
+- **BF03 — NOT STARTED:** Hosted deployment and real end-to-end beauty claim/fulfilment verification; real SMS only after explicit approval.

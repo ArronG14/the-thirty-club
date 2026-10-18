@@ -434,3 +434,12 @@
   - K11: optional Twilio.
   - K12: copy and time approvals.
 - **Commit:** `9b4fb5d` (feature, on branch `concierge/pre-birthday`, rebased onto `6ebc301`); this log entry is committed immediately after it. See git history.
+
+## 2026-10-18 Europe/London — Codex — Phase A backend contract
+
+- **Task:** Inspect actual source repository and existing concierge, establish PostgreSQL authority and commit the frontend contract before implementation.
+- **Summary:** Read required project documentation; inspected existing Netlify Blobs concierge, owner/rehearsal routes, credentials, Twilio channel and slots engine. Isolated branch starts at source commit `2e345de`; original `.env.example` modification preserved. Created dedicated Supabase project The Thirty Club in AG14, London, after explicit organization choice; quoted cost $0/month. Added exact v1 contract, shared types and ADR-014.
+- **Created/modified:** `docs/CONCIERGE_API_CONTRACT.md`, `src/shared/concierge/types.ts`, `ARCHITECTURE.md`, `TASKS.md`, `BUILD_LOG.md`.
+- **Checks/results:** Repository and API inspection; contract formatting/type checks recorded at commit. No backend implementation or production verification claimed.
+- **Known issues/remaining work:** Phase B implementation, migrations, server environment configuration, deployment and real redemption rehearsal. No SMS approved or sent.
+- **Commit:** This Phase A commit; hash reported to the owner immediately after creation.
