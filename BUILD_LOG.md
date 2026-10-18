@@ -311,3 +311,72 @@
 - **Known issues:** Physical iPhone Safari/Home Screen rehearsal remains unperformed; browser-engine tests do not measure device GPU/thermal performance or safe areas. Browser restore-tab/session features may restore sessionStorage: Exit owner mode is the explicit handover action. Existing placeholder casino rewards and absent real screening messages remain unchanged. Public bundles contain the requested PIN; this is a convenience gate, not private-asset authentication. Vite preview checks production assets but does not emulate Netlify Edge routing.
 - **Remaining work:** Physical device/content rehearsal and hosted deployment confirmation remain outside the local browser checks. The completed code is committed for the requested main-branch push to Netlify.
 - **Commit:** `2259c27` — completed owner-access implementation; base `cfe61f4`. Final production rebuild and all four WebKit owner cases passed again after the storage cleanup and typography refinements. Work performed in an isolated checkout under the attached `30club` workspace; the original clean checkout was not edited.
+
+## 2026-10-18 13:10 BST (Europe/London) — Claude Code (Opus 5.5) — The Concierge: pre-birthday journey (ADR-012)
+
+- **Task:** Design and implement the pre-birthday Concierge from the owner's brief:
+  - Phase One invitation and Departure Lounge (22 Oct 14:00 Europe/London).
+  - NFC travel credential with a manual fallback.
+  - Duty-Free and In-Flight privileges with real notifications to Arron.
+  - Friday correspondence.
+  - The Saturday membership-card gate before the Members' Lounge.
+  - Scheduled concierge messages to Alise.
+  - Owner testing.
+- **Summary:**
+  - **Plan.** Written first in `docs/CONCIERGE.md` Part 1, then implemented.
+  - **Backend (the first; ADR-003 had deferred it).**
+    - One Netlify Function at `/api/*` and a Scheduled Function every minute.
+    - Netlify Blobs, using create-if-new and ETag writes.
+    - HMAC-signed sessions, constant-time credential checks and per-IP rate limits.
+    - Idempotent redemptions with delivery status tracked separately: `delivered` only on Telegram `ok: true`. Retries with backoff, then owner resend.
+    - Scheduled messages claimed once. Alise's messages are handed to Arron by Telegram (default) or sent by Twilio SMS (`ALISE_DISPATCH=sms`).
+    - A server-side rehearsal realm with a virtual clock, `[REHEARSAL]`-marked notifications and no SMS to Alise.
+  - **Client (new feature `src/features/concierge/`).**
+    - A 2.5D Departure Lounge (`/departure`): split-flap board, concierge letters, luggage-tag riddle, boarding-pass ceremony, leather wallet, and wax-sealed envelopes. Each envelope runs through locked, reveal, active, redemption, ink-stamp confirmation and redeemed states. All state persists, and offline pending intents are never shown as redeemed.
+    - The NFC arrival route (`/c/:token`).
+    - The owner console (`/concierge/owner`) and a rehearsal ribbon.
+  - **Entrance.**
+    - A sealed letter on the step (Phase One, then a link once the lounge opens).
+    - The countdown now targets **Jamaica midnight explicitly** (amends ADR-006).
+    - New stage `awaiting-credential`: the birthday alone no longer opens the doors. The card's link, the number printed on it, or detection by a paired display plays the existing ceremony.
+    - Scheduled rooms (Casino 2 pm, unchanged time) now also require the membership, so direct links cannot skip it.
+  - **Integration with the other agent's work.**
+    - Another agent pushed the PIN owner test mode (`2259c27`, also numbered ADR-011) during this task. I rebased onto it without changing its behaviour. Its storage adapter now takes the concierge's realm keys. Its environment supplies the card: absent in the locked preview, presented in the birthday and open previews.
+    - Its birthday preview now starts at Jamaica midnight; `docs/OWNER_ACCESS.md` is corrected to say so.
+    - The concierge record is renumbered ADR-012.
+- **Created:**
+  - `src/features/concierge/**` (domain, client, ui, owner, testing helper, tests).
+  - `netlify/concierge/**` (store, Blobs adapter, config, auth, channels, service, api, dispatch, test doubles, 41 tests).
+  - `netlify/functions/api.ts` and `netlify/functions/concierge-dispatch.ts`.
+  - `build/conciergeLocalApi.ts`.
+  - `tests/concierge.spec.ts` and `tests/concierge-helpers.ts`.
+  - `tools/membership-hash.mjs`.
+  - `docs/CONCIERGE.md` and `.env.example`.
+- **Modified:**
+  - Project: `netlify.toml` (functions directory; `/api/*` 404 redirect removed, bare `/api` kept); `vite.config.ts` (local API plugin, netlify tests included); `playwright.config.ts` (`CONCIERGE_LOCAL_API=1`); `package.json` and lockfile (`@netlify/blobs` ^11.1.2).
+  - App: `src/app/App.tsx` and its test; `src/dev/devLinks.ts` and its test.
+  - Club: `clubState.ts`, `membershipRecord.ts` (key parameter), `club.test.ts`.
+  - Entrance domain: `countdown`, `entranceMachine`, `entranceRecord` (key parameter), `environment`, `butlerScript`.
+  - Entrance UI and scene: `entranceEnvironment`, `useEntrance`, `Facade`, `Entrance`, `entrance.css`, `EntranceScene`, `devPreview`, and their tests.
+  - Lounge tests.
+  - Browser tests: `tests/entrance-poster.spec.ts` and `tests/lounge.spec.ts`.
+  - Docs: `docs/OWNER_ACCESS.md` (one line), `ARCHITECTURE.md` (ADR-012), `TASKS.md` (K01–K12), `README.md`.
+- **Checks and results (final, on the rebased branch):**
+  - `npm run check` PASS: types, ESLint, Prettier, **418 tests in 34 files**, production build.
+  - `npx playwright test --workers=1` PASS: **30 production Chromium tests**, including the 8 new concierge tests (390×844 mobile emulation, fake channels) and the other agent's 4 owner tests.
+  - `npx playwright test -c playwright.screening.config.ts --workers=1` PASS: 9 tests. This ran before the rebase, and that suite was not touched by it.
+  - `grep` of `dist/` found no test keys, local-API routes or test helpers.
+  - Visually reviewed in the in-app browser at 390×844, against the dev server and its fake API: closed lounge, credential request, boarding ceremony, wallet, seal break, Duty-Free granted with the fake Telegram outbox checked, in-flight choices and SERVED stamp, letter on the step, birthday card prompt, owner console.
+  - The review led to fixes: boarding-pass stub overflow, seal and title overlap, stamp placement, envelope eyebrow contrast and mark placement.
+- **Not verified (honest):**
+  - No Netlify deploy. The Functions, Blobs, scheduled function and edge routing have not run on Netlify.
+  - No real Telegram or Twilio call; every test uses fakes.
+  - No physical NFC tag, iPhone, Safari or WebKit run of the concierge.
+  - The in-flight time (18:30 UK), Friday time (09:00 Jamaica), the riddles and all concierge copy are PROVISIONAL, awaiting the owner.
+- **Remaining work (owner):**
+  - K08: create the Telegram bot, set the environment variables, deploy, send a console test.
+  - K09: write and test NFC tags in a rehearsal, print the codes, choose the riddles.
+  - K10: full iPhone rehearsal, then clear test records.
+  - K11: optional Twilio.
+  - K12: copy and time approvals.
+- **Commit:** `9b4fb5d` (feature, on branch `concierge/pre-birthday`, rebased onto `6ebc301`); this log entry is committed immediately after it. See git history.

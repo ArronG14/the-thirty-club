@@ -6,7 +6,7 @@ After authentication, the **Owner · test mode** button opens the private office
 
 - **Enter Club** skips the door and membership ceremonies and opens the lounge.
 - **Visit a room** offers the lounge, screening room and casino. Unimplemented rooms are omitted.
-- **Preview birthday unlock** starts five seconds before local midnight and runs the existing door opening and membership presentation. It does not change the actual 24 October 2026 release date or the phone clock.
+- **Preview birthday unlock** starts five seconds before midnight in Jamaica (the club's explicit opening instant since ADR-012) and runs the existing door opening and membership presentation; in this preview the membership card counts as presented. It does not change the actual 24 October 2026 release date or the phone clock.
 - **Return to locked entrance** clears the test entrance/membership unlock latches and simulates the day before the birthday. It preserves test casino prizes and screening progress.
 - **Casino test controls**, inside the casino, reuse reset, completed state, next jackpot, chip top-up, forced outcomes, reward awards and record inspection. These operate exclusively on owner test data.
 - **Reset test progress** clears all owner records (including screening, casino, prizes and the optional film marker), then returns to the locked rehearsal. Alise’s records are untouched.
