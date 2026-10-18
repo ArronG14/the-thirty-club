@@ -167,7 +167,9 @@ jackpot is never offered by chance once it has paid. Limit 80 spins.
   `a6da56e` (lobby, games, reveal, integration), `0368753` (landscape framing,
   focus return, optional-asset tests, capture tooling, docs), then the commit
   that adds the dev-seed tests, this report and the build log.
-- Push status: see the final message of the run (recorded after the push).
+- Push status: pushed to `origin/main` (fast-forward from `073645b`, nothing
+  overwritten) with head `3159b23`. A last docs-only commit records this
+  paragraph; its hash is in the final message of the run.
 
 ## Outstanding issues
 
@@ -227,4 +229,7 @@ vault-key artwork for the reveal.
 
 ## Sleep prevention
 
-(Recorded after the FINAL STEP; see the final message of the run.)
+The sleep-prevention process (PID 58438, `caffeinate -dimsu -t 43200`) is
+released as the very last action of the run, after this report is committed, so
+its outcome is stated in the final message of the run (the report file cannot
+contain an event that happens after it is written).
