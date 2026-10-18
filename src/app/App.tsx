@@ -7,6 +7,10 @@ import { Entrance } from '../features/entrance/ui/Entrance';
 import { AppShell } from '../shared/ui/AppShell';
 import { useConnectivity } from '../shared/state/useConnectivity';
 
+const ButlersOffice = lazy(
+  () => import('../features/butlers-office/ButlersOffice'),
+);
+
 const DepartureLounge = lazy(
   () => import('../features/concierge/ui/DepartureLounge'),
 );
@@ -64,6 +68,14 @@ export function App() {
       )}
       <Routes>
         <Route path="/" element={<Entrance />} />
+        <Route
+          path="/owner"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <ButlersOffice />
+            </Suspense>
+          }
+        />
         <Route path="/rooms/:roomId" element={<RoomGate />} />
         <Route
           path="/departure"

@@ -132,4 +132,18 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 | K14 | P0       | IMPLEMENTED | 3D entrance stability on iPhone Safari: no poster for a slow-but-playing scene, context-loss recovery, `?entrance-diag` (simulated WebKit only; real iPhone check pending)                              |
 
 VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.
+
+## Backend foundation and Butler's Office (ADR-014)
+
+- **BF01 — VERIFIED:** Dedicated Supabase project provisioned in London; API contract/shared types committed separately as `1486f9a`. Six migrations applied and hosted database security/rehearsal queries passed.
+- **BF02 — VERIFIED:** PostgreSQL migrations, revocable sessions, atomic beauty/voucher redemption, mobile owner dashboard and approved Twilio outbox. Local checks: 473 unit/integration tests, 32 existing browser regressions, 2 office browser tests and Netlify Function bundles. Hosted application/provider verification remains BF03.
+- **BF03 — BLOCKED:** Hosted Netlify deployment awaits owner-configured credentials. No hosted browser redemption or real SMS claimed; sending remains disabled. Exact setup/release steps are in docs/BACKEND_OPERATIONS.md.
+
+- **BF04 — IMPLEMENTED:** Casino API awards exactly ten vouchers on the first actual server play, validates subsequent grants and deducts claims atomically. Casino frontend integration is documented for its owner; visuals were preserved.
+- **BF05 — IMPLEMENTED:** Guarded legacy Blobs-to-PostgreSQL copy and verification tool. Actual source data cutover awaits Netlify access and a brief write freeze.
+
 | S01 | P0 | IMPLEMENTED | Shopping Privilege (`/?concierge=shopping`, `/api/concierge/shopping`, `npm run butler:shopping`). Checks passed locally; not deployed, no real Twilio/iPhone run |
+
+- **BF06 — VERIFIED:** Permanent backend compatibility with published Shopping (`7a1f815`): additive conflicts resolved on the backend branch; Shopping implementation unchanged; combined check passes 490 tests, Functions bundles and two owner browser rehearsals.
+- **BF07 — IN PROGRESS:** Guided Netlify access/configuration and permanent backend deployment. Owner password/hash generated privately using the existing script; SMS remains disabled; hosted verification awaits configuration and deployment.
+- **BF07 configuration checkpoint — IN PROGRESS:** Netlify access authorized; production Functions URL/site URL, secret owner hash and SMS-off flag configured. Owner's next action is to add the dedicated Supabase service-role key privately; merge/deploy/hosted checks follow.

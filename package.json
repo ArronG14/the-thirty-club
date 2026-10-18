@@ -20,6 +20,8 @@
     "test:webkit": "npm run build && playwright test -c playwright.webkit.config.ts",
     "check": "npm run typecheck && npm run lint && npm run format:check && npm test && npm run build",
     "capture:casino": "VITE_CASINO_LOOKDEV=1 vite build --outDir dist-lookdev && playwright test -c playwright.casino.config.ts",
+    "test:office": "npm run build && playwright test -c playwright.office.config.ts",
+    "functions:build": "npx --yes netlify-cli@27.13.0 functions:build --src netlify/functions --functions .netlify/functions-verified",
     "butler:shopping": "node --env-file-if-exists=.env tools/butler-shopping.mjs"
   },
   "dependencies": {
@@ -34,6 +36,7 @@
     "zustand": "^5.0.15"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "0.5.10",
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.64.1",
     "@tailwindcss/vite": "^4.3.3",

@@ -11,8 +11,8 @@
   function = "spa"
   path = "/*"
 
-# The concierge service (ADR-011): one function serves /api/*, a scheduled
-# function sends due messages. Secrets live only in site environment variables.
+# Concierge service (ADR-014): one function serves /api/*; the scheduled
+# worker processes only approved PostgreSQL SMS. Secrets are server-side.
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
