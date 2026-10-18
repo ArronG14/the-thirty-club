@@ -24,6 +24,11 @@ export const PREVIEW_MODES: readonly { mode: PreviewMode; label: string }[] = [
   { mode: 'induction', label: 'Lounge: first visit' },
   { mode: 'lounge', label: 'Lounge: member' },
   { mode: 'evening', label: 'Lounge: evening' },
+  { mode: 'casino-lobby', label: 'Casino: lobby' },
+  { mode: 'casino-roulette', label: 'Casino: roulette' },
+  { mode: 'casino-slots', label: 'Casino: slots' },
+  { mode: 'casino-jackpot', label: 'Casino: jackpot next' },
+  { mode: 'casino-completed', label: 'Casino: completed' },
 ];
 
 const SECOND = 1000;
@@ -42,14 +47,14 @@ function startOffset(mode: PreviewMode): number {
     case 'induction':
     case 'lounge':
       return 9 * HOUR;
-    case 'evening':
+    default:
       return 0; // absolute: see previewStart
   }
 }
 
 /** Virtual time at load. `evening` is 9 pm in Jamaica, every room open. */
 function previewStart(mode: PreviewMode): number {
-  return mode === 'evening'
+  return mode === 'evening' || mode.startsWith('casino-')
     ? instantInZone({ date: '2026-10-24', time: '21:00' })
     : openingInstant() + startOffset(mode);
 }
@@ -67,9 +72,10 @@ export function resolveDevPreview(search: string): EntranceEnvironment | null {
   const mode = new URLSearchParams(search).get(PREVIEW_PARAM);
   if (!isPreviewMode(mode)) return null;
   const seen = new Date(openingInstant()).toISOString();
+  const casino = mode.startsWith('casino-');
   const inLounge =
-    mode === 'induction' || mode === 'lounge' || mode === 'evening';
-  const member = mode === 'lounge' || mode === 'evening';
+    mode === 'induction' || mode === 'lounge' || mode === 'evening' || casino;
+  const member = mode === 'lounge' || mode === 'evening' || casino;
   return {
     preview: mode,
     clock: previewClock(mode),

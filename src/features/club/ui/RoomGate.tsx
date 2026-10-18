@@ -18,6 +18,13 @@ const ROOM_VIEWS: Partial<
   Record<RoomId, ComponentType<{ onComplete(): void }>>
 > = {
   'screening-room': lazy(() => import('../../screening/ui/ScreeningRoom')),
+  casino: lazy(() => import('../../casino/ui/Casino')),
+};
+
+/** What the door says while a lazily loaded room is being prepared. */
+const PREPARING: Partial<Record<RoomId, string>> = {
+  'screening-room': 'Preparing your private screening…',
+  casino: 'Preparing the tables…',
 };
 
 /**
@@ -56,7 +63,7 @@ export function RoomGate() {
       <Suspense
         fallback={
           <section className="plain-page">
-            <p>Preparing your private screening…</p>
+            <p>{PREPARING[view.room.id] ?? 'Preparing the room…'}</p>
             <a href="/">Return to the lounge</a>
           </section>
         }

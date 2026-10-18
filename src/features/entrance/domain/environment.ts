@@ -14,7 +14,13 @@ export type PreviewMode =
   | 'arrival'
   | 'induction'
   | 'lounge'
-  | 'evening';
+  | 'evening'
+  /** Grand Casino previews: every room open, casino state seeded. */
+  | 'casino-lobby'
+  | 'casino-roulette'
+  | 'casino-slots'
+  | 'casino-jackpot'
+  | 'casino-completed';
 
 export interface EntranceEnvironment {
   clock: Clock;

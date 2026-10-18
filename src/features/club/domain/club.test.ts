@@ -86,6 +86,7 @@ describe('room registry', () => {
       'entrance',
       'lounge',
       'screening-room',
+      'casino',
     ]);
   });
 

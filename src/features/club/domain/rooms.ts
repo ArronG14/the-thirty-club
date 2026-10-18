@@ -87,7 +87,7 @@ export const ROOMS: readonly RoomDefinition[] = [
     name: 'The Grand Casino',
     unlock: { kind: 'scheduled', at: instantInZone(ROOM_SCHEDULE.casino) },
     sequence: 2,
-    built: false,
+    built: true,
     path: '/rooms/casino',
     butler: {
       invitation:

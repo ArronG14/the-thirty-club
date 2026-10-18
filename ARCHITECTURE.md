@@ -53,6 +53,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-006 (2026-10-17): entrance timing and state, recorded below.
 - ADR-007 (2026-10-18): real-time 3D entrance with the SVG facade as poster and fallback, recorded below.
 - ADR-008 (2026-10-18): Members' Lounge, room registry and membership record, recorded below.
+- ADR-010 (2026-10-18): Grand Casino, shared prize engine and Gift Vault contract, recorded below.
 
 ## Open questions
 
@@ -195,3 +196,31 @@ Portrait playback uses full-width intrinsic-aspect video with controls/details b
 The inline HTML5 video keeps `playsInline`, tap-triggered sound and the existing persistence/navigation contracts, but disables native controls to remove duplication. A single custom strip provides transport, one seek bar and sender identification. Secondary viewing actions and return navigation live in a native modal options dialog. Portrait video and controls fit the application viewport; tall sources scale down only when required to keep controls visible. Landscape video fills the viewport with a tap/keyboard-revealed overlay that fades during playback. Focus, pause, errors, end states and reduced motion preserve control access.
 
 End-of-message UI belongs to the player and replaces its controls. It never changes the selected message until Watch Next, Replay or a collection selection is tapped. The room continues to own playlist/progress and all-message completion. Native iPhone fullscreen remains an optional browser presentation, never a prerequisite for enjoyable viewing. Arrival artwork, final-frame preview and camera push remain unchanged. Routine PWA footer status is deferred until leaving playback so it does not add vertical scroll; service-worker state remains mounted.
+
+## Grand Casino and the prize engine (ADR-010, 2026-10-18)
+
+Built on the owner's explicit request, overriding AGENTS.md's "do not build the casino" for the casino only. The Gift Vault is NOT built; only its contract is.
+
+**Two features, one direction of dependency.** `src/features/prizes/` is the club-wide prize engine and knows no game: games report named counters (`roulette.wins`), a reward declares `eligibility` conditions over counters and over other rewards (`awarded` / `claimed`), and the pure ledger (`ledger.ts`) decides what is awarded. `src/features/casino/` depends on `prizes/`, never the reverse, except that `prizes/clubRewards.ts` aggregates each experience's catalogue (today only `casino/config/casinoRewards.ts`). Winning a game and receiving a unique prize are separate steps: a win bumps counters; only the ledger awards, and `grants` is keyed by reward id, so a one-time reward cannot be awarded twice and a claimed reward cannot be downgraded. Awarded rewards are `unclaimed` until Alise claims them in the reveal (or the collection sheet); the House Favour requires two *claimed* rewards, so claims can chain awards.
+
+**Persistence.** Two versioned `localStorage` records: `thirty-club:prizes` (`{version, counters, grants}`: the shared ledger a future Gift Vault reads) and `thirty-club:casino` (`{version, chips, spins, visits, soundOn}`: game-local). Both degrade to fresh state on corrupt, missing or foreign-version data, repair field by field, drop unknown reward ids and read "claimed without a timestamp" as unclaimed. `migrate()` upgrades one version at a time and refuses newer versions (they read as empty; the app does not overwrite them until the next save, an accepted single-user limitation). No migration exists yet because the schema has never changed; the mechanism is unit-tested with injected migrations. Writes happen ledger-first. Previews (`?preview=casino-*`) use in-memory stores.
+
+**Outcome before animation.** `playRoulette`/`playSlots` resolve everything (outcome, chips, counters, awards) and the UI saves it BEFORE any animation starts. A refresh mid-spin therefore lands in a finished, consistent state and the unclaimed prize simply re-appears. Scripted outcomes (`config/casinoRules.ts`) are addressed by the persisted number of spins already played, so they can neither replay nor skip. Roulette script: win, lose, win, lose, win, then fair random; a step that cannot be honoured (a slip that covers every number cannot lose) falls back to random. Slots script: pair, miss, miss, triple, miss, miss, then the jackpot on spin 7; after the jackpot has paid it is never offered by chance. Slot outcomes are chosen as a class, converted to reel stops, and re-evaluated from those stops, so the reels cannot disagree with the engine. Both games have a spin limit per device (80) and a chip top-up; no real money exists anywhere.
+
+**Animation is derived, not simulated.** `scene/casinoMath.ts` (pure) plans each spin from the engine's result: the ball's world angle is a decelerating run that ends exactly on the winning pocket for any wheel start angle, then rides the pocket while the wheel coasts; reels use a ramped velocity profile whose travel is an integer count of symbols congruent to the stop. Unit tests assert that for every pocket and every stop the animation ends on the engine's answer.
+
+**3D.** One scene, one WebGL context: the roulette wheel (a 37-pocket head in the correct European order, frets, cone, turret, ball) and the slot machine (three textured reels, lever, lamps) live in the lobby itself and the camera travels to them along Catmull-Rom paths chosen in open floor. The scene is lazy (`CasinoCanvas`, ~15 KB gzip, sharing three.js with the entrance and lounge), disposes everything and forces context loss on unmount, uses the existing quality tiers and the poster/fallback pattern, and the whole room is textured procedurally (no downloaded assets); only the entrance's CC0 walnut scan is reused. If WebGL is unavailable or too slow, both games remain playable in a flat fallback (a wheel that turns to the engine's pocket, reels that stop on its symbols), honestly without the theatre.
+
+**Assets.** Every optional bespoke asset is named in `config/casinoAssets.ts` with suggested size and placement; `src: null` uses the procedural stand-in, and a missing or failing file always falls back. An optional 9:16 entrance film is wired (skip, session-once, reduced-motion skip, failure fallback) but ships disabled.
+
+**Dev-only.** `src/features/casino/dev/` (state seeds and the tools panel: reset, force a roulette number or slot class, award a reward, completed state, inspect JSON) is reachable only through `import.meta.env.DEV` branches and is absent from production builds. Previews are `?preview=casino-lobby|casino-roulette|casino-slots|casino-jackpot|casino-completed`, listed in the dev menu.
+
+**Gift Vault contract.** `prizes/vaultContract.ts` exposes `createPrizeReader(storage, catalog)`: `rewards()`, `claimed(kind?)`, `vaultGrants()` (claimed vault codes only), `isVaultUnlocked(vaultId)`, `matchCode(vaultId, code)`. The vault must use this and not import games.
+
+**Unresolved questions.**
+- Unlock codes live in the client bundle, so they are discoverable. This is acceptable for a ceremonial surprise and unacceptable for anything of real value; ADR-003 still requires the deferred backend before valuable redemptions.
+- Placeholders awaiting the owner (flagged `placeholder: true`): the Croupier's Clue text, the Vault Key code `TC-0000` and vault id, and the House Favour privilege. Reward names, the chip economy, the scripts and the spin limits are provisional creative choices.
+- The Thirty Club emblem on the reels is a stand-in star-in-ring until the real emblem exists.
+- Casino opening time is still the provisional 2 pm Jamaica time in `schedule.ts` (D02).
+- Real-iPhone performance of the casino scene has not been measured (software-rendered Chromium only).
+

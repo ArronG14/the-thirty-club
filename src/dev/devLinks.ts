@@ -52,11 +52,35 @@ export const DEV_LINK_GROUPS: readonly DevLinkGroup[] = [
     ],
   },
   {
+    title: 'Grand Casino',
+    links: [
+      {
+        label: 'Lobby (fresh progress)',
+        href: '/rooms/casino?preview=casino-lobby',
+        note: 'in-memory progress; nothing is saved',
+      },
+      {
+        label: 'Roulette table',
+        href: '/rooms/casino?preview=casino-roulette',
+      },
+      { label: 'Slot machine', href: '/rooms/casino?preview=casino-slots' },
+      {
+        label: 'Slots: jackpot on the next spin',
+        href: '/rooms/casino?preview=casino-jackpot',
+      },
+      {
+        label: 'Completed state (all prizes claimed)',
+        href: '/rooms/casino?preview=casino-completed',
+      },
+      { label: 'Real gate (production behaviour)', href: '/rooms/casino' },
+    ],
+  },
+  {
     title: 'Not yet built',
     links: [
       {
-        label: 'Grand Casino gate',
-        href: '/rooms/casino?preview=evening',
+        label: 'Gift Vault gate',
+        href: '/rooms/gift-vault?preview=evening',
         note: 'shows the honest "not ready" notice',
       },
       { label: 'Unknown route', href: '/missing-room' },

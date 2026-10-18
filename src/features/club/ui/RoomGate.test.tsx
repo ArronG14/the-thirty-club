@@ -59,7 +59,7 @@ describe('room gate', () => {
       serialiseMembership({ inductedAt: '2026-10-24T05:00:00Z', rooms: {} }),
     );
     vi.setSystemTime(new Date('2026-10-25T06:00:00Z'));
-    visit('/rooms/casino');
+    visit('/rooms/gift-vault');
     expect(
       screen.getByText(/not ready yet\. It is still being prepared/),
     ).toBeInTheDocument();
