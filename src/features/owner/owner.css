@@ -1,0 +1,106 @@
+.owner-toggle {
+  position: fixed;
+  z-index: 90;
+  right: max(12px, env(safe-area-inset-right));
+  top: max(12px, env(safe-area-inset-top));
+  min-height: 44px;
+  padding: 8px 16px;
+  background: #17120f;
+  color: #dfc38a;
+  border: 1px solid #997c47;
+  font:
+    12px Jost,
+    sans-serif;
+  letter-spacing: 0.08em;
+}
+.owner-dialog {
+  width: min(430px, calc(100vw - 32px));
+  max-height: calc(100dvh - 48px);
+  overflow: auto;
+  padding: 28px;
+  color: #eddfbf;
+  background: linear-gradient(145deg, #241914, #100e0d);
+  border: 1px solid #a08450;
+  box-shadow:
+    inset 0 0 0 5px #17120f,
+    inset 0 0 0 6px #5a482e,
+    0 24px 80px #000b;
+}
+.owner-dialog::backdrop {
+  background: #070606d9;
+}
+.owner-dialog h2 {
+  font:
+    32px 'Bodoni Moda',
+    serif;
+  margin: 12px 0;
+}
+.owner-dialog h3,
+.owner-eyebrow {
+  font:
+    11px Jost,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #c5a66d;
+}
+.owner-dialog p {
+  line-height: 1.5;
+}
+.owner-dialog form,
+.owner-actions {
+  display: grid;
+  gap: 10px;
+}
+.owner-dialog button,
+.owner-dialog input {
+  min-height: 48px;
+  padding: 12px;
+  border: 1px solid #8c734b;
+  background: #211a14;
+  color: #f0dfb9;
+  font:
+    16px Jost,
+    sans-serif;
+}
+.owner-dialog input {
+  width: 100%;
+  text-align: center;
+  font-size: 24px;
+  letter-spacing: 0.5em;
+}
+.owner-close {
+  width: 100%;
+  margin-top: 20px;
+}
+.owner-dialog :focus-visible,
+.owner-toggle:focus-visible {
+  outline: 2px solid #ecd7a3;
+  outline-offset: 3px;
+}
+.owner-clock-target {
+  display: none;
+  position: fixed;
+  z-index: 12;
+  border: 0;
+  padding: 0;
+  background: transparent;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.facade[data-render='scene'] .owner-clock-target,
+.facade[data-render='fading'] .owner-clock-target {
+  display: block;
+}
+.timepiece {
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+}
+.owner-dialog {
+  margin: auto;
+}
+.owner-dialog h3 {
+  margin: 20px 0 10px;
+}

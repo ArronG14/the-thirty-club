@@ -1,3 +1,4 @@
+import { progressStorage } from '../../owner/session';
 /**
  * The device's memory of the entrance. Non-authoritative and deliberately
  * tiny: it only prevents the doors relocking (e.g. a clock correction) and
@@ -58,17 +59,14 @@ export function browserEntranceStorage(): EntranceStorage {
   return {
     load() {
       try {
-        return parseRecord(window.localStorage.getItem(ENTRANCE_RECORD_KEY));
+        return parseRecord(progressStorage.getItem(ENTRANCE_RECORD_KEY));
       } catch {
         return emptyRecord;
       }
     },
     save(record) {
       try {
-        window.localStorage.setItem(
-          ENTRANCE_RECORD_KEY,
-          serialiseRecord(record),
-        );
+        progressStorage.setItem(ENTRANCE_RECORD_KEY, serialiseRecord(record));
       } catch {
         // Time-derived state still works; the record is a convenience.
       }

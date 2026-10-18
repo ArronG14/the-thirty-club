@@ -1227,7 +1227,7 @@
   color: var(--ivory);
 }
 
-/* ---------- Development tools (never in production) ---------- */
+/* ---------- Casino testing tools (development or authenticated owner) ---------- */
 
 .devtools {
   position: fixed;
@@ -1306,4 +1306,27 @@
   .reveal__card {
     transform: none;
   }
+}
+
+.devtools[data-owner='true'] {
+  bottom: max(12px, env(safe-area-inset-bottom));
+  left: max(12px, env(safe-area-inset-left));
+  color: #eddfbf;
+  font:
+    14px/1.5 Jost,
+    sans-serif;
+}
+.devtools[data-owner='true'] button,
+.devtools[data-owner='true'] input,
+.devtools[data-owner='true'] select {
+  min-height: 44px;
+  background: #211a14;
+  border-color: #8c734b;
+  color: #eddfbf;
+  font-size: 16px;
+}
+.devtools[data-owner='true'] .devtools__body {
+  background: #17120f;
+  border-color: #8c734b;
+  padding: 16px;
 }

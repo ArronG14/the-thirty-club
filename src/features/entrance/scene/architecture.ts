@@ -335,6 +335,7 @@ export interface Leaf {
   drums: Drum[];
   /** Points beneath each counter group, for the HTML unit labels. */
   labelAnchors: THREE.Object3D[];
+  clockBounds: THREE.Object3D[];
   bolt: THREE.Mesh | null;
 }
 
@@ -477,6 +478,18 @@ function buildLeaf(
   plate.position.set(plateX, PLATE_Y, 0);
   leaf.add(plate);
 
+  const clockBounds = [-1, 1].flatMap((x) =>
+    [-1, 1].map((y) => {
+      const anchor = new THREE.Object3D();
+      anchor.position.set(
+        plateX + (x * PLATE_W) / 2,
+        PLATE_Y + (y * PLATE_H) / 2,
+        0.03,
+      );
+      leaf.add(anchor);
+      return anchor;
+    }),
+  );
   const drums: Drum[] = [];
   const labelAnchors: THREE.Object3D[] = [];
   const shadeMat = new THREE.MeshBasicMaterial({
@@ -548,7 +561,7 @@ function buildLeaf(
   box(leaf, m.brass, [DOOR_W - 0.01, 0.2, 0.004], [cx, 0.11, 0.002]);
 
   mergeStatic(leaf);
-  return { pivot, drums, labelAnchors, bolt };
+  return { pivot, drums, labelAnchors, clockBounds, bolt };
 }
 
 export function buildDoors(scene: THREE.Object3D, m: Materials) {

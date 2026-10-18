@@ -55,6 +55,7 @@ export interface ScreenRect {
 
 export interface SceneAnchors {
   bell: ScreenRect;
+  clock: ScreenRect;
   /** Beneath DAYS, HOURS, MINUTES, SECONDS, in viewport pixels. */
   labels: { x: number; y: number }[];
 }
@@ -556,7 +557,18 @@ export class EntranceScene {
       right.labelAnchors[1],
       right.labelAnchors[0],
     ];
+    const corners = [...left.clockBounds, ...right.clockBounds].map((anchor) =>
+      this.project(anchor.getWorldPosition(new THREE.Vector3()), box),
+    );
+    const xs = corners.map((p) => p.x);
+    const ys = corners.map((p) => p.y);
     return {
+      clock: {
+        left: Math.min(...xs),
+        top: Math.min(...ys),
+        width: Math.max(...xs) - Math.min(...xs),
+        height: Math.max(...ys) - Math.min(...ys),
+      },
       bell: {
         left: Math.min(a!.x, b!.x),
         top: Math.min(a!.y, b!.y),

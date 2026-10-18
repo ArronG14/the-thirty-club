@@ -1,3 +1,4 @@
+import { progressStorage } from '../../owner/session';
 /**
  * The device's memory of Alise's membership and her progress through the
  * club. Non-authoritative: it decides what the butler says and which rooms
@@ -109,16 +110,14 @@ export function browserMembershipStorage(): MembershipStorage {
   return {
     load() {
       try {
-        return parseMembership(
-          window.localStorage.getItem(MEMBERSHIP_RECORD_KEY),
-        );
+        return parseMembership(progressStorage.getItem(MEMBERSHIP_RECORD_KEY));
       } catch {
         return emptyMembership;
       }
     },
     save(record) {
       try {
-        window.localStorage.setItem(
+        progressStorage.setItem(
           MEMBERSHIP_RECORD_KEY,
           serialiseMembership(record),
         );

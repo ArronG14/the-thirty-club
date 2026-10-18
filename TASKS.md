@@ -104,3 +104,9 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 
 - **S01 cinematic playback refinement — IMPLEMENTED:** one custom transport/scrub system, restrained sender line, secondary options dialog, viewport-fitting portrait playback and fading landscape overlay. Dedicated end-of-message/closing overlays wait for explicit actions. Captures and final verification are recorded in the latest BUILD_LOG entry; real iPhone/Safari testing remains pending.
 - **S01 premiere refinement local checks — VERIFIED:** `npm run check` (176 tests), 7 actual-media Chromium playback/layout tests and 13 production PWA tests in a serial rerun. Portrait/landscape/end-message screenshots reviewed. Default parallel PWA run encountered existing software-rendered lounge timing failures; no lounge assertions/timeouts were changed. Physical iPhone/Safari rehearsal remains NOT STARTED.
+
+## Secret owner access
+
+- **O01 — IMPLEMENTED:** hidden five-tap entrance clock activation, PIN 1414, mobile private-office panel, direct implemented-room navigation, birthday and locked rehearsals, isolated session progress, casino test controls, reset and exit. See `docs/OWNER_ACCESS.md` and ADR-011.
+- **O02 — VERIFIED:** default code gates (314 tests), all 21 serial production Chromium tests and four WebKit owner tests. Includes touch activation on the fallback and projected 3D clock, PIN rejection/acceptance, room navigation, birthday/locked rehearsal, isolated rewards, reset, exit and fresh-tab expiry. Commit/push status is recorded in BUILD_LOG.md.
+- **O03 — NOT STARTED:** physical iPhone Safari/Home Screen rehearsal; real screening messages and casino placeholders remain the existing content dependencies.

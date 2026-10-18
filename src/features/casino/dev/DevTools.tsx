@@ -1,9 +1,4 @@
-/**
- * DEVELOPMENT ONLY. Casino test tools: reset, force outcomes, award test
- * rewards, inspect progression and jump to the completed state. Rendered
- * only behind `import.meta.env.DEV` in Casino.tsx, so Vite removes this
- * file (and its imports) from production builds.
- */
+import { ownerActive } from '../../owner/session';
 import { useState } from 'react';
 import { CLUB_REWARDS } from '../../prizes/clubRewards';
 import type { SlotClass } from '../domain/slots';
@@ -24,17 +19,21 @@ export default function CasinoDevTools({ model }: { model: CasinoModel }) {
   const [armed, setArmed] = useState('none');
 
   return (
-    <aside className="devtools" data-open={open}>
+    <aside className="devtools" data-owner={ownerActive} data-open={open}>
       <button
         type="button"
         className="devtools__toggle"
         onClick={() => setOpen(!open)}
       >
-        DEV · casino
+        {ownerActive ? 'Casino test controls' : 'DEV · casino'}
       </button>
       {open && (
         <div className="devtools__body">
-          <p>Development only. Never shipped.</p>
+          <p>
+            {ownerActive
+              ? 'Owner rehearsal · isolated test rewards'
+              : 'Development testing'}
+          </p>
           <div className="devtools__row">
             <button type="button" onClick={() => model.replace(freshState())}>
               Reset progress

@@ -24,12 +24,14 @@ export interface EntranceCanvasProps {
   onReady(): void;
   onFallback(reason: FallbackReason): void;
   onDoorTap(): void;
+  onClockTap(): void;
 }
 
 // Instrument-style abbreviations fit the plate; the timer text is in full.
 const LABELS = ['Days', 'Hours', 'Mins', 'Secs'];
 
 export default function EntranceCanvas(props: EntranceCanvasProps) {
+  const clockRef = useRef<HTMLDivElement>(null);
   const hostRef = useRef<HTMLDivElement>(null);
   const labelRefs = useRef<(HTMLSpanElement | null)[]>([]);
   const sceneRef = useRef<EntranceScene | null>(null);
@@ -53,11 +55,18 @@ export default function EntranceCanvas(props: EntranceCanvasProps) {
     let cancelled = false;
     let scene: EntranceScene | null = null;
 
-    const place = ({ bell, labels }: SceneAnchors) => {
+    const place = ({ bell, labels, clock }: SceneAnchors) => {
       host?.style.setProperty('--bell-left', `${bell.left}px`);
       host?.style.setProperty('--bell-top', `${bell.top}px`);
       host?.style.setProperty('--bell-width', `${bell.width}px`);
       host?.style.setProperty('--bell-height', `${bell.height}px`);
+      const target = clockRef.current;
+      if (target) {
+        target.style.left = `${clock.left}px`;
+        target.style.top = `${clock.top - Math.max(0, 44 - clock.height) / 2}px`;
+        target.style.width = `${clock.width}px`;
+        target.style.height = `${Math.max(44, clock.height)}px`;
+      }
       labels.forEach((point, i) => {
         const el = labelRefs.current[i];
         if (el)
@@ -105,6 +114,15 @@ export default function EntranceCanvas(props: EntranceCanvasProps) {
 
   return (
     <>
+      <div
+        ref={clockRef}
+        className="owner-clock-target"
+        aria-hidden="true"
+        onClick={(e) => {
+          e.stopPropagation();
+          props.onClockTap();
+        }}
+      />
       <div ref={hostRef} className="scene-host" aria-hidden="true" />
       <div className="scene-labels" aria-hidden="true">
         {LABELS.map((label, i) => (

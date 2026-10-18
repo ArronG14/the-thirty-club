@@ -1,3 +1,4 @@
+import OwnerAccess from '../features/owner/OwnerAccess';
 import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router';
 import { RoomGate } from '../features/club/ui/RoomGate';
@@ -23,6 +24,7 @@ export function App() {
   }
   return (
     <AppShell>
+      <OwnerAccess />
       <Routes>
         <Route path="/" element={<Entrance />} />
         <Route path="/rooms/:roomId" element={<RoomGate />} />

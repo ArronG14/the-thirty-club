@@ -1,3 +1,4 @@
+import { progressStorage } from '../../owner/session';
 import type { VideoMessage } from './videoMessages';
 
 export const SCREENING_KEY = 'thirty-club:screening';
@@ -64,14 +65,14 @@ export function loadProgress(
   messages: readonly VideoMessage[],
 ): ScreeningProgress {
   try {
-    return parseProgress(localStorage.getItem(SCREENING_KEY), messages);
+    return parseProgress(progressStorage.getItem(SCREENING_KEY), messages);
   } catch {
     return freshProgress();
   }
 }
 export function saveProgress(progress: ScreeningProgress): boolean {
   try {
-    localStorage.setItem(
+    progressStorage.setItem(
       SCREENING_KEY,
       JSON.stringify({ version: 1, ...progress }),
     );

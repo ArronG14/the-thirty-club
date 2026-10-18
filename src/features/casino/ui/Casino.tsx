@@ -1,3 +1,4 @@
+import { ownerActive } from '../../owner/session';
 import {
   lazy,
   Suspense,
@@ -37,9 +38,7 @@ import { nextLine } from '../domain/butler';
 import './casino.css';
 
 const CasinoCanvas = lazy(() => import('../scene/CasinoCanvas'));
-const DevTools = import.meta.env.DEV
-  ? lazy(() => import('../dev/DevTools'))
-  : null;
+const DevTools = lazy(() => import('../dev/DevTools'));
 
 type RenderMode = 'poster' | 'loading' | 'fading' | 'scene';
 const FADE_MS = 1200;
@@ -597,7 +596,7 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
         />
       )}
       {film && <CasinoEntranceFilm onDone={() => setFilm(false)} />}
-      {DevTools && (
+      {(import.meta.env.DEV || ownerActive) && (
         <Suspense fallback={null}>
           <DevTools model={model} />
         </Suspense>

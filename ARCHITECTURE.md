@@ -225,3 +225,13 @@ Built on the owner's explicit request, overriding AGENTS.md's "do not build the 
 - The Thirty Club emblem on the reels is a stand-in star-in-ring until the real emblem exists.
 - Casino opening time is still the provisional 2 pm Jamaica time in `schedule.ts` (D02).
 - Real-iPhone performance of the casino scene has not been measured (software-rendered Chromium only).
+
+## Private owner rehearsal (ADR-011, 2026-10-18)
+
+The owner explicitly requested a hardcoded four-digit convenience PIN and production testing without a backend. `features/owner/` owns the hidden five-tap gesture, native modal control panel and session-scoped storage selection. Five completed clicks (including touch taps) within a rolling three-second window activate the panel. The fallback timepiece handles these directly; the 3D entrance projects the clock plate corners into a transparent HTML touch target each frame. There is no additional visible guest control.
+
+The existing five progress stores use one storage adapter: guest documents retain their existing localStorage keys; authenticated owner documents use sessionStorage under `thirty-club:owner:`. The optional casino-film session marker is also isolated. The adapter snapshots authorization at document creation, and authentication/exit/mode changes reload the document so asynchronous owner cleanup cannot switch to guest records. Storage failure never falls through from owner to guest. Standard page-session storage preserves reloads and ends with tab closure; browser session restoration may restore it (see `docs/OWNER_ACCESS.md`). Explicit Exit removes authorization and test records.
+
+Owner environments supply a shifted clock and isolated records to existing entrance/club hooks. Birthday preview starts five seconds before device-local midnight; locked rehearsal starts a day before. Direct access seeds only the owner's entrance/membership records and advances its clock beyond scheduled rooms in every supported time zone. The actual countdown date, guest room rules and serializers are unchanged. Reset clears only owner progress. The room list derives from built registry entries.
+
+Casino test controls are now a lazy chunk available to development builds or authenticated owner documents, with owner styling and accurate test-only labelling. Other development previews, debug globals, synthetic media and look-development controls remain behind their original DEV checks. The reused casino test state helpers are intentionally bundled for owner testing. This supersedes ADR-010's blanket statement that all casino tools are absent from production. Client code and the PIN remain inspectable; this gate adds no server authority or private-asset protection.

@@ -1,3 +1,4 @@
+import { sessionProgressStorage } from '../../owner/session';
 import { useEffect, useRef, useState } from 'react';
 import { CASINO_ASSETS } from '../config/casinoAssets';
 
@@ -18,7 +19,7 @@ export function CasinoEntranceFilm({ onDone }: { onDone(): void }) {
     if (done.current) return;
     done.current = true;
     try {
-      window.sessionStorage.setItem(SEEN_KEY, '1');
+      sessionProgressStorage.setItem(SEEN_KEY, '1');
     } catch {
       // Seen-state is a convenience only.
     }

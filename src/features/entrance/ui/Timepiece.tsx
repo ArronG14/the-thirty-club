@@ -38,13 +38,16 @@ const UNITS = [
 export function Timepiece({
   remaining,
   reducedMotion,
+  onTap,
 }: {
   remaining: Remaining;
   reducedMotion: boolean;
+  onTap?: () => void;
 }) {
   return (
     <div
       className="timepiece"
+      onClick={onTap}
       role="timer"
       aria-label="Time until the club opens"
     >

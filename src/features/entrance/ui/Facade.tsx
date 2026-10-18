@@ -1,3 +1,4 @@
+import { fiveTapGesture } from '../../owner/session';
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import { butlerContextFor } from '../domain/butlerScript';
 import { canRender3D } from '../scene/canRender3D';
@@ -23,6 +24,12 @@ const FADE_MS = 1400;
 export function Facade({ model }: { model: EntranceModel }) {
   const { stage, remaining, anticipation, reducedMotion, enter, currentHour } =
     model;
+  const [secretTap] = useState(() =>
+    fiveTapGesture(() =>
+      window.dispatchEvent(new Event('thirty-club:owner-prompt')),
+    ),
+  );
+  const onClockTap = () => secretTap(performance.now());
   const awaiting = stage === 'awaiting-entry';
   const prepared = stage === 'locked' || stage === 'final-minute';
   const [mode, setMode] = useState<RenderMode>(() =>
@@ -57,6 +64,7 @@ export function Facade({ model }: { model: EntranceModel }) {
             onReady={() => setMode((m) => (m === 'loading' ? 'fading' : m))}
             onFallback={() => setMode('poster')}
             onDoorTap={enter}
+            onClockTap={onClockTap}
           />
         </Suspense>
       )}
@@ -76,7 +84,11 @@ export function Facade({ model }: { model: EntranceModel }) {
       <Portal onEnter={awaiting ? enter : undefined} />
 
       <div className="facade__plinth">
-        <Timepiece remaining={remaining} reducedMotion={reducedMotion} />
+        <Timepiece
+          remaining={remaining}
+          reducedMotion={reducedMotion}
+          onTap={onClockTap}
+        />
         <p className="facade__line">
           {prepared
             ? 'Alise, your table is being prepared.'

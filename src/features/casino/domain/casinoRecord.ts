@@ -1,3 +1,4 @@
+import { progressStorage } from '../../owner/session';
 /**
  * The casino's own device record: chips, how many spins have been played
  * (which addresses the scripted outcomes) and the sound preference. Prizes
@@ -67,14 +68,14 @@ export function browserCasinoStorage(): CasinoStorage {
   return {
     load() {
       try {
-        return parseCasino(window.localStorage.getItem(CASINO_RECORD_KEY));
+        return parseCasino(progressStorage.getItem(CASINO_RECORD_KEY));
       } catch {
         return freshCasino;
       }
     },
     save(record) {
       try {
-        window.localStorage.setItem(CASINO_RECORD_KEY, serialiseCasino(record));
+        progressStorage.setItem(CASINO_RECORD_KEY, serialiseCasino(record));
       } catch {
         // The session continues from memory.
       }

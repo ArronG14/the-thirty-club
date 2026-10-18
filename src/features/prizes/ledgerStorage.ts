@@ -1,3 +1,4 @@
+import { progressStorage } from '../owner/session';
 /**
  * Persistence for the prize ledger: one versioned localStorage record that
  * the Gift Vault will read. Non-authoritative, like the rest of the device
@@ -107,7 +108,7 @@ export function browserPrizeStorage(
     load() {
       try {
         return parseLedger(
-          window.localStorage.getItem(PRIZE_LEDGER_KEY),
+          progressStorage.getItem(PRIZE_LEDGER_KEY),
           knownRewardIds,
         );
       } catch {
@@ -116,7 +117,7 @@ export function browserPrizeStorage(
     },
     save(ledger) {
       try {
-        window.localStorage.setItem(PRIZE_LEDGER_KEY, serialiseLedger(ledger));
+        progressStorage.setItem(PRIZE_LEDGER_KEY, serialiseLedger(ledger));
       } catch {
         // The session continues from memory.
       }
