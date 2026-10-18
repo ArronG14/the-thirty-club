@@ -85,3 +85,7 @@ See ADR-008 and `docs/lounge/`.
 ## Explicit non-goals
 
 Phase 2 builds only the entrance and foyer holding room. Phase 1 does not implement the lounge design, invitation sequence, membership card, casino, vault, privileges, screening room, secret mechanics, backend or final branding. No live AI, public membership, multi-user SaaS, payment processing, real-money gambling, generic luxury dashboards or unnecessary framework layers. Three.js and animation libraries remain deferred: the entrance uses CSS, SVG and compositor-friendly transitions only. Installation does not imply offline readiness.
+
+## Backend foundation and Butler’s Office (2026-10-18)
+
+The owner selected a dedicated Supabase PostgreSQL project, Netlify Functions and the existing Twilio Messaging Service. The v1 API implements secure owner/member sessions, independent nail/brow claims, drink-voucher accounting, approval-based scheduled/transactional SMS and the mobile `/owner` office. The shared frontend contract is `docs/CONCIERGE_API_CONTRACT.md`; deployment and safe legacy-data cutover are in `docs/BACKEND_OPERATIONS.md`. Local checks and hosted database rehearsal are recorded in BUILD_LOG.md. Netlify production verification, real message delivery, frontend Casino integration and physical iPhone rehearsal remain pending. No SMS has been sent during this work.

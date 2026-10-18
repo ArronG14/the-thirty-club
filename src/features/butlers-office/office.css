@@ -1,0 +1,213 @@
+.butlers-office {
+  width: min(100% - 2rem, 72rem);
+  margin: 0 auto;
+  padding: max(2rem, env(safe-area-inset-top)) 0
+    max(3rem, env(safe-area-inset-bottom));
+  color: #eadfc9;
+  font-family: var(--font-body, sans-serif);
+}
+.office-header {
+  border-bottom: 1px solid #a88d5559;
+  padding-bottom: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+.office-header h1 {
+  font-family: var(--font-display, Georgia, serif);
+  font-size: clamp(2rem, 7vw, 3.8rem);
+  font-weight: 400;
+  margin: 0.5rem 0;
+}
+.office-header p,
+.office-eyebrow {
+  color: #c7af7e;
+}
+.office-eyebrow {
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+}
+.butlers-office h2,
+.butlers-office h3 {
+  font-family: var(--font-display, Georgia, serif);
+  font-weight: 400;
+}
+.butlers-office h2 {
+  font-size: 1.8rem;
+  margin: 1.5rem 0 1rem;
+}
+.butlers-office h3 {
+  font-size: 1.4rem;
+  margin: 0.5rem 0;
+}
+.butlers-office p {
+  line-height: 1.6;
+}
+.butlers-office button,
+.butlers-office input,
+.butlers-office select,
+.butlers-office textarea {
+  font: inherit;
+  font-size: 1rem;
+  border-radius: 0.3rem;
+  min-height: 44px;
+}
+.butlers-office button {
+  cursor: pointer;
+  border: 1px solid #a88d55;
+  background: #c9ad76;
+  color: #17130e;
+  padding: 0.65rem 1rem;
+}
+.butlers-office button:disabled {
+  cursor: wait;
+  opacity: 0.5;
+}
+.butlers-office button:focus-visible,
+.butlers-office input:focus-visible,
+.butlers-office select:focus-visible,
+.butlers-office textarea:focus-visible {
+  outline: 2px solid #f3dca5;
+  outline-offset: 4px;
+}
+.butlers-office input,
+.butlers-office select,
+.butlers-office textarea {
+  width: 100%;
+  padding: 0.7rem;
+  background: #100f0d;
+  color: #f1e7d4;
+  border: 1px solid #786846;
+  box-sizing: border-box;
+}
+.butlers-office label {
+  display: grid;
+  gap: 0.45rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+.butlers-office form {
+  margin-top: 1rem;
+}
+.office-login {
+  max-width: 28rem;
+  margin: 3rem auto;
+}
+.office-login a {
+  display: inline-block;
+  margin-top: 1.5rem;
+  color: #d3b67c;
+}
+.office-session,
+.office-refresh {
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+.office-tabs {
+  display: flex;
+  overflow-x: auto;
+  gap: 0.5rem;
+  padding: 0.5rem 0 1rem;
+}
+.office-tabs button {
+  flex-shrink: 0;
+  background: transparent;
+  color: #d5c29a;
+  text-transform: capitalize;
+}
+.office-tabs button[aria-pressed='true'] {
+  background: #c9ad76;
+  color: #17130e;
+}
+.office-metrics,
+.office-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1rem;
+}
+.office-metrics article,
+.office-card {
+  background: linear-gradient(145deg, #211c15, #151310);
+  border: 1px solid #a88d554d;
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1rem;
+  overflow-wrap: anywhere;
+}
+.office-metrics article {
+  display: grid;
+  gap: 0.5rem;
+}
+.office-metrics strong {
+  font-size: 2rem;
+  font-weight: 400;
+}
+.office-form-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+.office-check {
+  display: flex !important;
+  align-items: center;
+}
+.office-check input {
+  width: 1.5rem;
+}
+.office-actions {
+  display: flex;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+.office-error {
+  background: #4c261e;
+  color: #ffe2cc;
+  padding: 0.8rem;
+  border-radius: 0.25rem;
+}
+.office-history {
+  padding: 0;
+  list-style: none;
+}
+.office-history li {
+  padding: 1rem 0;
+  border-bottom: 1px solid #a88d5533;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  overflow-wrap: anywhere;
+}
+.office-history li p {
+  width: 100%;
+  margin: 0;
+}
+.office-history span {
+  color: #c7af7e;
+  margin-left: auto;
+}
+.office-message {
+  white-space: pre-wrap;
+}
+.office-invitation {
+  margin-top: 1rem;
+}
+.office-invitation button {
+  margin-right: 0.5rem;
+}
+.butlers-office hr {
+  border: 0;
+  border-top: 1px solid #a88d554d;
+  margin: 2rem 0;
+}
+@media (max-width: 420px) {
+  .butlers-office {
+    width: calc(100% - 1.5rem);
+  }
+  .office-card {
+    padding: 1rem;
+  }
+}

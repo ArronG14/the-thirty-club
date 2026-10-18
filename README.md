@@ -60,3 +60,14 @@ The active repository is `/Users/ag14/Documents/Projects/the-thirty-club`. `netl
 Deploy the repository with its routing-only Edge Function, not just a drag-and-drop dist folder. It provides extensionless HTML navigation while leaving API and missing static resources as errors. `/api/*` is served by the concierge function (`netlify/functions/api.ts`); unknown API routes answer with a JSON 404, and the bare `/api` path stays a static 404. HTML, manifest and worker revalidate; Vite generates exact immutable asset rules in dist/_headers. Public/unhashed assets receive no immutable rule.
 
 Run both `npm run check` and `npm run test:pwa` before release. The PWA browser test verifies shell readiness/offline reload, query-bearing navigation, and refusal to substitute the shell for missing API/static requests. Vite preview is not a Netlify emulator: CDN routing, Edge runtime and response headers need a later authorised hosted preview. Check actual iPhone Safari/Home Screen installation and update behavior before production. This preparation does not deploy anything. See ADR-005 in ARCHITECTURE.md; the earlier MIGRATION_HANDOVER.md audit is historical.
+
+## Butler’s Office and authoritative backend
+
+`/owner` is the secure owner dashboard. The v1 Netlify API uses the dedicated Supabase PostgreSQL project for member sessions, beauty claims, drink vouchers and an approval-based Twilio outbox.
+
+- Frontend contract and shared types: [CONCIERGE_API_CONTRACT.md](docs/CONCIERGE_API_CONTRACT.md), `src/shared/concierge/types.ts`.
+- Server environment, migration cutover, recovery and deployment: [BACKEND_OPERATIONS.md](docs/BACKEND_OPERATIONS.md).
+- `npm run test:office` runs the mobile beauty-redemption rehearsal against embedded PostgreSQL with no SMS provider.
+- `npm run functions:build` bundles the Netlify Functions locally.
+
+The original cinematic identity verification and owner rehearsal PIN grant no authority to these APIs. SMS is disabled by default and requires explicit approval.

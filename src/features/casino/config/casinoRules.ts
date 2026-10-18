@@ -6,8 +6,8 @@
  * refresh can never replay or skip a step. After a script ends, spins fall
  * back to fair random numbers (roulette) or the filler weights (slots).
  */
-import type { ScriptStep } from '../domain/roulette';
-import type { SlotScriptConfig } from '../domain/slots';
+import type { ScriptStep } from '../domain/roulette.ts';
+import type { SlotScriptConfig } from '../domain/slots.ts';
 
 export const CHIPS = {
   /** Chips held on a first visit. */

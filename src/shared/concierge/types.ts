@@ -115,6 +115,7 @@ export interface OwnerOverview {
   deliveries: DeliveryLog[];
   activity: ActivityEvent[];
   smsEnabled: boolean;
+  transactionalSmsApproved: boolean;
 }
 export type ApiErrorCode =
   | 'invalid'
