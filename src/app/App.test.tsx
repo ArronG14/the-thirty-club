@@ -49,9 +49,17 @@ describe('routes and connectivity', () => {
     expect(
       screen.getByText('Alise, your table is being prepared.'),
     ).toBeInTheDocument();
-    expect(
-      screen.getAllByRole('button').map((button) => button.textContent),
-    ).toEqual(['Ring for service']);
+    // Names as announced: decorative artwork is aria-hidden.
+    const spoken = (element: Element) => {
+      const copy = element.cloneNode(true) as Element;
+      copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
+      return copy.textContent;
+    };
+    // The concierge's letter on the step (ADR-012) and the butler's bell.
+    expect(screen.getAllByRole('button').map(spoken)).toEqual([
+      'A letter has been left for you',
+      'Ring for service',
+    ]);
   });
 
   it('provides a recovery link for an unknown route', () => {

@@ -1,6 +1,6 @@
 # The Thirty Club
 
-Alise's private birthday members' club. The Grand Entrance (locked doors, countdown, butler, midnight ceremony and foyer) is implemented. The club experiences beyond the foyer are not built yet.
+Alise's private birthday members' club: the Grand Entrance, Members' Lounge, Private Screening Room and Grand Casino, plus the pre-birthday **Concierge** (Departure Lounge at `/departure`, NFC credentials at `/c/<token>`, privileges whose redemption notifies Arron by Telegram, scheduled messages to Alise and an owner console at `/concierge/owner`). The Gift Vault is not built. Operating the concierge (accounts, environment variables, NFC tags, rehearsal) is documented in [docs/CONCIERGE.md](docs/CONCIERGE.md).
 
 ## Local development
 
@@ -51,12 +51,12 @@ Read PROJECT.md, ARCHITECTURE.md, AGENTS.md, TASKS.md and BUILD_LOG.md before ch
 
 Serve `dist/` over HTTPS. Rewrite application routes to index.html, excluding `/api/` and missing static assets. Serve `sw.js`, index.html and the manifest with revalidation; hashed assets may use immutable caching. First open online, wait for explicit offline-ready status, enable airplane mode, then reload the root and a navigation route. On the actual iPhone, test Safari and Home Screen standalone launches, safe areas, reduced motion and an update with a waiting worker. Clearing browser storage should require an online first visit again. Local Chromium checks do not replace this rehearsal.
 
-No backend, secrets, personalised prize data or remote media are present. The existing Git repository and origin are preserved. No hosting deployment or production access gate is confirmed by this preparation task.
+The concierge (ADR-012) adds Netlify Functions and Netlify Blobs; its secrets live only in Netlify environment variables (see `.env.example` and docs/CONCIERGE.md). No personalised prize data or remote media are present. The existing Git repository and origin are preserved. No hosting deployment or production access gate is confirmed by this preparation task.
 
 ## Netlify configuration
 
-The active repository is `/Users/ag14/Documents/Projects/the-thirty-club`. `netlify.toml` uses the repository root, `npm run build`, publish directory `dist`, Node 22.13.1 and npm 10.9.2. No application environment variables are required. Keep build-time devDependencies installed.
+The active repository is `/Users/ag14/Documents/Projects/the-thirty-club`. `netlify.toml` uses the repository root, `npm run build`, publish directory `dist`, Node 22.13.1 and npm 10.9.2. The site builds without any environment variables; the concierge service needs the variables in docs/CONCIERGE.md and reports any that are missing in the owner console. Keep build-time devDependencies installed.
 
-Deploy the repository with its routing-only Edge Function, not just a drag-and-drop dist folder. It provides extensionless HTML navigation while leaving API and missing static resources as errors. API paths are reserved 404s until a backend is configured. HTML, manifest and worker revalidate; Vite generates exact immutable asset rules in dist/_headers. Public/unhashed assets receive no immutable rule.
+Deploy the repository with its routing-only Edge Function, not just a drag-and-drop dist folder. It provides extensionless HTML navigation while leaving API and missing static resources as errors. `/api/*` is served by the concierge function (`netlify/functions/api.ts`); unknown API routes answer with a JSON 404, and the bare `/api` path stays a static 404. HTML, manifest and worker revalidate; Vite generates exact immutable asset rules in dist/_headers. Public/unhashed assets receive no immutable rule.
 
 Run both `npm run check` and `npm run test:pwa` before release. The PWA browser test verifies shell readiness/offline reload, query-bearing navigation, and refusal to substitute the shell for missing API/static requests. Vite preview is not a Netlify emulator: CDN routing, Edge runtime and response headers need a later authorised hosted preview. Check actual iPhone Safari/Home Screen installation and update behavior before production. This preparation does not deploy anything. See ADR-005 in ARCHITECTURE.md; the earlier MIGRATION_HANDOVER.md audit is historical.

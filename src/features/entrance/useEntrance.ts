@@ -18,16 +18,23 @@ import type { EntranceEnvironment } from './domain/environment';
 /** Lands each tick just after the displayed second changes. */
 const TICK_SLACK_MS = 8;
 
-export function useEntrance({ clock, storage }: EntranceEnvironment) {
+export function useEntrance(
+  { clock, storage, card }: EntranceEnvironment,
+  { presentedNow = false }: { presentedNow?: boolean } = {},
+) {
   const reducedMotion = useReducedMotion();
   const [initialRecord] = useState(() => storage.load());
   const recordRef = useRef(initialRecord);
+  const [member, setMember] = useState(() => card.isPresented());
+  const memberRef = useRef(member);
   const [now, setNow] = useState(() => clock.now());
   const [state, dispatch] = useReducer(entranceReducer, undefined, () =>
-    initialEntranceState(
-      timePhase(clock.now(), openingInstant()),
-      initialRecord,
-    ),
+    initialEntranceState({
+      phase: timePhase(clock.now(), openingInstant()),
+      record: initialRecord,
+      member,
+      presentedNow,
+    }),
   );
   const counting = state.stage === 'locked' || state.stage === 'final-minute';
 
@@ -40,7 +47,11 @@ export function useEntrance({ clock, storage }: EntranceEnvironment) {
       const current = clock.now();
       const target = openingInstant();
       setNow(current);
-      dispatch({ type: 'time', phase: timePhase(current, target) });
+      dispatch({
+        type: 'time',
+        phase: timePhase(current, target),
+        member: memberRef.current,
+      });
       timer = setTimeout(
         tick,
         msUntilNextTick(current, target) + TICK_SLACK_MS,
@@ -91,6 +102,12 @@ export function useEntrance({ clock, storage }: EntranceEnvironment) {
 
   const target = openingInstant();
   const enter = useCallback(() => dispatch({ type: 'enter' }), []);
+  /** The card has just been presented (by hand, or seen on another device). */
+  const presentMembership = useCallback(() => {
+    memberRef.current = true;
+    setMember(true);
+    dispatch({ type: 'credential' });
+  }, []);
   const replay = useCallback(() => dispatch({ type: 'replay' }), []);
   const currentHour = useCallback(
     () => new Date(clock.now()).getHours(),
@@ -103,8 +120,12 @@ export function useEntrance({ clock, storage }: EntranceEnvironment) {
     remaining: remainingUntil(counting ? now : target, target),
     anticipation: counting ? anticipation(now, target) : 1,
     reducedMotion,
+    member,
+    /** The entrance clock, refreshed every second while counting. */
+    now,
     enter,
     replay,
+    presentMembership,
     currentHour,
   };
 }

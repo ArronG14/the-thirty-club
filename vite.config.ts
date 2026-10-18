@@ -1,4 +1,5 @@
 import { screeningPreviewMedia } from './build/screeningPreviewMedia.ts';
+import { conciergeLocalApi } from './build/conciergeLocalApi.ts';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import { netlifyHeaders } from './build/netlifyHeaders.ts';
@@ -9,6 +10,7 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     screeningPreviewMedia(),
+    conciergeLocalApi(),
     react(),
     tailwindcss(),
     netlifyHeaders(),
@@ -54,7 +56,7 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     setupFiles: ['./src/test/setup.ts'],
-    include: ['src/**/*.test.{ts,tsx}'],
+    include: ['src/**/*.test.{ts,tsx}', 'netlify/**/*.test.ts'],
     clearMocks: true,
   },
 });

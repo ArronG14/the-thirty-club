@@ -4,6 +4,10 @@ import { butlerContextFor } from '../domain/butlerScript';
 import { canRender3D } from '../scene/canRender3D';
 import type { SceneHandle } from '../scene/EntranceCanvas';
 import { preloadLounge } from '../../lounge/preload';
+import {
+  EntranceLetter,
+  MembershipPrompt,
+} from '../../concierge/ui/EntranceConcierge';
 import type { EntranceModel } from '../useEntrance';
 import { Portal } from './Portal';
 import { ServiceBell } from './ServiceBell';
@@ -22,8 +26,17 @@ const FADE_MS = 1400;
 
 /** The street-side entrance: sign, doors, timepiece and bell. */
 export function Facade({ model }: { model: EntranceModel }) {
-  const { stage, remaining, anticipation, reducedMotion, enter, currentHour } =
-    model;
+  const {
+    stage,
+    remaining,
+    anticipation,
+    reducedMotion,
+    enter,
+    currentHour,
+    member,
+    presentMembership,
+    now,
+  } = model;
   const [secretTap] = useState(() =>
     fiveTapGesture(() =>
       window.dispatchEvent(new Event('thirty-club:owner-prompt')),
@@ -31,6 +44,7 @@ export function Facade({ model }: { model: EntranceModel }) {
   );
   const onClockTap = () => secretTap(performance.now());
   const awaiting = stage === 'awaiting-entry';
+  const awaitingCard = stage === 'awaiting-credential';
   const prepared = stage === 'locked' || stage === 'final-minute';
   const [mode, setMode] = useState<RenderMode>(() =>
     canRender3D() ? 'loading' : 'poster',
@@ -90,10 +104,16 @@ export function Facade({ model }: { model: EntranceModel }) {
           onTap={onClockTap}
         />
         <p className="facade__line">
-          {prepared
-            ? 'Alise, your table is being prepared.'
-            : 'Alise, your table is ready.'}
+          {awaitingCard
+            ? 'Happy birthday, Alise. Your membership card, if you please.'
+            : prepared
+              ? member
+                ? 'Alise, your card is in order. Your table is being prepared.'
+                : 'Alise, your table is being prepared.'
+              : 'Alise, your table is ready.'}
         </p>
+        {stage === 'locked' && <EntranceLetter now={now} />}
+        {awaitingCard && <MembershipPrompt onPresented={presentMembership} />}
         {awaiting && (
           <button type="button" className="facade__enter" onClick={enter}>
             Enter the club

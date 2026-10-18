@@ -168,6 +168,12 @@ describe('room availability', () => {
     expect(isOpen(casino, AFTERNOON, record)).toBe(true);
   });
 
+  it('keeps scheduled rooms shut to anyone who has not presented the membership', () => {
+    // A direct link at 3 pm cannot skip the membership ceremony (ADR-012).
+    expect(isOpen(casino, AFTERNOON, emptyMembership)).toBe(false);
+    expect(isOpen(casino, AFTERNOON, member(BEFORE))).toBe(true);
+  });
+
   it('never relocks a room once seen open, even if the clock goes back', () => {
     const settled = settleUnlocks(member(BEFORE), AFTERNOON);
     expect(settled.rooms.casino?.unlockedAt).toBeDefined();

@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { BIRTHDAY_EARLY, presentMembershipCard } from './concierge-helpers';
 
 // The real-time Members' Lounge in the production build. Headless Chromium
 // renders WebGL in software (SwiftShader), so these use real timers and
@@ -11,7 +12,8 @@ test.describe('real-time lounge', () => {
     page,
   }) => {
     test.setTimeout(150_000);
-    await page.clock.setFixedTime(new Date(2026, 9, 24, 1, 0, 0));
+    await presentMembershipCard(page);
+    await page.clock.setFixedTime(BIRTHDAY_EARLY);
     await page.goto('/');
     await page.getByRole('button', { name: 'Enter the club' }).click();
     const lounge = page.locator('.lounge');

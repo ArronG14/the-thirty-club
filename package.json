@@ -24,6 +24,7 @@
     "@fontsource-variable/bodoni-moda": "^5.3.0",
     "@fontsource-variable/cormorant-garamond": "^5.3.0",
     "@fontsource-variable/jost": "^5.3.0",
+    "@netlify/blobs": "^11.1.2",
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "react-router": "^7.18.4",

@@ -106,21 +106,20 @@ export function stampRoom(
  * localStorage-backed record. Unavailable or full storage degrades to an
  * in-session membership: the ceremony may replay later, nothing breaks.
  */
-export function browserMembershipStorage(): MembershipStorage {
+export function browserMembershipStorage(
+  key = MEMBERSHIP_RECORD_KEY,
+): MembershipStorage {
   return {
     load() {
       try {
-        return parseMembership(progressStorage.getItem(MEMBERSHIP_RECORD_KEY));
+        return parseMembership(progressStorage.getItem(key));
       } catch {
         return emptyMembership;
       }
     },
     save(record) {
       try {
-        progressStorage.setItem(
-          MEMBERSHIP_RECORD_KEY,
-          serialiseMembership(record),
-        );
+        progressStorage.setItem(key, serialiseMembership(record));
       } catch {
         // The session continues from memory.
       }

@@ -15,29 +15,46 @@ function run(state: EntranceState, ...events: EntranceEvent[]) {
   return events.reduce(entranceReducer, state);
 }
 
+const start = (
+  phase: 'locked' | 'final-minute' | 'open',
+  record = emptyRecord,
+  member = true,
+  presentedNow = false,
+) => initialEntranceState({ phase, record, member, presentedNow });
+
 describe('initial entrance state', () => {
   it('starts locked or in the final minute from the clock', () => {
-    expect(initialEntranceState('locked', emptyRecord).stage).toBe('locked');
-    expect(initialEntranceState('final-minute', emptyRecord).stage).toBe(
-      'final-minute',
-    );
+    expect(start('locked').stage).toBe('locked');
+    expect(start('final-minute').stage).toBe('final-minute');
+    expect(start('locked', emptyRecord, false).stage).toBe('locked');
   });
 
-  it('greets a late arrival at unlocked doors rather than replaying midnight', () => {
-    expect(initialEntranceState('open', emptyRecord)).toEqual({
-      stage: 'awaiting-entry',
+  it('greets a late member at unlocked doors rather than replaying midnight', () => {
+    expect(start('open')).toEqual({ stage: 'awaiting-entry', welcomed: false });
+  });
+
+  it('keeps the doors closed after midnight until the card is presented', () => {
+    expect(start('open', emptyRecord, false)).toEqual({
+      stage: 'awaiting-credential',
       welcomed: false,
     });
   });
 
+  it('plays the ceremony at once when arriving from the card', () => {
+    expect(start('open', emptyRecord, true, true).stage).toBe('unlocking');
+    // Before midnight the card alone opens nothing.
+    expect(start('locked', emptyRecord, true, true).stage).toBe('locked');
+  });
+
   it('does not relock when the device clock moves backwards after unlock', () => {
     const record = { unlockedAt: seen, ceremonySeenAt: null };
-    expect(initialEntranceState('locked', record).stage).toBe('awaiting-entry');
+    expect(start('locked', record).stage).toBe('awaiting-entry');
+    expect(start('locked', record, false).stage).toBe('awaiting-entry');
   });
 
   it('returns members who have entered straight to the foyer', () => {
     const record = { unlockedAt: seen, ceremonySeenAt: seen };
-    expect(initialEntranceState('locked', record)).toEqual({
+    expect(start('locked', record)).toEqual({
       stage: 'foyer',
       welcomed: false,
     });
@@ -48,9 +65,13 @@ describe('entrance transitions', () => {
   const locked: EntranceState = { stage: 'locked', welcomed: false };
 
   it('runs the live midnight ceremony automatically', () => {
-    let state = run(locked, { type: 'time', phase: 'final-minute' });
+    let state = run(locked, {
+      type: 'time',
+      phase: 'final-minute',
+      member: true,
+    });
     expect(state.stage).toBe('final-minute');
-    state = run(state, { type: 'time', phase: 'open' });
+    state = run(state, { type: 'time', phase: 'open', member: true });
     expect(state.stage).toBe('unlocking');
     state = run(state, { type: 'advance' });
     expect(state.stage).toBe('opening');
@@ -59,9 +80,25 @@ describe('entrance transitions', () => {
   });
 
   it('jumps from locked to unlocking if the tab slept through the final minute', () => {
-    expect(run(locked, { type: 'time', phase: 'open' }).stage).toBe(
-      'unlocking',
-    );
+    expect(
+      run(locked, { type: 'time', phase: 'open', member: true }).stage,
+    ).toBe('unlocking');
+  });
+
+  it('waits at midnight for the card, then opens when it is presented', () => {
+    let state = run(locked, { type: 'time', phase: 'open', member: false });
+    expect(state.stage).toBe('awaiting-credential');
+    state = run(state, { type: 'time', phase: 'open', member: false });
+    expect(state.stage).toBe('awaiting-credential');
+    expect(run(state, { type: 'enter' })).toBe(state);
+    state = run(state, { type: 'credential' });
+    expect(state.stage).toBe('unlocking');
+    state = run(state, { type: 'advance' }, { type: 'advance' });
+    expect(state).toEqual({ stage: 'foyer', welcomed: true });
+  });
+
+  it('ignores a presented card at any other stage', () => {
+    expect(run(locked, { type: 'credential' })).toBe(locked);
   });
 
   it('ignores the clock once the doors are unlocked', () => {
@@ -72,7 +109,9 @@ describe('entrance transitions', () => {
       'foyer',
     ] as const) {
       const state: EntranceState = { stage, welcomed: false };
-      expect(run(state, { type: 'time', phase: 'locked' })).toBe(state);
+      expect(run(state, { type: 'time', phase: 'locked', member: true })).toBe(
+        state,
+      );
     }
   });
 
@@ -132,9 +171,16 @@ describe('device record', () => {
     ).toEqual({ unlockedAt: seen, ceremonySeenAt: seen });
   });
 
-  it('records nothing while locked', () => {
+  it('records nothing while locked or waiting for the card', () => {
     expect(
       nextRecord(emptyRecord, { stage: 'final-minute', welcomed: false }, seen),
+    ).toBe(emptyRecord);
+    expect(
+      nextRecord(
+        emptyRecord,
+        { stage: 'awaiting-credential', welcomed: false },
+        seen,
+      ),
     ).toBe(emptyRecord);
   });
 });

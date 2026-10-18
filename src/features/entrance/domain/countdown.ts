@@ -4,6 +4,8 @@
  * resumed sessions and device sleep cannot drift the display.
  */
 
+import { instantInZone } from '../../club/domain/schedule';
+
 export const OPENING_DATE = { year: 2026, monthIndex: 9, day: 24 } as const;
 export const FINAL_MINUTE_MS = 60_000;
 
@@ -12,14 +14,24 @@ const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
+/** The birthday is spent in Jamaica; its midnight is the club's. */
+export const OPENING_ZONE = 'America/Jamaica';
+
 /**
- * Local midnight at the start of 24 October 2026 in whatever time zone the
- * device currently uses. Computed on demand (not cached) so a device that
- * changes zone, e.g. after a flight, targets its new local midnight.
+ * Midnight at the start of 24 October 2026 in Jamaica (05:00 UTC), whatever
+ * zone the device is set to. Amended from device-local midnight by ADR-012:
+ * a phone still on London time would otherwise have opened the doors at
+ * 6 pm on Friday, Jamaica time.
  */
 export function openingInstant(): number {
   const { year, monthIndex, day } = OPENING_DATE;
-  return new Date(year, monthIndex, day, 0, 0, 0, 0).getTime();
+  return instantInZone(
+    {
+      date: `${year}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`,
+      time: '00:00',
+    },
+    OPENING_ZONE,
+  );
 }
 
 export interface Remaining {

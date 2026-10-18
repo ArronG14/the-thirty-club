@@ -1,4 +1,5 @@
 import { useState, type CSSProperties } from 'react';
+import { useLocation } from 'react-router';
 import type { EntranceStage } from '../domain/entranceMachine';
 import type { EntranceEnvironment } from '../domain/environment';
 import { createEntranceEnvironment } from '../entranceEnvironment';
@@ -11,6 +12,8 @@ import './entrance.css';
 
 const ANNOUNCEMENTS: Partial<Record<EntranceStage, string>> = {
   'final-minute': 'Less than one minute until the club opens.',
+  'awaiting-credential':
+    'Midnight. The club is open to members. Please present your membership card.',
   unlocking: 'Midnight. The doors are unlocking.',
   'awaiting-entry': 'The doors are unlocked. The club is open.',
   opening: 'The doors are opening.',
@@ -22,7 +25,14 @@ export function Entrance({
   environment?: EntranceEnvironment;
 }) {
   const [env] = useState(() => environment ?? createEntranceEnvironment());
-  const model = useEntrance(env);
+  // Arriving from the membership card's link (/c/<token>): play the ceremony.
+  const location = useLocation();
+  const [presentedNow] = useState(
+    () =>
+      (location.state as { presented?: string } | null)?.presented ===
+      'membership',
+  );
+  const model = useEntrance(env, { presentedNow });
   const { stage, anticipation, reducedMotion } = model;
 
   return (

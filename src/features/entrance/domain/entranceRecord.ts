@@ -55,18 +55,20 @@ export function serialiseRecord(record: EntranceRecord): string {
  * localStorage-backed record. Storage can be unavailable (private browsing,
  * quota, eviction); failures degrade to time-only behaviour, never an error.
  */
-export function browserEntranceStorage(): EntranceStorage {
+export function browserEntranceStorage(
+  key = ENTRANCE_RECORD_KEY,
+): EntranceStorage {
   return {
     load() {
       try {
-        return parseRecord(progressStorage.getItem(ENTRANCE_RECORD_KEY));
+        return parseRecord(progressStorage.getItem(key));
       } catch {
         return emptyRecord;
       }
     },
     save(record) {
       try {
-        progressStorage.setItem(ENTRANCE_RECORD_KEY, serialiseRecord(record));
+        progressStorage.setItem(key, serialiseRecord(record));
       } catch {
         // Time-derived state still works; the record is a convenience.
       }

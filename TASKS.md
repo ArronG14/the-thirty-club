@@ -110,3 +110,22 @@ The current working repository is `/Users/ag14/Documents/Projects/the-thirty-clu
 - **O01 — IMPLEMENTED:** hidden five-tap entrance clock activation, PIN 1414, mobile private-office panel, direct implemented-room navigation, birthday and locked rehearsals, isolated session progress, casino test controls, reset and exit. See `docs/OWNER_ACCESS.md` and ADR-011.
 - **O02 — VERIFIED:** default code gates (314 tests), all 21 serial production Chromium tests and four WebKit owner tests. Includes touch activation on the fallback and projected 3D clock, PIN rejection/acceptance, room navigation, birthday/locked rehearsal, isolated rewards, reset, exit and fresh-tab expiry. Commit/push status is recorded in BUILD_LOG.md.
 - **O03 — NOT STARTED:** physical iPhone Safari/Home Screen rehearsal; real screening messages and casino placeholders remain the existing content dependencies.
+
+## Concierge — pre-birthday journey (ADR-012)
+
+| ID  | Priority | Status      | Task / acceptance                                                                                                                                                                                       |
+| --- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| K01 | P0       | VERIFIED    | Design plan (docs/CONCIERGE.md, ADR-012): journey, visual direction, data model, notification architecture, security model                                                                              |
+| K02 | P0       | VERIFIED    | Concierge service core: credentials, signed sessions, rate limits, idempotent redemptions, Telegram/Twilio channels, retries, scheduled dispatch, owner API, rehearsal realm — 41 unit tests with fakes |
+| K03 | P0       | IMPLEMENTED | Netlify wiring: `api` function at `/api/*`, `concierge-dispatch` scheduled function, Blobs adapter. Not yet deployed or run on Netlify                                                                  |
+| K04 | P0       | VERIFIED    | Departure Lounge (`/departure`): board, credential request and riddle, boarding ceremony, wallet, privilege lifecycle, offline pending intents — component and Playwright tests                         |
+| K05 | P0       | VERIFIED    | NFC credential arrival (`/c/:token`) and manual-code fallback, both credentials                                                                                                                         |
+| K06 | P0       | VERIFIED    | Entrance: Phase One letter on the step; Jamaica-midnight eligibility; `awaiting-credential` until the membership card; scheduled rooms require membership                                               |
+| K07 | P1       | VERIFIED    | Owner console (`/concierge/owner`): configuration health, NFC links/codes, activity and delivery status, resend, release times, message send/mark/copy, rehearsal, display pairing, live reset          |
+| K08 | P0       | NOT STARTED | Owner: create Telegram bot and set all environment variables in Netlify; deploy; console test notification arrives on Arron's phone                                                                     |
+| K09 | P0       | NOT STARTED | Owner: write and test NFC tags (rehearsal realm), print manual codes, choose riddles to match hiding places                                                                                             |
+| K10 | P0       | NOT STARTED | Full rehearsal on the real iPhone (Safari) and hosted site: Thursday, in-flight, Friday, birthday card ceremony; then clear rehearsal/live test records                                                 |
+| K11 | P1       | NOT STARTED | Optional: Twilio account, alphanumeric sender test to Alise's number, `ALISE_DISPATCH=sms`                                                                                                              |
+| K12 | P1       | NOT STARTED | Owner approval of concierge copy, in-flight time (PROVISIONAL 18:30 UK), Friday time (09:00 Jamaica) and membership riddle (PROVISIONAL)                                                                |
+
+VERIFIED here means the recorded local checks passed (see BUILD_LOG); it does not cover Netlify hosting, real providers, NFC hardware or an iPhone.

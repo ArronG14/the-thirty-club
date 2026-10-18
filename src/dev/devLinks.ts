@@ -24,6 +24,33 @@ export const DEV_LINK_GROUPS: readonly DevLinkGroup[] = [
       { label: 'Final minute', href: '/?preview=final-minute' },
       { label: 'Midnight unlock', href: '/?preview=midnight' },
       { label: 'Late arrival', href: '/?preview=arrival' },
+      {
+        label: 'Birthday: the doors await the card',
+        href: '/?preview=awaiting-card',
+      },
+    ],
+  },
+  {
+    title: 'Concierge (pre-birthday)',
+    links: [
+      {
+        label: 'Departure Lounge (real clock)',
+        href: '/departure',
+        note: 'local API with fake channels; shift its clock via POST /api/__local/clock',
+      },
+      {
+        label: 'Travel credential NFC link (test token)',
+        href: '/c/departure-test-token-0001',
+      },
+      {
+        label: 'Membership card NFC link (test token)',
+        href: '/c/membership-test-token-0001',
+      },
+      {
+        label: 'Owner console',
+        href: '/concierge/owner',
+        note: 'local owner key: test-owner-key-0001',
+      },
     ],
   },
   {

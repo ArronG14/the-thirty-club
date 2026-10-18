@@ -30,7 +30,9 @@ export function isOpen(
     case 'membership':
       return record.inductedAt !== null;
     case 'scheduled':
-      return now >= room.unlock.at;
+      // The time is kept (ADR-008); the membership must also have been
+      // presented, so a direct link cannot skip the ceremony (ADR-012).
+      return record.inductedAt !== null && now >= room.unlock.at;
   }
 }
 

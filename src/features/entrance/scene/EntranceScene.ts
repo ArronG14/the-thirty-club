@@ -460,7 +460,7 @@ export class EntranceScene {
           ? reducedMotion
             ? 1
             : boltRetraction(since)
-          : counting(stage)
+          : counting(stage) || stage === 'awaiting-credential'
             ? 0
             : 1;
       bolt.position.x = 0.81 - retract * 0.095;
@@ -472,8 +472,11 @@ export class EntranceScene {
 
     // Light: the final minute builds, midnight blazes, the room floods.
     const blaze = stage === 'unlocking' ? Math.min(1, since * 1.5) : 0;
+    // Waiting (for her, or for her card): the seam breathes.
     const breathe =
-      stage === 'awaiting-entry' ? 0.85 + 0.15 * Math.sin(t * 1.4) : 1;
+      stage === 'awaiting-entry' || stage === 'awaiting-credential'
+        ? 0.85 + 0.15 * Math.sin(t * 1.4)
+        : 1;
     doors.leak.opacity =
       (0.35 + warm * 0.65) * breathe * Math.max(0, 1 - open * 4);
     doors.leak.color.setRGB(3 + blaze * 3, 2.1 + blaze * 2, 1.1 + blaze);

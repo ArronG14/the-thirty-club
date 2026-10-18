@@ -8,7 +8,7 @@ import {
 } from '../../club/domain/membershipRecord';
 import { CONCIERGE_LINES } from '../../club/domain/loungeScript';
 import { memoryEntranceStorage } from '../../entrance/domain/entranceRecord';
-import { systemClock } from '../../entrance/domain/environment';
+import { presentedCard, systemClock } from '../../entrance/domain/environment';
 import { Entrance } from '../../entrance/ui/Entrance';
 
 // 1 am in Kingston on the birthday: after midnight, before any scheduled room.
@@ -29,6 +29,7 @@ function enterLounge(record?: MembershipRecord) {
             ceremonySeenAt: SEEN,
           }),
           membership,
+          card: presentedCard,
           preview: null,
         }}
       />

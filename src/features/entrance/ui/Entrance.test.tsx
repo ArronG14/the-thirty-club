@@ -12,24 +12,39 @@ import {
   type EntranceRecord,
   type EntranceStorage,
 } from '../domain/entranceRecord';
-import { systemClock } from '../domain/environment';
+import {
+  absentCard,
+  presentedCard,
+  systemClock,
+  type MembershipCard,
+} from '../domain/environment';
 import { Entrance } from './Entrance';
 
-// Local-time constructors keep these tests independent of the host zone.
-const MIDNIGHT = new Date(2026, 9, 24, 0, 0, 0);
+// The birthday is midnight in Jamaica (UTC−5), whatever the host zone.
+const MIDNIGHT = new Date('2026-10-24T05:00:00Z');
 const before = (ms: number) => new Date(MIDNIGHT.getTime() - ms);
 const after = (ms: number) => new Date(MIDNIGHT.getTime() + ms);
 
 let storage: EntranceStorage;
 let membership: MembershipStorage;
 
-function open(record?: EntranceRecord, member?: MembershipRecord) {
+function open(
+  record?: EntranceRecord,
+  member?: MembershipRecord,
+  card: MembershipCard = presentedCard,
+) {
   storage = memoryEntranceStorage(record);
   membership = memoryMembershipStorage(member);
   const view = render(
     <MemoryRouter>
       <Entrance
-        environment={{ clock: systemClock, storage, membership, preview: null }}
+        environment={{
+          clock: systemClock,
+          storage,
+          membership,
+          card,
+          preview: null,
+        }}
       />
     </MemoryRouter>,
   );
@@ -66,7 +81,7 @@ afterEach(() => {
 describe('locked entrance', () => {
   it('shows the club, the countdown and the personal line', () => {
     vi.setSystemTime(before(((6 * 24 + 3) * 60 + 4) * 60_000 + 5_000));
-    const club = open();
+    const club = open(undefined, undefined, absentCard);
     expect(club.dataset.stage).toBe('locked');
     expect(
       screen.getByRole('heading', { name: 'The Thirty Club' }),
@@ -225,6 +240,161 @@ describe('the final minute and midnight', () => {
     const club = open();
     advance(1_100);
     expect(club.querySelector('.drum__strip--rolling')).not.toBeNull();
+  });
+});
+
+describe('the membership card (ADR-012)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    localStorage.clear();
+  });
+
+  it('keeps the doors closed at midnight until the card is presented', () => {
+    vi.setSystemTime(before(2_000));
+    const club = open(undefined, undefined, absentCard);
+    advance(2_100);
+    expect(club.dataset.stage).toBe('awaiting-credential');
+    expect(timerText()).toContain('0 days, 0 hours, 0 minutes, 0 seconds');
+    expect(
+      screen.getByText(
+        'Happy birthday, Alise. Your membership card, if you please.',
+      ),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole('button', { name: 'Enter the club' }),
+    ).not.toBeInTheDocument();
+    // Hours later, the doors are still waiting; nothing was recorded.
+    advance(3 * 3_600_000);
+    expect(club.dataset.stage).toBe('awaiting-credential');
+    expect(storage.load().unlockedAt).toBeNull();
+  });
+
+  it('a late arrival without the card is asked for it too', () => {
+    vi.setSystemTime(after(9 * 3_600_000));
+    const club = open(undefined, undefined, absentCard);
+    expect(club.dataset.stage).toBe('awaiting-credential');
+  });
+
+  it('opens the ceremony when the number on the card is presented by hand', async () => {
+    vi.setSystemTime(after(3_600_000));
+    const fetch = vi.fn().mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          // A real session is opaque; the payload says realm and scopes.
+          session: `${btoa(JSON.stringify({ v: 1, realm: 'live', scopes: ['membership'], iat: 1 }))}.sig`,
+          credential: 'membership',
+          activatedAt: after(3_600_000).toISOString(),
+          state: {},
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    vi.stubGlobal('fetch', fetch);
+    const club = open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Present the card by hand' }),
+    );
+    fireEvent.change(
+      screen.getByLabelText('The number on your membership card'),
+      {
+        target: { value: 'tc 3010 2410' },
+      },
+    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Present membership' }),
+      );
+    });
+    expect(fetch).toHaveBeenCalledWith(
+      '/api/concierge/activate',
+      expect.objectContaining({ method: 'POST' }),
+    );
+    expect(club.dataset.stage).toBe('unlocking');
+    advance(ceremonyTimeline(false).unlockingMs);
+    advance(ceremonyTimeline(false).openingMs);
+    expect(club.dataset.stage).toBe('foyer');
+  });
+
+  it('tells Alise when the number is not recognised', async () => {
+    vi.setSystemTime(after(3_600_000));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(
+        new Response(JSON.stringify({ error: 'unrecognised', message: 'no' }), {
+          status: 404,
+          headers: { 'content-type': 'application/json' },
+        }),
+      ),
+    );
+    const club = open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Present the card by hand' }),
+    );
+    fireEvent.change(
+      screen.getByLabelText('The number on your membership card'),
+      {
+        target: { value: 'WRONG-0000' },
+      },
+    );
+    await act(async () => {
+      fireEvent.click(
+        screen.getByRole('button', { name: 'Present membership' }),
+      );
+    });
+    expect(
+      screen.getByText(/I do not recognise that number/),
+    ).toBeInTheDocument();
+    expect(club.dataset.stage).toBe('awaiting-credential');
+  });
+
+  it('a card presented early opens the doors automatically at midnight', () => {
+    vi.setSystemTime(before(2_000));
+    const club = open();
+    expect(
+      screen.getByText(
+        'Alise, your card is in order. Your table is being prepared.',
+      ),
+    ).toBeInTheDocument();
+    advance(2_100);
+    expect(club.dataset.stage).toBe('unlocking');
+  });
+});
+
+describe('the letter on the step (Phase One)', () => {
+  const THURSDAY_2PM_UK = Date.parse('2026-10-22T13:00:00Z');
+
+  it('announces the Departure Lounge before Thursday', () => {
+    vi.setSystemTime(new Date(THURSDAY_2PM_UK - 2 * 24 * 3_600_000));
+    open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'A letter has been left for you' }),
+    );
+    const letter = screen.getByRole('dialog');
+    expect(letter).toHaveTextContent('Your membership has been approved.');
+    expect(letter).toHaveTextContent(/Thursday 22 October, 2\spm UK time/);
+    expect(letter).toHaveTextContent('In 2 days, 0 hours');
+    expect(screen.queryByRole('link', { name: /Departure Lounge/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+
+  it('leads to the Departure Lounge from Thursday at two, UK time', () => {
+    vi.setSystemTime(new Date(THURSDAY_2PM_UK + 60_000));
+    open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Your Departure Lounge is ready' }),
+    );
+    expect(
+      screen.getByRole('link', { name: 'Proceed to the Departure Lounge' }),
+    ).toHaveAttribute('href', '/departure');
+  });
+
+  it('is withdrawn in the final minute and after midnight', () => {
+    vi.setSystemTime(before(30_000));
+    open(undefined, undefined, absentCard);
+    expect(
+      screen.queryByRole('button', { name: /letter|Departure Lounge/ }),
+    ).toBeNull();
   });
 });
 

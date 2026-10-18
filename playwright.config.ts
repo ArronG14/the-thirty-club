@@ -9,5 +9,8 @@ export default defineConfig({
     command: 'npm run preview -- --port 4173 --strictPort',
     url: 'http://127.0.0.1:4173',
     reuseExistingServer: false,
+    // The concierge API with fake channels (build/conciergeLocalApi.ts):
+    // no test can reach Telegram or Twilio.
+    env: { CONCIERGE_LOCAL_API: '1' },
   },
 });

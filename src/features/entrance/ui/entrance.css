@@ -425,6 +425,7 @@
 }
 .facade__line {
   margin: 0;
+  text-wrap: balance;
   font-family: var(--font-text);
   font-style: italic;
   font-weight: 400;

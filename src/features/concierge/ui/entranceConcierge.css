@@ -1,0 +1,150 @@
+/* The concierge at the Grand Entrance: a letter on the step, the card prompt. */
+
+.step-letter {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 48px;
+  padding: 0.35rem 0.6rem;
+  border: 0;
+  background: none;
+  color: var(--ivory);
+}
+.step-letter__envelope {
+  position: relative;
+  width: 3.3rem;
+  height: 2.2rem;
+  flex: none;
+  border-radius: 2px;
+  transform: rotate(-5deg);
+  background: linear-gradient(175deg, #f6ecd6, #e2cfaa);
+  box-shadow:
+    0 6px 12px -4px rgb(0 0 0 / 0.8),
+    0 0 18px rgb(240 190 120 / 0.18);
+  animation: letter-glint 5s ease-in-out infinite;
+}
+.step-letter__flap {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 60%;
+  background: linear-gradient(180deg, #ebdcbc, #d8c296);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+}
+.step-letter__seal {
+  position: absolute;
+  top: calc(60% - 0.6rem);
+  left: 50%;
+  width: 1.2rem;
+  height: 1.2rem;
+  margin-left: -0.6rem;
+}
+.step-letter__caption {
+  font-family: var(--font-caps);
+  font-size: 0.56rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+  color: var(--champagne-bright);
+  text-align: left;
+}
+.step-letter[data-ready='true'] .step-letter__envelope {
+  box-shadow:
+    0 6px 12px -4px rgb(0 0 0 / 0.8),
+    0 0 24px 2px rgb(240 190 120 / 0.4);
+}
+@keyframes letter-glint {
+  0%,
+  100% {
+    transform: rotate(-5deg);
+  }
+  50% {
+    transform: rotate(-3.5deg) translateY(-1px);
+  }
+}
+.step-letter__go {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+.letter__when {
+  display: grid;
+  gap: 0.15rem;
+  margin: 1.1rem 0 0;
+  padding-top: 0.9rem;
+  border-top: 1px solid rgb(140 108 54 / 0.35);
+  text-align: center;
+}
+.letter__when span:first-child {
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+.letter__when span:last-child {
+  font-style: italic;
+  color: rgb(43 29 20 / 0.7);
+}
+
+.card-prompt {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  width: 100%;
+  max-width: 22rem;
+  text-align: center;
+}
+.card-prompt__riddle {
+  margin: 0;
+  font-family: var(--font-text);
+  font-style: italic;
+  font-size: clamp(0.98rem, 4.2vw, 1.12rem);
+  line-height: 1.4;
+  color: var(--ink-soft);
+}
+.card-prompt__riddle p {
+  margin: 0;
+}
+.card-prompt__form {
+  width: 100%;
+}
+.card-prompt__message {
+  margin: 0;
+  font-style: italic;
+  color: var(--champagne-bright);
+}
+.card-prompt__message:empty {
+  display: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .step-letter__envelope {
+    animation: none;
+  }
+}
+
+.rehearsal-ribbon {
+  position: fixed;
+  z-index: 50;
+  top: max(0.3rem, env(safe-area-inset-top));
+  left: 50%;
+  translate: -50% 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.15rem 0.2rem 0.15rem 0.7rem;
+  border: 1px solid rgb(240 138 126 / 0.7);
+  border-radius: 999px;
+  background: rgb(30 10 12 / 0.92);
+  color: #f6c9c1;
+  font-family: var(--font-caps);
+  font-size: 0.58rem;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+}
+.rehearsal-ribbon button {
+  min-height: 44px;
+  padding: 0 0.7rem;
+  border: 0;
+  border-radius: 999px;
+  background: #f6c9c1;
+  color: #2a0c10;
+  font-family: var(--font-caps);
+  font-size: 0.58rem;
+}

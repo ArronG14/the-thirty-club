@@ -11,15 +11,16 @@
   function = "spa"
   path = "/*"
 
-# No backend exists yet. Never serve static content or the shell as an API.
+# The concierge service (ADR-011): one function serves /api/*, a scheduled
+# function sends due messages. Secrets live only in site environment variables.
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
+
+# The bare /api path is never the shell. /api/* belongs to the api function,
+# which answers unknown routes with a JSON 404.
 [[redirects]]
   from = "/api"
-  to = "/404.html"
-  status = 404
-  force = true
-
-[[redirects]]
-  from = "/api/*"
   to = "/404.html"
   status = 404
   force = true

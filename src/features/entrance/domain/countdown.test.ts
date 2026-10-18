@@ -18,40 +18,35 @@ const MINUTE = 60 * SECOND;
 const HOUR = 60 * MINUTE;
 const DAY = 24 * HOUR;
 
-describe('opening instant (device-local midnight)', () => {
+describe('opening instant (midnight in Jamaica, ADR-012)', () => {
   it.each([
-    ['Europe/London', '2026-10-23T23:00:00.000Z'], // BST, UTC+1
-    ['America/Jamaica', '2026-10-24T05:00:00.000Z'], // EST all year, UTC−5
-    ['America/Los_Angeles', '2026-10-24T07:00:00.000Z'], // PDT, UTC−7
-    ['Asia/Kolkata', '2026-10-23T18:30:00.000Z'], // UTC+5:30
-    ['Pacific/Kiritimati', '2026-10-23T10:00:00.000Z'], // UTC+14
-    ['UTC', '2026-10-24T00:00:00.000Z'],
-  ])('is 00:00 on 24 October in %s', (zone, utc) => {
+    'Europe/London',
+    'America/Jamaica',
+    'America/Los_Angeles',
+    'Asia/Kolkata',
+    'Pacific/Kiritimati',
+    'UTC',
+  ])('is 05:00 UTC on 24 October whatever the device zone (%s)', (zone) => {
     process.env.TZ = zone;
-    const instant = new Date(openingInstant());
-    expect(instant.toISOString()).toBe(utc);
-    expect(instant.getFullYear()).toBe(2026);
-    expect(instant.getMonth()).toBe(9);
-    expect(instant.getDate()).toBe(24);
-    expect(instant.getHours()).toBe(0);
-    expect(instant.getMinutes()).toBe(0);
+    expect(new Date(openingInstant()).toISOString()).toBe(
+      '2026-10-24T05:00:00.000Z',
+    );
   });
 
-  it('follows the device when it changes time zone (e.g. after a flight)', () => {
+  it('does not move when the device changes time zone (e.g. after a flight)', () => {
     process.env.TZ = 'Europe/London';
     const london = openingInstant();
     process.env.TZ = 'America/Jamaica';
-    const jamaica = openingInstant();
-    expect(jamaica - london).toBe(6 * HOUR);
+    expect(openingInstant()).toBe(london);
   });
 
-  it('is open in London while Jamaica is still counting the final minute', () => {
+  it('a phone still on London time counts the same final minute as Jamaica', () => {
     const instant = Date.parse('2026-10-24T04:59:30Z');
-    process.env.TZ = 'Europe/London';
-    expect(timePhase(instant, openingInstant())).toBe('open');
-    process.env.TZ = 'America/Jamaica';
-    expect(timePhase(instant, openingInstant())).toBe('final-minute');
-    expect(remainingUntil(instant, openingInstant()).seconds).toBe(30);
+    for (const zone of ['Europe/London', 'America/Jamaica']) {
+      process.env.TZ = zone;
+      expect(timePhase(instant, openingInstant())).toBe('final-minute');
+      expect(remainingUntil(instant, openingInstant()).seconds).toBe(30);
+    }
   });
 });
 

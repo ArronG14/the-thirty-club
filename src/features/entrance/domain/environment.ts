@@ -7,11 +7,24 @@ export interface Clock {
 
 export const systemClock: Clock = { now: () => Date.now() };
 
+/**
+ * Whether Alise's membership card has been presented on this device. The
+ * birthday makes her eligible; the card opens the doors (ADR-012).
+ */
+export interface MembershipCard {
+  isPresented(): boolean;
+}
+
+export const presentedCard: MembershipCard = { isPresented: () => true };
+export const absentCard: MembershipCard = { isPresented: () => false };
+
 export type PreviewMode =
   | 'locked'
   | 'final-minute'
   | 'midnight'
   | 'arrival'
+  /** Birthday midnight has passed; the doors wait for the card. */
+  | 'awaiting-card'
   | 'induction'
   | 'lounge'
   | 'evening'
@@ -27,6 +40,8 @@ export interface EntranceEnvironment {
   storage: EntranceStorage;
   /** Membership and room progress, shown in the Members' Lounge. */
   membership: MembershipStorage;
+  /** The membership credential (the physical card). */
+  card: MembershipCard;
   /** Non-null only in development builds; production never sets it. */
   preview: PreviewMode | null;
 }

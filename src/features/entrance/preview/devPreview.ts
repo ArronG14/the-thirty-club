@@ -8,10 +8,12 @@ import { openingInstant } from '../domain/countdown';
 import { memoryMembershipStorage } from '../../club/domain/membershipRecord';
 import { instantInZone } from '../../club/domain/schedule';
 import { memoryEntranceStorage } from '../domain/entranceRecord';
-import type {
-  Clock,
-  EntranceEnvironment,
-  PreviewMode,
+import {
+  absentCard,
+  presentedCard,
+  type Clock,
+  type EntranceEnvironment,
+  type PreviewMode,
 } from '../domain/environment';
 
 export const PREVIEW_PARAM = 'preview';
@@ -21,6 +23,7 @@ export const PREVIEW_MODES: readonly { mode: PreviewMode; label: string }[] = [
   { mode: 'final-minute', label: 'Final minute' },
   { mode: 'midnight', label: 'Midnight' },
   { mode: 'arrival', label: 'Late arrival' },
+  { mode: 'awaiting-card', label: 'Birthday: card awaited' },
   { mode: 'induction', label: 'Lounge: first visit' },
   { mode: 'lounge', label: 'Lounge: member' },
   { mode: 'evening', label: 'Lounge: evening' },
@@ -43,6 +46,8 @@ function startOffset(mode: PreviewMode): number {
       return -64 * SECOND;
     case 'midnight':
       return -8 * SECOND;
+    case 'awaiting-card':
+      return 2 * 60 * SECOND;
     case 'arrival':
     case 'induction':
     case 'lounge':
@@ -79,6 +84,12 @@ export function resolveDevPreview(search: string): EntranceEnvironment | null {
   return {
     preview: mode,
     clock: previewClock(mode),
+    // Before the birthday and at the door she has no card yet; the other
+    // previews have it, so the ceremony plays as it always has.
+    card:
+      mode === 'awaiting-card' || mode === 'locked'
+        ? absentCard
+        : presentedCard,
     storage: memoryEntranceStorage(
       inLounge
         ? { unlockedAt: seen, ceremonySeenAt: seen }

@@ -2,9 +2,29 @@ import OwnerAccess from '../features/owner/OwnerAccess';
 import { lazy, Suspense } from 'react';
 import { Route, Routes } from 'react-router';
 import { RoomGate } from '../features/club/ui/RoomGate';
+import { RehearsalRibbon } from '../features/concierge/ui/RehearsalRibbon';
 import { Entrance } from '../features/entrance/ui/Entrance';
 import { AppShell } from '../shared/ui/AppShell';
 import { useConnectivity } from '../shared/state/useConnectivity';
+
+const DepartureLounge = lazy(
+  () => import('../features/concierge/ui/DepartureLounge'),
+);
+const CredentialArrival = lazy(
+  () => import('../features/concierge/ui/CredentialArrival'),
+);
+const OwnerConsole = lazy(
+  () => import('../features/concierge/owner/OwnerConsole'),
+);
+
+/** Quiet holding state while a lazily loaded room arrives. */
+function Arriving() {
+  return (
+    <p className="plain-page" role="status">
+      One moment…
+    </p>
+  );
+}
 
 const ScreeningPreview = import.meta.env.DEV
   ? lazy(() => import('../features/screening/preview/ScreeningPreview'))
@@ -25,9 +45,34 @@ export function App() {
   return (
     <AppShell>
       <OwnerAccess />
+      <RehearsalRibbon />
       <Routes>
         <Route path="/" element={<Entrance />} />
         <Route path="/rooms/:roomId" element={<RoomGate />} />
+        <Route
+          path="/departure"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <DepartureLounge />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/c/:token"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <CredentialArrival />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/concierge/owner"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <OwnerConsole />
+            </Suspense>
+          }
+        />
         <Route
           path="*"
           element={

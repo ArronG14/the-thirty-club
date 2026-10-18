@@ -6,7 +6,8 @@ import type { EntranceStage } from './entranceMachine';
  */
 
 /** The lounge has its own repertoire: club/domain/loungeScript.ts. */
-export type ButlerContext = 'locked' | 'final-minute' | 'awaiting-entry';
+export type ButlerContext =
+  'locked' | 'final-minute' | 'awaiting-credential' | 'awaiting-entry';
 
 export function greetingFor(hour: number): string {
   if (hour >= 5 && hour < 12) return 'Good morning';
@@ -32,6 +33,12 @@ const script: Record<ButlerContext, readonly Line[]> = {
     'The staff have taken their places. Your husband has been asked to stop helping.',
     'Do stand clear of the doors, madam. They have waited thirty years for this; they intend to make an entrance.',
   ],
+  'awaiting-credential': [
+    'Happy birthday, Alise. The club is open. I am, however, obliged to ask for your membership card. House rules. Not even I may bend them.',
+    'Your card was delivered to your room, I understand. The staff insisted on discretion. I insisted on a clue.',
+    'Should the card prove shy, madam, the number printed upon it will do perfectly well.',
+    'Thirty years in the making, and the doors are waiting on a small rectangle of card. I find it rather thrilling.',
+  ],
   'awaiting-entry': [
     'The doors are unlocked, Alise. They have been waiting for you. So, I confess, have I.',
     'Do go in. The club has been ready since midnight, and it is not accustomed to being kept waiting — present company excepted.',
@@ -42,6 +49,7 @@ export function butlerContextFor(stage: EntranceStage): ButlerContext | null {
   switch (stage) {
     case 'locked':
     case 'final-minute':
+    case 'awaiting-credential':
     case 'awaiting-entry':
       return stage;
     default:

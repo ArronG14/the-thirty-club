@@ -38,9 +38,11 @@ describe('developer menu', () => {
   });
 
   it('only ever bypasses locks through the existing dev preview param', () => {
+    // Credential links (/c/<test token>) present a credential to the local
+    // service like a real tag; they bypass nothing.
     for (const { href } of DEV_LINK_GROUPS.flatMap((g) => g.links)) {
       expect(href).toMatch(
-        /^\/(?:[a-z-]+(?:\/[a-z-]+)*)?(?:\?preview=[a-z-]+)?$/,
+        /^\/(?:[a-z0-9-]+(?:\/[a-z0-9-]+)*)?(?:\?preview=[a-z-]+)?$/,
       );
     }
   });

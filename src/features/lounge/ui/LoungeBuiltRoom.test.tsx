@@ -8,7 +8,7 @@ import {
 } from '../../club/domain/membershipRecord';
 import { RoomGate } from '../../club/ui/RoomGate';
 import { memoryEntranceStorage } from '../../entrance/domain/entranceRecord';
-import { systemClock } from '../../entrance/domain/environment';
+import { presentedCard, systemClock } from '../../entrance/domain/environment';
 import { Entrance } from '../../entrance/ui/Entrance';
 
 const SEEN = '2026-10-24T05:00:00.000Z';
@@ -44,6 +44,7 @@ describe('once a room is built', () => {
                     ceremonySeenAt: SEEN,
                   }),
                   membership: browserMembershipStorage(),
+                  card: presentedCard,
                   preview: null,
                 }}
               />

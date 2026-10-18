@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { BIRTHDAY_MORNING, presentMembershipCard } from './concierge-helpers';
 
 // The SVG entrance: what a browser without WebGL gets, and the poster the
 // 3D scene dissolves from. It must keep its bell and never fetch the chunk.
@@ -37,7 +38,8 @@ test('reduced motion keeps the poster doors still and the ceremony brief', async
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.clock.install({ time: new Date(2026, 9, 24, 9, 0, 0) });
+  await presentMembershipCard(page);
+  await page.clock.install({ time: BIRTHDAY_MORNING });
   await page.goto('/');
   const club = page.locator('.club');
   await expect(club).toHaveAttribute('data-motion', 'reduced');
@@ -55,7 +57,8 @@ test('reduced motion keeps the lounge still and its ceremony intact', async ({
   page,
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.clock.install({ time: new Date(2026, 9, 24, 9, 0, 0) });
+  await presentMembershipCard(page);
+  await page.clock.install({ time: BIRTHDAY_MORNING });
   await page.goto('/');
   await page.getByRole('button', { name: 'Enter the club' }).click();
   await page.clock.runFor(1_000);
@@ -81,9 +84,10 @@ test('reduced motion keeps the lounge still and its ceremony intact', async ({
 test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
   test.use({ timezoneId: 'America/Jamaica' });
 
-  test('unlocks at local midnight, welcomes Alise and remembers', async ({
+  test('unlocks at midnight for a member, welcomes Alise and remembers', async ({
     page,
   }) => {
+    await presentMembershipCard(page);
     // 23:59:57 on 23 October in Kingston; already 05:59:57 on the 24th in London.
     await page.clock.install({ time: new Date('2026-10-24T04:59:57Z') });
     await page.goto('/');
@@ -147,17 +151,42 @@ test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
 test.describe('in London (UTC+1 in October)', () => {
   test.use({ timezoneId: 'Europe/London' });
 
-  test('the same instant is already past midnight, so the doors await', async ({
+  test('a phone still on London time counts down to Jamaica midnight too', async ({
     page,
   }) => {
     await page.clock.setFixedTime(new Date('2026-10-24T04:59:57Z'));
     await page.goto('/');
     await expect(page.locator('.club')).toHaveAttribute(
       'data-stage',
-      'awaiting-entry',
+      'final-minute',
     );
+    await expect(page.getByRole('timer')).toContainText(
+      '0 days, 0 hours, 0 minutes, 3 seconds',
+    );
+  });
+});
+
+test.describe('the membership card (ADR-012)', () => {
+  test.use({ timezoneId: 'America/Jamaica' });
+
+  test('the birthday alone does not open the doors', async ({ page }) => {
+    await page.clock.install({ time: new Date('2026-10-24T04:59:58Z') });
+    await page.goto('/');
+    const club = page.locator('.club');
+    await page.clock.runFor(3_000);
+    await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
+    await expect(
+      page.getByText(
+        'Happy birthday, Alise. Your membership card, if you please.',
+      ),
+    ).toBeVisible();
     await expect(
       page.getByRole('button', { name: 'Enter the club' }),
-    ).toBeVisible();
+    ).toHaveCount(0);
+    await page.clock.runFor(60 * 60_000);
+    await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
+    // A direct visit to a room is refused too: the lounge is not reachable.
+    await page.goto('/rooms/screening-room');
+    await expect(page.getByText(/not open yet|not ready yet/i)).toBeVisible();
   });
 });
