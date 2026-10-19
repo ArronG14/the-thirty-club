@@ -290,3 +290,59 @@ export interface OwnerCorrespondence {
   letters: OwnerLetter[];
   smsEnabled: boolean;
 }
+
+/* ------------------------------------------------------------------ */
+/* The Butler's Service. See docs/BUTLERS_SERVICE.md.                 */
+/* ------------------------------------------------------------------ */
+/** A request Alise left by ringing for the Butler, as she sees it. */
+export interface MemberServiceRequest {
+  id: string;
+  body: string;
+  createdAt: ISODateTime;
+  resolvedAt: ISODateTime | null;
+}
+export interface RequestResponse {
+  id: string;
+  kind: 'sms' | 'letter';
+  createdAt: ISODateTime;
+  sms: (LetterSms & { body: string }) | null;
+  /** Null for an SMS, or when a linked draft letter was later deleted. */
+  letter: {
+    id: string;
+    title: string;
+    state: LetterState;
+    status: LetterStatus;
+    deliverAt: ISODateTime | null;
+    publishedAt: ISODateTime | null;
+  } | null;
+}
+/** Every word Alise has had with the Butler: from the bell or a letter. */
+export interface OwnerServiceRequest {
+  id: string;
+  body: string;
+  createdAt: ISODateTime;
+  resolvedAt: ISODateTime | null;
+  source: 'service' | 'letter';
+  letter: { id: string; title: string } | null;
+  notificationSms: LetterSms | null;
+  responses: RequestResponse[];
+}
+export interface OwnerRequests {
+  requests: OwnerServiceRequest[];
+  smsEnabled: boolean;
+}
+/** A Butler SMS Arron wrote directly; an outbox message plus its creation. */
+export interface DirectSms extends ScheduledMessage {
+  createdAt: ISODateTime;
+}
+export interface DirectSmsInput {
+  body: string;
+  timezone: 'Europe/London' | 'America/Jamaica';
+  /** Null sends now (the next dispatch round). */
+  sendAt: ISODateTime | null;
+  idempotencyKey: string;
+}
+export interface OwnerDirectSms {
+  messages: DirectSms[];
+  smsEnabled: boolean;
+}

@@ -64,3 +64,13 @@ export function invitationSlot(
   if (hour >= 17 && hour <= 21) return 'evening';
   return 'night';
 }
+
+/**
+ * Sent to Arron when Alise rings for the Butler and leaves a request that
+ * is not tied to a letter. `{message}` is her exact request.
+ */
+export const ARRON_REQUEST_NOTIFICATION =
+  'THE THIRTY CLUB — Madam Alise rang for the Butler: {message}. Reply from the Butler’s Office.';
+
+/** Longest Butler SMS Arron may write (one outbox message). */
+export const BUTLER_SMS_MAX_LENGTH = 1600;

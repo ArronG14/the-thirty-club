@@ -14,6 +14,7 @@ import {
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
+import { serviceRoute } from './service.ts';
 import {
   bridgeMemberSession,
   releaseCasinoVaults,
@@ -329,6 +330,16 @@ export function createBackendApi({ db, env }: ApiDeps) {
         ip,
       });
       if (vault) return respond(vault.data, vault.status);
+      const service = await serviceRoute({
+        route,
+        path,
+        method: request.method,
+        body,
+        session,
+        db,
+        env,
+      });
+      if (service) return respond(service.data, service.status);
       const desk = await correspondenceRoute({
         route,
         path,

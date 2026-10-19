@@ -33,7 +33,7 @@ const codes = new Set<ApiErrorCode>([
   'server',
 ]);
 /**
- * Gift Vault and Correspondence Desk actions live in their own RPCs so
+ * Gift Vault, Correspondence Desk and Butler's Service actions live in their own RPCs so
  * `ttc_action` stays untouched.
  */
 export const rpcFor = (action: string) =>
@@ -43,7 +43,9 @@ export const rpcFor = (action: string) =>
           action,
         )
       ? 'ttc_correspondence_action'
-      : 'ttc_action';
+      : /^(service-|owner-request|owner-direct-sms-)/.test(action)
+        ? 'ttc_service_action'
+        : 'ttc_action';
 export function database(
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,
