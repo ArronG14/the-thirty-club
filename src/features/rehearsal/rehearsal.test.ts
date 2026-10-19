@@ -76,18 +76,19 @@ describe('concierge letters on the step', () => {
 });
 
 describe('the rehearsal timeline', () => {
-  it('is ordered and ten presets exist in the requested order', () => {
+  it('is ordered and the presets exist in the requested order', () => {
     const times = TIMELINE.map((e) => e.at);
     expect(times).toEqual([...times].sort((a, b) => a - b));
     expect(SCENARIOS.map((s) => s.id)).toEqual([
+      'early-membership',
       'before-departure',
       'departure-opening',
+      'casino-opening',
       'birthday-eve',
       'final-minute',
       'midnight',
       'awaiting-card',
       'just-entered',
-      'casino-opening',
       'casino-jackpot',
       'vault-unlock',
       'all-open',

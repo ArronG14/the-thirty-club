@@ -1,6 +1,7 @@
 /** The Butler's Office sections, in order; `?tab=` deep links use these. */
 export const OFFICE_TABS = [
   'overview',
+  'journey',
   'correspondence',
   'requests',
   'privileges',

@@ -164,13 +164,15 @@ export default function RehearsalDesk() {
       id: u.id,
       label: u.label,
       at: u.at,
-      watch: u.kind === 'letter' ? '/' : '',
+      watch: u.kind === 'letter' || u.kind === 'milestone' ? '/' : '',
       detail:
-        u.kind === 'letter'
-          ? 'Scheduled in the simulated Correspondence Desk.'
-          : u.kind === 'sms'
-            ? 'Scheduled in the simulated SMS outbox (no real SMS).'
-            : 'Scheduled in the simulated Gift Vault.',
+        u.kind === 'milestone'
+          ? 'A journey milestone in the simulated office: it fires when the rehearsal clock reaches it (Office → journey to hold, move or trigger it).'
+          : u.kind === 'letter'
+            ? 'Scheduled in the simulated Correspondence Desk.'
+            : u.kind === 'sms'
+              ? 'Scheduled in the simulated SMS outbox (no real SMS).'
+              : 'Scheduled in the simulated Gift Vault.',
       source: 'office' as const,
     })),
   ].sort((a, b) => a.at - b.at);

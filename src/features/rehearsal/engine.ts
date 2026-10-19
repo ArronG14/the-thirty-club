@@ -37,6 +37,10 @@ import {
 } from '../casino/dev/devState';
 import { clearOwnerProgress } from '../owner/session';
 import { OWNER_PREFIX } from '../owner/session';
+import {
+  isAdmissionRoom,
+  type AdmissionRoomId,
+} from '../../shared/journey/contract';
 import { rehearsalNow, resetRehearsalClock, setRehearsalTime } from './clock';
 import { clearRehearsalLocal } from './storage';
 
@@ -50,6 +54,9 @@ const uk = (date: string, time: string) =>
 
 export const BIRTHDAY = openingInstant();
 export const CASINO_OPENS = jamaica('2026-10-24', '14:00');
+/** The journey's default Casino milestone (ADR-020). */
+export const CASINO_MILESTONE = jamaica('2026-10-23', '09:00');
+export const EARLY_MEMBERSHIP = jamaica('2026-10-20', '13:00');
 export const PRIVILEGES_OPENS = jamaica('2026-10-24', '10:00');
 export const DEPARTURE_OPENS = instantOf(DEPARTURE_LOUNGE_OPENS);
 
@@ -94,23 +101,7 @@ export const TIMELINE: readonly TimelineEvent[] = [
     at: BIRTHDAY,
     watch: '/',
     detail:
-      '00:00 in Jamaica. The time-lock withdraws; with the card presented the doors swing open and the membership card is presented in the lounge. The Screening Room and Gift Vault open with the membership.',
-  },
-  {
-    id: 'privileges-opens',
-    label: 'Privileges Collection hour (not built)',
-    at: PRIVILEGES_OPENS,
-    watch: '/',
-    detail:
-      'The registry opens the Privileges Collection at 10:00 Jamaica, but the room itself is not built: it reads “Being prepared”.',
-  },
-  {
-    id: 'casino-opens',
-    label: 'Grand Casino opens',
-    at: CASINO_OPENS,
-    watch: '/',
-    detail:
-      '14:00 in Jamaica. The Butler announces the casino in the lounge; it becomes enterable.',
+      '00:00 in Jamaica. The time-lock withdraws; with the card presented the doors swing open and the membership card is presented in the lounge. The Screening Room and Gift Vault are introduced by their journey milestones (Letters of Admission in the Lounge).',
   },
 ].sort((a, b) => a.at - b.at);
 
@@ -171,6 +162,8 @@ function writeCasino(kind: 'fresh' | 'jackpot' | 'completed') {
 
 export interface Scenario {
   id: string;
+  /** Admissions the scenario's moment already includes (ADR-020). */
+  admitted?: readonly AdmissionRoomId[];
   label: string;
   detail: string;
   at: number;
@@ -185,6 +178,15 @@ const locked = (at: number, card = false) => {
 };
 
 export const SCENARIOS: readonly Scenario[] = [
+  {
+    id: 'early-membership',
+    label: 'Early membership (founding member)',
+    detail:
+      'Tuesday 20 Oct, 12:59:30 Jamaica: at 13:00 the journey invites her to the Members’ Lounge; the Butler’s letter arrives at the locked doors with ENTER THE MEMBERS’ LOUNGE.',
+    at: EARLY_MEMBERSHIP - 30_000,
+    go: '/',
+    apply: (at) => locked(at),
+  },
   {
     id: 'before-departure',
     label: 'Before departure',
@@ -201,6 +203,21 @@ export const SCENARIOS: readonly Scenario[] = [
     at: DEPARTURE_OPENS - 30_000,
     go: '/',
     apply: (at) => locked(at),
+  },
+  {
+    id: 'casino-opening',
+    label: 'Casino opening (admission ceremony)',
+    detail:
+      'Friday 23 Oct, 08:59:30 Jamaica, in the Lounge as a founding member: at 09:00 the Casino milestone fires and the Butler presents its Letter of Admission. Accept it to be escorted in.',
+    at: CASINO_MILESTONE - 30_000,
+    go: '/lounge',
+    admitted: ['lounge'],
+    apply: (at) => {
+      writeEntrance('locked', at);
+      writeMembership(inducted(at - 40 * HOUR));
+      writeCard(false, at);
+      writeCasino('fresh');
+    },
   },
   {
     id: 'birthday-eve',
@@ -248,22 +265,6 @@ export const SCENARIOS: readonly Scenario[] = [
       writeEntrance('unlocked', at);
       writeMembership(emptyMembership);
       writeCard(true, at);
-    },
-  },
-  {
-    id: 'casino-opening',
-    label: 'Casino opening',
-    detail:
-      '13:59:30 Jamaica, in the lounge: the Butler announces the Grand Casino at 14:00.',
-    at: CASINO_OPENS - 30_000,
-    go: '/',
-    apply: (at) => {
-      writeEntrance('unlocked', at);
-      writeMembership(
-        inducted(at - 13 * HOUR, ['screening-room', 'gift-vault']),
-      );
-      writeCard(true, at);
-      writeCasino('fresh');
     },
   },
   {
@@ -326,6 +327,7 @@ export async function applyScenario(id: string, go = true) {
   if (!scenario) return;
   setRehearsalTime(scenario.at);
   await scenario.apply(scenario.at);
+  await syncAdmissions(scenario.admitted ?? []);
   remember(scenario.label);
   if (go) window.location.assign(scenario.go);
 }
@@ -366,6 +368,35 @@ export interface LaunchTarget {
   label: string;
   detail: string;
   launch(): Promise<string>;
+  /** Rooms whose Letter of Admission is presented rather than pre-accepted. */
+  ceremony?: readonly AdmissionRoomId[];
+  /** Extra admissions this launch includes (beyond the rooms it opens). */
+  admitted?: readonly AdmissionRoomId[];
+}
+
+/**
+ * The journey's admissions for this rehearsal (ADR-020): every room the
+ * rehearsal's membership already has open is admitted in the simulated
+ * office through the real invite and accept actions, so the real gates
+ * decide. `ceremony` rooms are invited only.
+ */
+async function syncAdmissions(
+  extra: readonly AdmissionRoomId[],
+  ceremony: readonly AdmissionRoomId[] = [],
+) {
+  const record = browserMembershipStorage().load();
+  const open = Object.entries(record.rooms)
+    .filter(([, progress]) => progress?.unlockedAt)
+    .map(([room]) => room)
+    .filter(isAdmissionRoom);
+  // Inducted means she is already a member of the Lounge.
+  if (record.inductedAt) open.push('lounge');
+  const admitted = [...new Set([...open, ...extra])].filter(
+    (room) => !ceremony.includes(room),
+  );
+  if (admitted.length === 0 && ceremony.length === 0) return;
+  const { rehearseAdmissions } = await import('./office');
+  await rehearseAdmissions(admitted, ceremony);
 }
 
 /** Moves the rehearsal clock forward to `at` if it is earlier. */
@@ -459,10 +490,39 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
     },
   },
   {
+    id: 'early-lounge',
+    label: 'The Members’ Lounge before the birthday',
+    detail:
+      'Tuesday 20 Oct after 13:00 Jamaica: the early-membership letter at the locked doors; ENTER THE MEMBERS’ LOUNGE accepts it and the founding-membership induction follows.',
+    launch: async () => {
+      const at = atLeast(EARLY_MEMBERSHIP + MINUTE);
+      locked(at);
+      return '/';
+    },
+    ceremony: ['lounge'],
+  },
+  {
+    id: 'casino-admission',
+    label: 'The Grand Casino admission ceremony',
+    detail:
+      'Friday 23 Oct after 09:00 Jamaica, as a founding member: the Butler’s summons at the doors, then the Letter of Admission in the Lounge and the escort into the Casino.',
+    launch: async () => {
+      const at = atLeast(CASINO_MILESTONE + MINUTE);
+      writeEntrance('locked', at);
+      writeMembership(inducted(EARLY_MEMBERSHIP + HOUR));
+      writeCard(false, at);
+      writeCasino('fresh');
+      return '/';
+    },
+    admitted: ['lounge'],
+    ceremony: ['casino'],
+  },
+  {
     id: 'screening-journey',
     label: 'The Screening Room journey (first visit)',
     detail:
-      'From the Members’ Lounge: accept the Butler’s invitation, watch the five-second test film, return to your seat. Clears screening progress first.',
+      'From the Members’ Lounge: the Letter of Admission, the Butler’s escort, the five-second test film, return to your seat. Clears screening progress first.',
+    ceremony: ['screening-room'],
     launch: async () => {
       memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
       freshScreening();
@@ -513,6 +573,7 @@ export async function launchRoom(id: string) {
   const target = LAUNCH_TARGETS.find((t) => t.id === id);
   if (!target) return;
   const path = await target.launch();
+  await syncAdmissions(target.admitted ?? [], target.ceremony ?? []);
   remember(target.label);
   window.location.assign(path);
 }

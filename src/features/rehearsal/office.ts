@@ -5,6 +5,7 @@
  * the same `/api/v1` handlers, as the simulated owner.
  */
 import type { OwnerVault } from '../../shared/concierge/types';
+import type { AdmissionRoomId } from '../../shared/journey/contract';
 import { simulationActive } from './mode';
 
 export class SimulationUnavailable extends Error {}
@@ -36,6 +37,59 @@ export async function simOwner<T>(
       data.message ?? 'The simulated office refused.',
     );
   return data;
+}
+
+/** One request to the simulated office, as Alise (always signed in). */
+async function simMember<T>(path: string, body?: unknown): Promise<T> {
+  if (!simulationActive)
+    throw new SimulationUnavailable('Rehearsal controls work only in TEST.');
+  const { simOffice } = await import('./sim/v1');
+  const office = await simOffice();
+  const response = await office.handle(
+    new Request(`${window.location.origin}/api/v1${path}`, {
+      method: body === undefined ? 'GET' : 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-concierge-request': '1',
+      },
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    }),
+    'member',
+  );
+  const data = (await response.json()) as T & { message?: string };
+  if (!response.ok)
+    throw new SimulationUnavailable(
+      data.message ?? 'The simulated office refused.',
+    );
+  return data;
+}
+
+/**
+ * Admissions in the simulated office (ADR-020), through the real owner and
+ * member actions: `admitted` rooms are invited and accepted, `ceremony`
+ * rooms are invited fresh so their Letter of Admission can be rehearsed
+ * (a rehearsal may start a ceremony again; the real office never can).
+ */
+export async function rehearseAdmissions(
+  admitted: readonly AdmissionRoomId[],
+  ceremony: readonly AdmissionRoomId[] = [],
+) {
+  const { simOffice } = await import('./sim/v1');
+  const office = await simOffice();
+  for (const room of ceremony)
+    await office.pg.query(
+      'delete from public.ttc_room_admissions where room_id = $1',
+      [room],
+    );
+  for (const room of [...admitted, ...ceremony])
+    await simOwner(`/owner/journey/rooms/${room}/invite`, {});
+  for (const room of admitted)
+    await simMember(`/journey/admissions/${room}/accept`, {});
+}
+
+/** Triggers a journey milestone now, as the owner would from TEST. */
+export async function fireRehearsalMilestone(key: string) {
+  await simOwner(`/owner/journey/milestones/${key}/fire`, {});
 }
 
 /** Runs the simulated every-minute round now (letters due, SMS "sent"). */
@@ -218,7 +272,7 @@ export interface UpcomingItem {
   id: string;
   label: string;
   at: number;
-  kind: 'letter' | 'sms' | 'compartment';
+  kind: 'letter' | 'sms' | 'compartment' | 'milestone';
 }
 
 /** Everything the simulated office has scheduled, for the timeline. */
@@ -242,7 +296,20 @@ export async function scheduledInOffice(): Promise<UpcomingItem[]> {
   }>(
     "select slug as id, display_number as n, available_at as at from public.ttc_vaults where state = 'locked' and available_at is not null",
   );
+  const milestones = await office.pg.query<{
+    key: string;
+    title: string;
+    at: string;
+  }>(
+    "select key, title, fire_at as at from public.ttc_journey_milestones where state = 'pending'",
+  );
   return [
+    ...milestones.rows.map((r) => ({
+      id: `milestone-${r.key}`,
+      label: `Journey: ${r.title}`,
+      at: Date.parse(r.at),
+      kind: 'milestone' as const,
+    })),
     ...letters.rows.map((r) => ({
       id: r.id,
       label: `Letter: ${r.title}`,

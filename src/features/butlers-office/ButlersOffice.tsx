@@ -14,6 +14,7 @@ import { CorrespondenceDesk } from './CorrespondenceDesk';
 import { ButlerSmsDesk } from './ButlerSmsDesk';
 import { RequestsDesk } from './RequestsDesk';
 import { OFFICE_TABS, type OfficeTab } from './tabs';
+import { JourneyOffice } from './JourneyOffice';
 import './office.css';
 const fmtMoney = (pence: number) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
@@ -511,6 +512,7 @@ export default function ButlersOffice({
                 </>
               )}
               {tab === 'vault' && <VaultOffice />}
+              {tab === 'journey' && <JourneyOffice />}
               {tab === 'correspondence' && <CorrespondenceDesk />}
               {tab === 'requests' && <RequestsDesk />}
               {tab === 'membership' && (
