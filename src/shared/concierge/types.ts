@@ -1,4 +1,5 @@
 /** Versioned, authoritative Concierge API. See docs/CONCIERGE_API_CONTRACT.md. */
+import type { LetterAction } from '../journey/contract.ts';
 export type ISODateTime = string;
 export type Quantity = string;
 export type RedemptionState = 'pending' | 'fulfilled';
@@ -261,6 +262,8 @@ export interface MemberLetter {
   openedAt: ISODateTime | null;
   thankedAt: ISODateTime | null;
   status: 'published' | 'opened' | 'thanked';
+  /** A birthday-journey letter's button (ADR-020); null for ordinary letters. */
+  action?: LetterAction | null;
   replies: MemberLetterReply[];
 }
 export interface CorrespondenceSummary {
@@ -282,6 +285,9 @@ export interface OwnerLetter extends LetterInput {
   invitationTemplate: 'morning' | 'afternoon' | 'evening' | 'night' | null;
   invitationSms: LetterSms | null;
   thanksSms: LetterSms | null;
+  /** Set on letters the birthday journey wrote (ADR-020). */
+  journeyRef?: string | null;
+  action?: LetterAction | null;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
   replies: OwnerLetterReply[];

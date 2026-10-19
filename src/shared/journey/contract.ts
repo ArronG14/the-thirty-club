@@ -9,7 +9,7 @@
  * `/api/v1/owner/journey`, and the event payloads other systems (the Casino,
  * vouchers, the Gift Vault) publish into the journey's event inbox.
  */
-import type { ISODateTime } from '../concierge/types';
+import type { ISODateTime } from '../concierge/types.ts';
 
 /* ------------------------------------------------------------------ */
 /* Rooms and admissions                                                */

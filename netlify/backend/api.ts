@@ -14,6 +14,7 @@ import {
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
+import { journeyRoute } from './journey.ts';
 import { serviceRoute } from './service.ts';
 import {
   bridgeMemberSession,
@@ -350,6 +351,16 @@ export function createBackendApi({ db, env }: ApiDeps) {
         env,
       });
       if (desk) return respond(desk.data, desk.status);
+      const journey = await journeyRoute({
+        route,
+        path,
+        method: request.method,
+        body,
+        session,
+        db,
+        env,
+      });
+      if (journey) return respond(journey.data, journey.status);
       throw new BackendError('not-found');
     } catch (error) {
       const known =

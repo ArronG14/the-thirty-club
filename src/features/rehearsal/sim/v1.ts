@@ -17,6 +17,7 @@ import type { Session } from '../../../shared/concierge/types';
 import { createBackendApi } from '../../../../netlify/backend/api';
 import { hashToken, newToken } from '../../../../netlify/backend/auth';
 import { publishDueLetters } from '../../../../netlify/backend/correspondence';
+import { runJourneyRound } from '../../../../netlify/backend/journey';
 import {
   BackendError,
   rpcFor,
@@ -302,11 +303,13 @@ async function boot(): Promise<SimOffice> {
 }
 
 /**
- * The every-minute round, simulated: publish due letters (the real code),
+ * The every-minute round, simulated: fire due journey milestones and
+ * process journey events, publish due letters (the real code),
  * then run the real outbox worker against a fake provider. The provider is
  * a function in this file; it never calls `fetch`.
  */
 async function runRound(db: Database) {
+  await runJourneyRound(db);
   const { published } = await publishDueLetters(db);
   let sent = 0;
   const deliveries: { id: string; claimId: string; sid: string }[] = [];
