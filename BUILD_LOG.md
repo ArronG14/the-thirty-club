@@ -728,4 +728,12 @@
   - 3D escort camera checked by eye once in software-rendered Chromium.
 - **Known issues:** No physical iPhone: native fullscreen player, auto-close at the end, Done, audio with the ringer switch and rotation are unverified (manual steps in the handover doc). The birthday film is not supplied; hosting above ~95 MB needs an external HTTPS host with byte ranges, and committing a private film needs the owner's decision. Poster wording and Butler lines are provisional.
 - **Remaining work:** SR08 (owner supplies and configures the film), SR09 (iPhone rehearsal), SR10 (copy approval).
-- **Commit:** recorded in the release entry below / sprint report (this entry is committed with the work).
+- **Commit:** `9529e112eb441734355468afeca88df757cff00d`.
+
+## 2026-10-19 21:45 BST (Europe/London) — Claude (Opus 5.5) — ADR-019 release and production smoke
+
+- **Task:** Release the birthday screening and smoke-test production.
+- **Summary:** GitHub `main` fast-forwarded `b36a3a7 → 9529e11` (no force); branch `feature/screening-final` pushed. Netlify deploy `6ad67faef110ed512a458826` built and published commit `9529e11` at 20:38:39 UTC on https://30.ag14.co.
+- **Checks/results (production):** `GET /media/screening/screening-test-5s.mp4` with a range → `206`, `video/mp4`, `bytes 0-1/146746`; `sw.js` contains no `.mp4`. `tests/screening-film.spec.ts` against https://30.ag14.co (iPhone 13 profile) PASS **4/4 WebKit** and **4/4 Chromium**: Dev Mode → Screening Room journey → escort → introduction → real five-second film to its end → closing words → encore → returning welcome, with zero `/api/` requests and the browser's guest records untouched; early exit, refresh, resume and restart; LIVE locked before midnight and "being prepared" after (simulated in the test browser only); landscape. Screenshots `docs/screening/journey/production/`. No file under `netlify/`, `supabase/`, Shopping, Casino or Vault changed in this release; production credentials, `SMS_SENDING_ENABLED` and LIVE data were not touched.
+- **Known issues:** as in the entry above: no physical iPhone run; birthday film not configured.
+- **Commit:** this documentation commit follows `9529e11`.
