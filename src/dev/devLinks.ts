@@ -72,10 +72,16 @@ export const DEV_LINK_GROUPS: readonly DevLinkGroup[] = [
         label: 'Room, real gate (production behaviour)',
         href: '/rooms/screening-room',
       },
-      { label: 'Cinema arrival', href: '/?preview=screening-arrival' },
-      { label: 'Playback demo', href: '/?preview=screening-demo' },
-      { label: 'End-of-message preview', href: '/?preview=screening-endframe' },
-      { label: 'No messages yet', href: '/?preview=screening' },
+      {
+        label: 'Seated, five-second test film',
+        href: '/?preview=screening-demo',
+      },
+      { label: 'Film not configured (LIVE)', href: '/?preview=screening' },
+      {
+        label: 'Cinema arrival (blank screen)',
+        href: '/?preview=screening-arrival',
+      },
+      { label: 'Screen-filling frame', href: '/?preview=screening-endframe' },
     ],
   },
   {

@@ -148,6 +148,9 @@ export function conciergeLine(index: number): string {
 }
 
 /** When Alise reaches for a room that is open but not yet ready. */
+/** Spoken as he shows her to her seat in the Private Screening Room. */
+export const SCREENING_ESCORT_LINE = 'This way, Madam. Your seat is ready.';
+
 export function preparingLine(roomName: string): string {
   return `${roomName} is still being prepared, Alise. I shall come and fetch you the moment it is ready.`;
 }

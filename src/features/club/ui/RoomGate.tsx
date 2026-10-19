@@ -1,26 +1,11 @@
-import {
-  lazy,
-  Suspense,
-  useCallback,
-  useEffect,
-  useState,
-  type ComponentType,
-} from 'react';
+import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { createEntranceEnvironment } from '../../entrance/entranceEnvironment';
 import { isRoomId, type RoomId } from '../domain/rooms';
+import { ROOM_VIEWS } from './roomViews';
 import { formatClubTime } from '../domain/schedule';
 import { useClub } from '../useClub';
 import './roomGate.css';
-
-/** A built room must also register its lazy view here. */
-const ROOM_VIEWS: Partial<
-  Record<RoomId, ComponentType<{ onComplete(): void }>>
-> = {
-  'screening-room': lazy(() => import('../../screening/ui/ScreeningRoom')),
-  casino: lazy(() => import('../../casino/ui/Casino')),
-  'gift-vault': lazy(() => import('../../vault/ui/VaultRoutes')),
-};
 
 /** What the door says while a lazily loaded room is being prepared. */
 const PREPARING: Partial<Record<RoomId, string>> = {
@@ -64,7 +49,7 @@ export function RoomGate() {
     return (
       <Suspense
         fallback={
-          <section className="plain-page">
+          <section className="plain-page" data-room={view.room.id}>
             <p>{PREPARING[view.room.id] ?? 'Preparing the room…'}</p>
             <a href="/">Return to the lounge</a>
           </section>

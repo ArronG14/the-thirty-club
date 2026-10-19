@@ -3,7 +3,13 @@
  * they are unit-testable.
  */
 
-export type LoungeFocus = 'room' | 'hearth' | 'screening' | 'directory';
+export type LoungeFocus =
+  | 'room'
+  | 'hearth'
+  | 'screening'
+  | 'directory'
+  /** Walking her towards the screening-room doorway (the escort). */
+  | 'escort';
 
 export interface Shot {
   position: [number, number, number];
@@ -37,6 +43,11 @@ export const SHOTS: Record<LoungeFocus, Shot> = {
     position: [-0.7, 1.58, 0.9],
     look: [-1.98, 1.55, -4.6],
     halfWidth: 1.4,
+  },
+  escort: {
+    position: [1.05, 1.5, -1.6],
+    look: [1.98, 1.3, -4.6],
+    halfWidth: 0.85,
   },
 };
 

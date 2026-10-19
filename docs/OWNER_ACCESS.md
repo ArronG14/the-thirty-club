@@ -32,4 +32,4 @@ Edit `OWNER_PIN` in `src/features/owner/session.ts`, keeping it four numeric dig
 
 Run `npm run check`, then `npm run test:pwa -- --workers=1`. The owner browser cases are in `tests/owner.spec.ts`; run them independently with `npx playwright test tests/owner.spec.ts --workers=1`. These run against the production build, including the normal guest gate and ignored development preview parameters. WebKit can be exercised with `--browser=webkit` when installed. A physical iPhone Safari and Home Screen rehearsal remains necessary for real-device rendering, safe areas and GPU performance.
 
-The screening room currently has no real birthday messages, and casino content still includes existing placeholders. Owner access does not fabricate or replace that content.
+The Screening Room's birthday film is not configured yet: rehearsals play the labelled five-second test film, and Alise sees "Your screening is being prepared." (ADR-019). Casino content still includes existing placeholders. Owner access does not fabricate or replace that content.

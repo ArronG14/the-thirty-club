@@ -71,9 +71,11 @@ describe('room gate', () => {
       serialiseMembership({ inductedAt: '2026-10-24T05:00:00Z', rooms: {} }),
     );
     visit('/rooms/screening-room');
+    // LIVE, before the birthday film is configured: honest, no Watch Movie.
     expect(
-      await screen.findByText('The messages are not ready yet.'),
+      await screen.findByText('Your screening is being prepared.'),
     ).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Watch Movie' })).toBeNull();
     expect(
       screen.getByRole('link', { name: 'Return to the Members’ Lounge' }),
     ).toHaveAttribute('href', '/');

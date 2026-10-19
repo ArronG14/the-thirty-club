@@ -1,0 +1,48 @@
+/**
+ * The Butler in the Private Screening Room. Scripted (no AI); each moment
+ * speaks once. All wording is PROVISIONAL until the owner approves it.
+ */
+import type { ScreeningStatus } from './screeningRecord';
+
+export const SCREENING_LINES = {
+  /** First visit: the full introduction. */
+  introduction:
+    'Madam, a number of distinguished guests have requested the opportunity to address you on this rather special occasion. I have taken the liberty of arranging a private screening.',
+  /** Any later visit. */
+  welcomeBack:
+    'Welcome back, Madam. Your private screening is ready whenever you wish.',
+  /** A later visit after leaving part-way through. */
+  welcomeBackResume:
+    'Welcome back, Madam. I have kept your place, should you wish to continue.',
+  /** The film's first natural end. */
+  closing:
+    'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.',
+  /** Any later natural end. */
+  encore: 'An encore, Madam. The theatre remains entirely at your disposal.',
+  /** She left the film before its end. */
+  paused: 'Of course, Madam. I have kept your place.',
+  /** LIVE, before the owner has configured the film. */
+  preparing:
+    'Madam, the projectionist is making his final preparations. Your screening will be ready very shortly.',
+} as const;
+
+/** What he says as she sits down. */
+export function arrivalLine({
+  hasFilm,
+  introduced,
+  status,
+}: {
+  hasFilm: boolean;
+  introduced: boolean;
+  status: ScreeningStatus;
+}): string {
+  if (!hasFilm) return SCREENING_LINES.preparing;
+  if (!introduced) return SCREENING_LINES.introduction;
+  return status === 'interrupted'
+    ? SCREENING_LINES.welcomeBackResume
+    : SCREENING_LINES.welcomeBack;
+}
+
+/** What he says when the film ends by itself. */
+export const endLine = (firstCompletion: boolean) =>
+  firstCompletion ? SCREENING_LINES.closing : SCREENING_LINES.encore;

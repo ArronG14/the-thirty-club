@@ -57,10 +57,21 @@ describe('once a room is built', () => {
     fireEvent.click(
       screen.getByRole('button', { name: 'Continue your evening' }),
     );
+    // The Butler shows her to her seat: his line, the walk and the fade.
     expect(
-      await screen.findByRole('heading', {
-        name: 'The Private Screening Room',
-      }),
+      screen.getByText('This way, Madam. Your seat is ready.'),
+    ).toBeInTheDocument();
+    expect(document.querySelector('.lounge')).toHaveAttribute(
+      'data-escort',
+      'true',
+    );
+    expect(document.querySelector('.lounge__escort')).not.toBeNull();
+    expect(
+      await screen.findByRole(
+        'heading',
+        { name: 'The Private Screening Room' },
+        { timeout: 5000 },
+      ),
     ).toBeInTheDocument();
     expect(
       browserMembershipStorage().load().rooms['screening-room']?.visitedAt,

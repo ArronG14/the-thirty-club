@@ -1,104 +1,113 @@
-# Private Screening Room — implementation and handover
+# Private Screening Room — the birthday screening (ADR-019)
 
-Status: **IMPLEMENTED**. Local automated verification and reference captures are recorded in BUILD_LOG.md. Approval of the composition, real messages and physical iPhone rehearsal remain outstanding.
+Status: **IMPLEMENTED**, verified in Playwright Chromium and WebKit on an iPhone 13 profile (see BUILD_LOG.md). **The birthday film itself is not configured**: LIVE shows "Your screening is being prepared." until the owner sets `BIRTHDAY_FILM`. Native iPhone fullscreen has **not** been verified on a physical iPhone; the manual steps are below.
 
-## Rendering decision
+This supersedes the earlier multi-message collection (ADR-009). The room now shows **one continuous film**, which the owner assembles separately in CapCut: the AI-generated introduction, the friends' and family's messages, and the AI-generated ending. This code does not generate the film or any animation.
 
-Prompt 05 supersedes the earlier scene proposal. This room uses a generated photographic architectural backdrop, a fixed HTML projection surface and a native HTML5 video player. There is no Three.js import, camera simulation or WebGL dependency. The Grand Entrance and Members’ Lounge rendering implementations are unchanged.
+## The experience
 
-The two backgrounds live in `public/images/screening/`. The built-in imagegen tool produced still images only; prompts and provenance are in `docs/screening/ASSET_PROMPTS.md`. A portrait crop provides a nearly full-width screen at 390 × 844. A separate desktop composition preserves the room’s proportions. The cinema is now an intermediate arrival composition. Begin/Resume pushes into the projection surface over 850 ms, then all architecture disappears. Playback starts directly from the tap and never waits for the animation. Reduced motion switches instantly. Portrait playback centres full-width video at its natural aspect ratio above a single compact transport strip and sender line. If a tall clip would push the controls beyond a short phone viewport, it scales down with `object-fit: contain`. Landscape video occupies the viewport; its controls overlay the film, reveal on tap/keyboard activity and fade after 2.8 seconds of playback. Paused/error/end states retain controls, and reduced motion disables fading. Rotation changes CSS layout, preserves the exact same video element and playback time, and scrolls back to the film if a tall portrait clip was scrolled. Fullscreen remains an optional action in Screening options; comfortable viewing does not depend on it.
+| Stage           | What happens                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| A. Escort       | In the Members' Lounge, "Continue your evening", the Directory's Enter or the 3D doorway. The Butler says "This way, Madam. Your seat is ready." The 3D camera walks towards the screening-room doorway (new `escort` shot), the picture fades to black from 0.9 s, the room's code was prefetched, and at 2.3 s the room loads in the dark and fades in (1.1 s) with her already seated before the screen: about 3.5 s door to seat. In the poster lounge (no WebGL) there is no camera move, only the fade. Reduced motion: a 0.3 s fade.                                                                                                                                     |
+| B. Seated       | The existing photographic cinema. The screen carries the poster: THE THIRTY CLUB PRESENTS · THIRTY YEARS OF ALISE · _A Private Birthday Screening_ · **WATCH MOVIE** (48 px tall, 176 px wide). Beneath it the Butler: first visit "Madam, a number of distinguished guests…"; later visits "Welcome back, Madam. Your private screening is ready whenever you wish."                                                                                                                                                                                                                                                                                                           |
+| C. Watch Movie  | Within the tap, synchronously: `video.play()`, then fullscreen. The `<video>` is deliberately **not** `playsinline`, so on iPhone `play()` itself opens Safari's native fullscreen player (pause/resume, scrubbing, volume, rotation, Done). Elsewhere `video.requestFullscreen()` gives the browser's player; if fullscreen is unavailable or refused the film fills the viewport (the theatre layout) with native controls and a centred "Leave the screening". The CSS push-in (architecture scales towards the screen, the screen's clip expands to the viewport over 0.9 s) only follows the tap; nothing asynchronous precedes the requests. Orientation is never forced. |
+| D. End          | On `ended`: exit fullscreen where permitted, restore the room (camera settles back, poster returns), and the Butler: first natural end "I trust you enjoyed your private screening, Madam…"; later ends "An encore, Madam…". Completion is counted once per playback and stamps the club record's `completedAt` (idempotent). Watch Movie is available again immediately; there is no limit.                                                                                                                                                                                                                                                                                    |
+| Early exit      | Done on iPhone (`webkitendfullscreen`), Escape / exiting browser fullscreen (`fullscreenchange`), or "Leave the screening": pause, keep her place, back to the seat, "Of course, Madam. I have kept your place." The poster says **Resume Movie**, with "Your place is kept at 0:02. Watch from the beginning". No completion is recorded. If iOS closes its player in the last 0.25 s before `ended` arrives, that counts as the natural end (once).                                                                                                                                                                                                                           |
+| E. Later visits | The short welcome (or "Welcome back, Madam. I have kept your place, should you wish to continue." when interrupted). The film is never single-use.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 
-## Viewing and capturing
+Other cases: a refresh, backgrounding or navigating away mid-film keeps the place (saved every 2 s, on pause, `visibilitychange`, `pagehide` and unmount); a long pause changes nothing; a load error or lost connection returns her to the seat with an honest notice ("The screening needs a connection. The film is not kept on this device.") and Watch Movie retries; a refused `play()` says "The projector did not start. Tap Watch Movie once more." No state leaves her on a black screen: every exit path restores the seated room.
 
-Start `npm run dev -- --port 5185 --strictPort` in the project root.
+## Files
 
-- Clean **final screen-filling** cinematic reference: `http://127.0.0.1:5185/?preview=screening-endframe`
-- Separate cinema arrival reference: `http://127.0.0.1:5185/?preview=screening-arrival`
-- Interactive technical demonstration: `http://127.0.0.1:5185/?preview=screening-demo`
-- Empty collection: `http://127.0.0.1:5185/?preview=screening`
-- Real membership-gated room: `/rooms/screening-room`
+| Concern                                                         | Where                                                                                                                                                       |
+| --------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **The film configuration (the only file to edit for the film)** | `src/features/screening/config/screeningFilm.ts`                                                                                                            |
+| Record, reducer, status (no React)                              | `src/features/screening/domain/screeningRecord.ts`                                                                                                          |
+| The Butler's lines (PROVISIONAL)                                | `src/features/screening/domain/screeningScript.ts`; escort line in `club/domain/loungeScript.ts`                                                            |
+| Fullscreen per browser                                          | `src/features/screening/ui/filmPresentation.ts`                                                                                                             |
+| The room                                                        | `src/features/screening/ui/ScreeningRoom.tsx`, `screening.css`                                                                                              |
+| Escort                                                          | `src/features/lounge/ui/Lounge.tsx` (+ `lounge.css`), `lounge/scene/loungeMath.ts` (`escort` shot), `club/ui/roomViews.ts` (`preloadRoom`)                  |
+| Temporary test film and its generator                           | `public/media/screening/screening-test-5s.mp4`, `tools/create-screening-test-film.swift`                                                                    |
+| Rehearsal launch and reset                                      | `src/features/rehearsal/engine.ts` (`screening-journey`, `resetRoom('screening-room')`)                                                                     |
+| Tests                                                           | `domain/screeningRecord.test.ts`, `ui/ScreeningRoom.test.tsx`, `tests/screening-film.spec.ts` (`playwright.screening.config.ts`), `tests/screening.spec.ts` |
 
-Previews are behind `import.meta.env.DEV`, removed from production and independent of membership. The real route always uses `RoomGate`. Preview progress uses the same screening storage key on the development origin; clear `thirty-club:screening` there to return to the first-visit title.
+Retired with the message collection: `ScreenPlayer`, `MessageList`, `EntranceFilm`, `videoMessages`, `progress`, `premiere.css`, the synthetic fixtures and their development middleware.
 
-With the server running, execute `node tools/capture-screening.mjs`. Captures wait for the backdrop and fonts, use reduced motion, and save:
+## State
 
-- `docs/screening/endframe-mobile.png` — 390 × 844.
-- `docs/screening/endframe-mobile-3x.png` — 1170 × 2532, the same 390 × 844 CSS composition at device scale 3.
-- `docs/screening/endframe-desktop.png` — 1440 × 900.
-- `premiere-mobile.png`, `player-mobile.png`, `collection-mobile.png` — technical UI review states.
+`thirty-club:screening`, version 2: `enteredAt`, `introducedAt`, `plays`, `completedAt` (first natural end), `completions`, `resume: {filmId, seconds} | null`. Status: never entered → entered → started (stopped too early to keep a place) → interrupted (place kept) → completed. A returning visitor is one whose record already had `enteredAt` when the page loaded. A resume point within 1 s of either end is not kept. Replacing the film (new `id`) starts resume positions afresh but keeps her history. Version 1 records (the empty message collection) read as a fresh room.
 
-The final end frame is the blank illuminated projection surface filling the display, with no architecture. `arrival-mobile.png`, `arrival-mobile-3x.png`, `arrival-desktop.png` and `arrival-landscape.png` preserve the architectural journey separately. `endframe-landscape.png` captures 844 × 390. Additional playback references cover both landscape and portrait source clips in both device orientations. `message-ended-mobile.png` and `message-ended-landscape.png` capture the dedicated end overlay. The high-resolution capture is a 3× browser render. Use the **endframe** captures for the final film frame; use the **arrival** captures only for the intermediate seated composition. No text, controls, cursor, PWA footer or development overlay appears in that preview.
+Guests store it in `localStorage`; Dev Mode / TEST rehearsals store it in the tab's session storage under `thirty-club:owner:` (the existing `progressStorage`), so rehearsals never touch Alise's record. Local and non-authoritative (ADR-003); it unlocks nothing.
 
-## Architecture and navigation
+## Access (unchanged)
 
-- `domain/videoMessages.ts`: existing typed metadata, sorting, placeholder exclusion and validation, extended only with an optional transcript.
-- `domain/progress.ts`: versioned local record, parsing, selection, position, watched tracking and completion helpers; no React.
-- `ui/ScreeningRoom.tsx`: premiere/welcome, selection, collection and closing states.
-- `ui/ScreenPlayer.tsx`: native media API lifecycle, one custom control system, options and end overlays.
-- `ui/premiere.css`: dedicated viewport-fitting player presentation; the arrival artwork styles remain separate.
-- `ui/MessageList.tsx`: native modal dialog with focus containment, Escape and focus restoration.
-- `ui/CinemaBackdrop.tsx`, `cinemaConfig.ts`, `screening.css`: replaceable visual environment.
-- `ui/EntranceFilm.tsx`: optional future entrance only.
+The room still opens with the membership presented after 24 October 2026 00:00 Jamaica (`unlock: membership`, ADR-012), through `RoomGate`, on direct navigation, reloads and from the Directory. Nothing in this change alters the gate. LIVE before midnight: "This room is not open yet." LIVE after midnight with no configured film: the poster and "Your screening is being prepared.", no Watch Movie, no `<video>`, no test-film label. Rehearsals and the local dev server use the test film, labelled "Rehearsal · temporary five-second test film" beneath the screen.
 
-`RoomGate` lazy-loads the room and still requires the existing membership/unlock rules. `rooms.ts` marks it built. Directory, guided continuation and butler doorway navigation use that registry automatically. Direct eligible visits are stamped. `useClub.complete` stamps completion only after **all current real messages** have ended. A visit, skip, or reaching the last clip without watching the others does not complete the room. Completion never removes access.
+## Rehearse the complete experience
 
-Inline playback uses **one custom control system** around an HTML5 video with `playsInline` and native `controls` disabled. Previous/play-pause/next, one scrubber and elapsed/duration sit in the first compact row; sender, Messages and Screening options occupy the second. Replay, fullscreen, mute, captions/transcript and return-to-lounge are in a native modal options dialog. iOS native fullscreen is preferred when exposed; its browser-owned controls replace inline chrome. Other browsers use the Fullscreen API, with a viewport presentation fallback. Routine PWA status remains in the lounge rather than adding a footer below the film; the existing worker/status state stays mounted.
+1. On the Grand Entrance, tap the clock five times within three seconds, enter **1414** (Dev Mode).
+2. **Open Dev Mode → The Screening Room journey (first visit).** It moves the rehearsal clock past midnight, presents the card, inducts the membership, clears this rehearsal's screening progress and the room's completion, and opens the Members' Lounge.
+3. Tap **Continue your evening** → the escort → seated → the Butler's introduction → **Watch Movie** → the five-second test film plays in the native player → it ends → back in the seat → closing words.
+4. Watch again as often as you like; leave part-way (Done on iPhone) to see Resume Movie; reload to check the kept place; return to the Lounge and come back for the short welcome.
+5. Repeat from step 2 at any time. **The Private Screening Room** launch goes straight to the seat keeping progress (returning visitor); **Reset room → Screening Room** clears it. The same launches are in TEST (`/concierge/owner/test` → Rehearsal). **Exit Dev Mode** before handing the phone over.
 
-Playback is invoked synchronously in the user’s tap, including selection changes, before presentation effects. Rejected play requests expose a Play/Retry recovery. An ended clip leaves its source selected and replaces the transport strip with one end-of-message overlay: sender, Watch Next, Replay and Browse Messages. It never automatically advances. The final message instead offers the closing line, rewatch, replay, browsing and return to the lounge. Hidden-tab playback pauses. Unmount pauses, releases the source and cancels waiting timers. The StrictMode setup restores a source removed by its cleanup rehearsal.
+Locally: `npm run dev`, then `/?preview=screening-demo` (seated, test film), `/?preview=screening` (LIVE, unconfigured), `/?preview=screening-arrival`, `/?preview=screening-endframe`; these previews do not exist in production.
 
-## Adding real messages
+## Replace the temporary film with the birthday film
 
-No genuine messages have been supplied. Production currently filters both existing placeholders and shows “The messages are not ready yet.” The technical films never become production birthday content.
+1. Export from CapCut with the settings below.
+2. Choose where it lives:
+   - **Same origin (simplest):** copy it to `public/media/screening/thirty-years-of-alise-v1.mp4`. Only if the file is under **95 MB** (GitHub rejects files over 100 MB) and you have decided the film may be committed to the private repository: AGENTS.md forbids committing private content without that decision.
+   - **External HTTPS host (needed above ~95 MB):** a host that serves `Content-Type: video/mp4` and HTTP byte ranges (`206 Partial Content`; iPhone Safari requires them), e.g. a public bucket. Use the `https://` URL.
+     Either way the URL is visible in the public JavaScript bundle; an unguessable filename helps, but this is not access control (ADR-003).
+3. In `src/features/screening/config/screeningFilm.ts`, replace `export const BIRTHDAY_FILM: ScreeningFilm | null = null;` with:
+   ```ts
+   export const BIRTHDAY_FILM: ScreeningFilm | null = {
+     id: 'thirty-years-of-alise-v1',
+     title: 'Thirty Years of Alise',
+     src: '/media/screening/thirty-years-of-alise-v1.mp4', // or the https:// URL
+     type: 'video/mp4',
+     kind: 'birthday',
+     // poster: '/media/screening/thirty-years-of-alise.jpg',  (optional)
+     // captions: '/media/screening/thirty-years-of-alise.vtt', (optional)
+   };
+   ```
+   Change the `id` (e.g. `-v2`) whenever you replace the file, so a kept place from the old cut is not applied to the new one. Nothing else changes: the room plays whatever this entry names.
+4. Update the unit test that asserts `BIRTHDAY_FILM` is `null` (`screeningRecord.test.ts`, "keeps LIVE safely unconfigured…") to expect the new entry, run `npm run check` and `npm run test:screening`, commit and push. Netlify builds `main`.
+5. Rehearse on the iPhone (below) with Dev Mode **and** once as a guest after midnight (or with a rehearsal account), watching the whole film with sound.
 
-1. Prepare MP4 files with H.264 video and AAC audio, fast-start metadata, and sensible mobile bitrates. Verify sound and orientation on the actual iPhone. Preserve the complete image; the player uses `object-fit: contain`.
-2. Put authorised files at `public/media/screening/<stable-id>.mp4` for same-origin delivery, or arrange a same-origin media endpoint. Existing validation requires sources, posters and captions under `/media/screening/`; external URLs require a deliberate hosting/validation change.
-3. Add an entry to `VIDEO_MESSAGES` in `src/features/screening/domain/videoMessages.ts`. Use a unique lowercase ID and unique numeric `order`. Remove `placeholder` only for real, approved content.
-4. Provide captions (`.vtt`) or an accurate transcript. Posters and introductions are optional.
-5. Run the checks and rehearse every file on the actual phone. Never commit private videos without the owner’s explicit decision. Same-origin public static delivery does not provide private-media authentication.
+To keep the five-second film in rehearsal after the real one exists, nothing is needed: once `BIRTHDAY_FILM` is valid, rehearsals use it too. To regenerate the test film on a Mac: `xcrun swift tools/create-screening-test-film.swift public/media/screening/screening-test-5s.mp4`.
 
-Example metadata (illustrative fields, not content to publish):
+## Recommended CapCut export
 
-```ts
-{
-  id: 'approved-message-id',
-  sender: 'Approved sender name',
-  order: 1,
-  video: { src: '/media/screening/approved-message-id.mp4', type: 'video/mp4' },
-  poster: '/media/screening/approved-message-id.jpg',
-  captions: '/media/screening/approved-message-id.vtt',
-  // transcript: 'Accurate approved transcript, if captions are unavailable.',
-}
-```
+- **Format:** MP4. **Codec:** H.264 (not HEVC; H.264 plays everywhere, including older iPhones and any desktop rehearsal). **Audio:** AAC, stereo, 48 kHz (CapCut's default).
+- **Resolution:** 1080p. **Frame rate:** 30 fps (or 25 if every source clip is 25). **Bitrate:** "Recommended", or about 6–8 Mbps for 1080p; lower to ~4 Mbps (or 720p) if the file is too large for the chosen host or for hotel Wi-Fi.
+- **Size estimate:** megabytes ≈ Mbps × minutes × 7.5. A 6-minute film at 6 Mbps is about 270 MB (external hosting); at 4 Mbps and 3 minutes, about 90 MB.
+- **Orientation:** 16:9 landscape is the natural choice for a cinema; she can rotate in the native player. 9:16 also works (letterboxed in the room's theatre layout). Keep SDR (switch off HDR export if offered).
+- **Fast start:** progressive playback needs the file's index at the start. If playback takes long to begin on the phone, re-wrap without re-encoding using a separately installed ffmpeg: `ffmpeg -i export.mp4 -c copy -movflags +faststart thirty-years-of-alise-v1.mp4`.
+- **Loudness:** CapCut's "Normalise loudness" on the whole timeline keeps the guests' messages at an even level.
 
-Conversion example with an independently installed ffmpeg:
+## Manual iPhone verification (required; not automatable)
 
-```sh
-ffmpeg -i input.mov -vf "scale=-2:720" -c:v libx264 -profile:v high -crf 23 -preset slow -c:a aac -b:a 128k -movflags +faststart output.mp4
-```
+On the birthday iPhone, in Safari and again from the Home Screen app, on Wi-Fi and on mobile data:
 
-Do not reuse an ID for a different person’s message: viewing history is keyed by ID. New IDs are initially unwatched. Curated order comes solely from `order`; browsing and restarting do not erase watched history.
+1. Dev Mode → The Screening Room journey: the escort's camera walk and fade feel smooth; the room appears seated with no white flash.
+2. Watch Movie opens the **native fullscreen player at once**, with sound (ringer switch on and off: video sound should play either way).
+3. Pause/resume, scrub back and forward, volume buttons, rotate to landscape and back, AirPlay icon visible (not required).
+4. Let it end: the player closes by itself (or tap Done if iOS leaves it open on the last frame); the room returns seated with the closing words; no black screen.
+5. Watch again; then tap Done part-way: Resume Movie appears with the kept time; Resume continues from there.
+6. Mid-film, lock the phone / switch apps, return: no stuck black screen; Done returns to the seat.
+7. Reload mid-film: the room offers Resume.
+8. Airplane mode, Watch Movie: an honest notice, no crash; reconnect and Watch Movie works.
+9. Exit Dev Mode; as a guest before midnight the room is locked; after midnight with no film configured it says "Your screening is being prepared."
 
-## Persistence and offline boundary
-
-`thirty-club:screening` stores version 1, `started`, `lastId`, `watched`, per-message `positions` and `entranceSeen`. Positions save periodically and on pause/visibility changes. Corrupt records, unknown IDs, invalid values, blocked storage and quota errors recover safely. A storage-failure notice explains that progress will only last for this visit. This is local, non-authoritative convenience state; storage eviction or changing devices can lose it.
-
-The service worker precaches the shell and architectural WebP assets, **not video files**. Failed offline playback explains the need for a connection. There is no offline-download claim or implementation. Private hosting, reliable travel connectivity and a separately prepared video backup remain owner/content decisions.
-
-## Replacing architecture
-
-Replace the portrait and desktop WebP assets, or update `cinemaConfig.background` and the desktop CSS background URL. Keep the screen blank and frontal. Align `--screen-left`, `--screen-width`, `--screen-top` and `--screen-height` in `screening.css` to the new surface. Current portrait background crop is 114% × 125%, centred horizontally and at 48% vertically; the screen uses 6.1% left, 87.8% width, 29.25svh top, 27.5svh height. Landscape anchors are calculated from the proportionally covered 1586 × 992 artwork: 19.4% left, 61.4% width, 17.5% top and 43.8% height of the scaled image, adjusted for its centred crop. These anchors apply only to arrival, never playback. Landscape artwork uses cover rather than stretching. Regenerate arrival captures after changing artwork or anchors. Playback and the final screen-filling end frame are independent of the background.
-
-## Adding the future entrance cinematic
-
-No entrance film has been generated or embedded. In `ui/cinemaConfig.ts`, set `entrance.enabled`, `entrance.src` and optional `entrance.poster` when an approved film exists. Use a muted inline MP4 ending on the captured composition; keep the film and player separate.
-
-`EntranceFilm` provides Skip, completion callback, error/autoplay rejection fallback and a 12-second safety timeout. End/Skip/failure releases the screen-filling premiere destination, not the seated arrival. Reduced motion bypasses it, and a locally recorded prior entrance bypasses subsequent playback. It never controls membership or media availability. Verify the final matched frame and inline/autoplay behaviour on the phone when adding the real film.
+Record the iOS version, results and any deviation in BUILD_LOG.md.
 
 ## Checks and limitations
 
-- `npm run check`: TypeScript, ESLint, Prettier, Vitest and production build.
-- `npm run test:pwa`: production browser checks including membership gating, no-WebGL rendering, directory/return navigation, exclusion of previews and media from the worker.
-- `npx playwright test --config playwright.screening.config.ts`: development browser tests using real synthetic H.264 media, including playback, pause, seek, portrait enlargement, resume, completion, errors, reduced motion and screen-filling end frames, portrait/landscape layout, same-element rotation and the push-in transition.
-- `node tools/create-screening-fixtures.mjs`: regenerates two six-second **silent technical test films** with Chromium’s H.264 MediaRecorder. They live in `tests/fixtures/`, served only by a Vite development middleware with byte ranges. No dependencies were added.
-
-No actual iPhone, Safari/WebKit, sound, interruption, standalone-mode or poor-network rehearsal has occurred. Playwright WebKit is not installed locally. Unit tests verify the inline attributes and gesture-triggered iPhone fullscreen API path; Chromium tests verify real H.264 playback and source/time continuity. Synthetic clips verify browser video mechanics, not the final messages’ audio/codec quality. Real content, captions/transcripts, private hosting decisions, composition approval and physical-device rehearsal remain necessary before birthday release.
+- `npm run check` (unit tests include the record, script, film configuration, fullscreen order within the tap, iPhone/element/theatre presentation, natural end, encore, early exit, iOS end-race, unmount, error and LIVE-unconfigured cases).
+- `npm run test:screening`: production build, iPhone 13 profile, Chromium then WebKit: the full journey with the real MP4 (escort timing, introduction, Watch Movie geometry, real playback of the 1280×720 film with sound unmuted and native controls, natural end, closing words, club completion, encore, returning welcome, zero `/api/` requests, Alise's localStorage untouched), early exit + refresh + resume + restart, LIVE gate and unconfigured state, phone landscape. Screenshots: `docs/screening/journey/`.
+- `npm run test:pwa` includes `tests/screening.spec.ts`: LIVE gate, unconfigured state, Directory → escort round trip, previews stripped, MP4 served with byte ranges and absent from the precache.
+- Playwright WebKit is desktop WebKit with an iPhone viewport: it has the element Fullscreen API (and in headless runs used the theatre layout), not the iPhone's native player. **Native iPhone fullscreen, its Done button, auto-close at the end, audio routing and rotation are unverified until the manual steps above are run.**
+- The 3D camera walk was checked by eye once, in software-rendered Chromium (dev preview `?preview=lounge&lookdev`): the view moves towards the curtained doorway while the Butler speaks. The automated journeys use the poster lounge (fade only); frame rate on the phone is unmeasured.
+- Video is never cached offline (no `mp4` in the precache, no runtime caching).

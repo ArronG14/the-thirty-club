@@ -27,7 +27,8 @@
     "butler:shopping": "node --env-file-if-exists=.env tools/butler-shopping.mjs",
     "owner:set-password": "node tools/set-owner-password.mjs",
     "owner:password": "node tools/owner-password.mjs",
-    "test:rehearsal": "npm run build && playwright test -c playwright.rehearsal.config.ts"
+    "test:rehearsal": "npm run build && playwright test -c playwright.rehearsal.config.ts",
+    "test:screening": "npm run build && playwright test -c playwright.screening.config.ts && SCREENING_WEBKIT=1 playwright test -c playwright.screening.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",

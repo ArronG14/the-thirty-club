@@ -4,228 +4,281 @@ import {
   fireEvent,
   render,
   screen,
-  waitFor,
-  within,
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { SCREENING_KEY } from '../domain/progress';
-import type { VideoMessage } from '../domain/videoMessages';
-import ScreeningRoom, { EndFrame } from './ScreeningRoom';
-const messages: VideoMessage[] = ['one', 'two'].map((id, order) => ({
-  id,
-  order,
-  sender: `Test ${id}`,
-  video: { src: `/media/screening/${id}.mp4`, type: 'video/mp4' },
-}));
-function mount(content = messages, complete = vi.fn()) {
-  return render(
+import { TEST_FILM, type ScreeningFilm } from '../config/screeningFilm';
+import { freshRecord, loadRecord, saveRecord } from '../domain/screeningRecord';
+import { SCREENING_LINES } from '../domain/screeningScript';
+import ScreeningRoom from './ScreeningRoom';
+
+function mount(film: ScreeningFilm | null = TEST_FILM, complete = vi.fn()) {
+  const view = render(
     <MemoryRouter>
-      <ScreeningRoom messages={content} onComplete={complete} />
+      <ScreeningRoom film={film} onComplete={complete} />
     </MemoryRouter>,
   );
+  return { ...view, complete };
 }
-const press = (name: string | RegExp) =>
-  fireEvent.click(screen.getByRole('button', { name }));
-const video = () => document.querySelector('video')!;
+const video = () =>
+  document.querySelector('video') as HTMLVideoElement & {
+    webkitEnterFullscreen?: () => void;
+  };
+const watchButton = () =>
+  screen.getByRole('button', { name: /^(Watch|Resume) Movie$/ });
+const phase = () =>
+  document.querySelector('.cinema')?.getAttribute('data-phase');
+/** Puts the element where a real browser would be. */
+function at(
+  element: HTMLVideoElement,
+  state: Partial<Record<'currentTime' | 'duration' | 'readyState', number>> & {
+    ended?: boolean;
+  },
+) {
+  for (const [key, value] of Object.entries(state))
+    Object.defineProperty(element, key, {
+      configurable: true,
+      writable: true,
+      value,
+    });
+}
+const speak = () => act(() => vi.advanceTimersByTime(1300));
+
+let fullscreenEnabled = true;
 beforeEach(() => {
+  vi.useFakeTimers();
   localStorage.clear();
-  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(function (
-    this: HTMLMediaElement,
-  ) {
-    fireEvent.play(this);
-    return Promise.resolve();
+  fullscreenEnabled = true;
+  Object.defineProperty(document, 'fullscreenEnabled', {
+    configurable: true,
+    get: () => fullscreenEnabled,
   });
-  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(function (
-    this: HTMLMediaElement,
-  ) {
-    fireEvent.pause(this);
-  });
+  vi.spyOn(HTMLMediaElement.prototype, 'play').mockImplementation(() =>
+    Promise.resolve(),
+  );
+  vi.spyOn(HTMLMediaElement.prototype, 'pause').mockImplementation(() => {});
   vi.spyOn(HTMLMediaElement.prototype, 'load').mockImplementation(() => {});
-  HTMLDialogElement.prototype.showModal = function () {
-    this.setAttribute('open', '');
-  };
-  HTMLDialogElement.prototype.close = function () {
-    this.removeAttribute('open');
-  };
+  HTMLElement.prototype.requestFullscreen = vi.fn(() => Promise.resolve());
 });
 afterEach(() => {
   cleanup();
+  vi.useRealTimers();
   vi.restoreAllMocks();
 });
-describe('screening experience', () => {
-  it('has no autoplay and starts synchronously from the premiere tap; pause, replay, navigation work', () => {
+
+describe('the Private Screening Room', () => {
+  it('seats her before the poster; the Butler introduces the film once', () => {
     mount();
-    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    expect(
+      screen.getByRole('heading', { name: 'Thirty Years of Alise' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('The Thirty Club presents')).toBeInTheDocument();
+    expect(
+      screen.getByText('A Private Birthday Screening'),
+    ).toBeInTheDocument();
+    expect(watchButton()).toHaveTextContent('Watch Movie');
+    expect(
+      screen.getByText('Rehearsal · temporary five-second test film'),
+    ).toBeInTheDocument();
+    // A normal MP4 with native controls; never autoplay, never playsinline,
+    // so the iPhone opens its own fullscreen player.
+    expect(video()).toHaveAttribute('src', TEST_FILM.src);
+    expect(video()).toHaveAttribute('controls');
     expect(video()).not.toHaveAttribute('autoplay');
-    press('Begin screening');
-    expect(video()).toHaveAttribute('src', messages[0]!.video.src);
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
-    press('Pause');
-    expect(screen.getByRole('button', { name: 'Play' })).toBeVisible();
-    press('Screening options');
-    press('Replay message');
-    press('Next message');
-    expect(video()).toHaveAttribute('src', messages[1]!.video.src);
-    press('Previous message');
-    expect(video()).toHaveAttribute('src', messages[0]!.video.src);
-    expect(JSON.parse(localStorage.getItem(SCREENING_KEY)!).watched).toEqual(
-      [],
-    );
-  });
-  it('offers next, records only ended clips, completes once all watched, and allows rewatch', () => {
-    const complete = vi.fn();
-    mount(messages, complete);
-    press('Begin screening');
-    fireEvent.ended(video());
-    expect(complete).not.toHaveBeenCalled();
-    press(/Watch next message from/);
-    fireEvent.ended(video());
-    expect(screen.getByText('The end')).toBeVisible();
-    expect(complete).toHaveBeenCalled();
-    press('Rewatch the collection');
-    expect(video()).toHaveAttribute('src', messages[0]!.video.src);
-    expect(JSON.parse(localStorage.getItem(SCREENING_KEY)!).watched).toEqual([
-      'one',
-      'two',
-    ]);
-  });
-  it('resumes after remount and browsing does not erase progress', () => {
-    const first = mount();
-    press('Begin screening');
-    fireEvent.ended(video());
-    press(/Watch next message from/);
-    first.unmount();
-    mount();
-    press('Browse messages');
-    const dialog = screen.getByRole('dialog');
-    expect(within(dialog).getByText('Watched')).toBeVisible();
-    press('Close collection');
-    press('Resume screening');
-    expect(video()).toHaveAttribute('src', messages[1]!.video.src);
-  });
-  it('restores saved position on metadata and scrubs without marking watched', () => {
-    localStorage.setItem(
-      SCREENING_KEY,
-      JSON.stringify({
-        version: 1,
-        started: true,
-        lastId: 'one',
-        positions: { one: 8 },
-        watched: [],
-      }),
-    );
-    mount();
-    press('Resume screening');
-    Object.defineProperty(video(), 'duration', {
-      value: 20,
-      configurable: true,
-    });
-    fireEvent.loadedMetadata(video());
-    expect(video().currentTime).toBe(8);
-    fireEvent.change(screen.getByRole('slider'), { target: { value: '12' } });
-    expect(video().currentTime).toBe(12);
-    expect(JSON.parse(localStorage.getItem(SCREENING_KEY)!).watched).toEqual(
-      [],
-    );
-  });
-  it('recovers from a rejected play and media error without blocking skipping or leaving', async () => {
-    vi.spyOn(HTMLMediaElement.prototype, 'play').mockRejectedValue(
-      new Error('NotAllowedError'),
-    );
-    mount();
-    press('Begin screening');
-    await screen.findByText(/Tap Play to continue/);
-    fireEvent.error(video());
-    expect(
-      screen.getByText('This message cannot load right now.'),
-    ).toBeVisible();
-    press('Retry');
-    expect(HTMLMediaElement.prototype.load).toHaveBeenCalled();
-    await act(async () => {});
-    press('Next message');
-    press('Screening options');
-    expect(
-      screen.getByRole('link', { name: 'Return to the Members’ Lounge' }),
-    ).toHaveAttribute('href', '/');
-    await act(async () => {});
-  });
-  it('filters placeholders and never starts an empty collection', () => {
-    mount([{ ...messages[0]!, placeholder: true }]);
-    expect(screen.getByText('The messages are not ready yet.')).toBeVisible();
-    expect(document.querySelector('video')).toBeNull();
-    expect(screen.queryByText('Test one')).toBeNull();
-  });
-  it('keeps invalid content recoverable even for a returning viewer', () => {
-    localStorage.setItem(
-      SCREENING_KEY,
-      JSON.stringify({ version: 1, started: true, lastId: 'one', watched: [] }),
-    );
-    mount([messages[0]!, { ...messages[1]!, order: 0 }]);
-    expect(
-      screen.getByText(
-        'The collection needs a little attention. Please return shortly.',
-      ),
-    ).toBeVisible();
-    expect(
-      screen.queryByRole('button', { name: 'Resume screening' }),
-    ).toBeNull();
-    expect(
-      screen.getByRole('link', { name: 'Return to the Members’ Lounge' }),
-    ).toBeVisible();
+    expect(video()).not.toHaveAttribute('playsinline');
+    expect(HTMLMediaElement.prototype.play).not.toHaveBeenCalled();
+    speak();
+    expect(screen.getByText(SCREENING_LINES.introduction)).toBeInTheDocument();
+    expect(loadRecord().introducedAt).not.toBeNull();
+    expect(loadRecord().enteredAt).not.toBeNull();
   });
 
-  it('offers native iPhone fullscreen from options without remounting the inline video', () => {
-    mount();
-    press('Begin screening');
-    const element = video();
-    const enterFullscreen = vi.fn();
-    Object.defineProperty(element, 'webkitEnterFullscreen', {
-      value: enterFullscreen,
+  it('a returning visitor gets the short welcome', () => {
+    saveRecord({
+      ...freshRecord(),
+      enteredAt: '2026-10-24T05:10:00.000Z',
+      introducedAt: '2026-10-24T05:10:00.000Z',
     });
-    expect(element).toHaveAttribute('playsinline');
-    expect(element.controls).toBe(false);
-    expect(screen.getAllByRole('slider')).toHaveLength(1);
-    press('Screening options');
-    press('Fullscreen');
-    expect(enterFullscreen).toHaveBeenCalledOnce();
-    expect(video()).toBe(element);
-  });
-  it('shows one end-of-message overlay and waits for Watch Next', () => {
     mount();
-    press('Begin screening');
-    const element = video();
-    fireEvent.ended(element);
-    expect(screen.getByRole('heading', { name: 'Test one' })).toBeVisible();
-    expect(screen.queryByRole('slider')).toBeNull();
-    expect(screen.queryByRole('button', { name: 'Next message' })).toBeNull();
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
-    expect(video()).toBe(element);
-    press('Replay');
-    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(2);
+    speak();
+    expect(
+      screen.getByText(
+        'Welcome back, Madam. Your private screening is ready whenever you wish.',
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(SCREENING_LINES.introduction)).toBeNull();
   });
-  it('pauses when hidden and cleans up the media on exit', async () => {
-    const view = mount();
-    press('Begin screening');
-    Object.defineProperty(document, 'visibilityState', {
-      value: 'hidden',
-      configurable: true,
+
+  it('Watch Movie plays and requests fullscreen inside the same tap', () => {
+    mount();
+    const order: string[] = [];
+    vi.mocked(HTMLMediaElement.prototype.play).mockImplementation(() => {
+      order.push('play');
+      return Promise.resolve();
     });
-    fireEvent(document, new Event('visibilitychange'));
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: 'Play' })).toBeVisible(),
+    vi.mocked(HTMLElement.prototype.requestFullscreen).mockImplementation(
+      () => {
+        order.push('fullscreen');
+        return Promise.resolve();
+      },
     );
-    const element = video();
-    view.unmount();
-    expect(element).not.toHaveAttribute('src');
-    Object.defineProperty(document, 'visibilityState', {
-      value: 'visible',
-      configurable: true,
+    fireEvent.click(watchButton());
+    // Both happened synchronously, before any timer or animation.
+    expect(order).toEqual(['play', 'fullscreen']);
+    expect(phase()).toBe('film');
+    expect(loadRecord().plays).toBe(1);
+  });
+
+  it('on iPhone (no element fullscreen) uses the native video player', () => {
+    fullscreenEnabled = false;
+    mount();
+    const enter = vi.fn();
+    video().webkitEnterFullscreen = enter;
+    at(video(), { readyState: 1 });
+    fireEvent.click(watchButton());
+    expect(HTMLMediaElement.prototype.play).toHaveBeenCalledTimes(1);
+    expect(enter).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('.cinema')).toHaveAttribute(
+      'data-presentation',
+      'native',
+    );
+  });
+
+  it('falls back to the theatre layout where fullscreen is unavailable', () => {
+    fullscreenEnabled = false;
+    mount();
+    fireEvent.click(watchButton());
+    expect(document.querySelector('.cinema')).toHaveAttribute(
+      'data-presentation',
+      'theatre',
+    );
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Leave the screening' }),
+    );
+    expect(phase()).toBe('seated');
+  });
+
+  it('natural end: back to the seat, closing words, one completion; replay is unlimited', () => {
+    const { complete } = mount();
+    speak();
+    fireEvent.click(watchButton());
+    at(video(), { readyState: 4, duration: 5, currentTime: 5, ended: true });
+    fireEvent.ended(video());
+    fireEvent.ended(video());
+    expect(phase()).toBe('seated');
+    expect(screen.getByText(SCREENING_LINES.closing)).toBeInTheDocument();
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(loadRecord()).toMatchObject({ completions: 1, resume: null });
+    const firstCompletion = loadRecord().completedAt;
+
+    // Again, from the beginning.
+    expect(watchButton()).toHaveTextContent('Watch Movie');
+    fireEvent.click(watchButton());
+    expect(video().currentTime).toBe(0);
+    at(video(), { currentTime: 5, ended: true });
+    fireEvent.ended(video());
+    expect(screen.getByText(SCREENING_LINES.encore)).toBeInTheDocument();
+    expect(loadRecord()).toMatchObject({
+      completions: 2,
+      plays: 2,
+      completedAt: firstCompletion,
     });
   });
-  it('renders a deterministic clean end frame without controls or WebGL', () => {
-    const { container } = render(<EndFrame />);
-    expect(container.querySelector('canvas, video, button, a')).toBeNull();
-    expect(container.textContent).toBe('');
+
+  it('leaving the native player early keeps her place and records no completion', () => {
+    fullscreenEnabled = false;
+    const { complete } = mount();
+    video().webkitEnterFullscreen = vi.fn();
+    fireEvent.click(watchButton());
+    at(video(), { readyState: 4, duration: 5, currentTime: 2.4 });
+    fireEvent(video(), new Event('webkitbeginfullscreen'));
+    fireEvent(video(), new Event('webkitendfullscreen'));
+    expect(phase()).toBe('seated');
+    expect(screen.getByText(SCREENING_LINES.paused)).toBeInTheDocument();
+    expect(complete).not.toHaveBeenCalled();
+    expect(loadRecord()).toMatchObject({
+      completedAt: null,
+      resume: { filmId: TEST_FILM.id, seconds: 2.4 },
+    });
+    expect(watchButton()).toHaveTextContent('Resume Movie');
+    expect(screen.getByText(/Your place is kept at 0:02/)).toBeInTheDocument();
+
+    // Resume continues from the kept place; "from the beginning" restarts.
+    fireEvent.click(watchButton());
+    expect(video().currentTime).toBe(2.4);
+    at(video(), { currentTime: 3 });
+    fireEvent(video(), new Event('webkitendfullscreen'));
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Watch from the beginning' }),
+    );
+    expect(video().currentTime).toBe(0);
+  });
+
+  it('iOS closing its player at the very end still counts as the end, once', () => {
+    fullscreenEnabled = false;
+    const { complete } = mount();
+    fireEvent.click(watchButton());
+    at(video(), { readyState: 4, duration: 5, currentTime: 4.9 });
+    fireEvent(video(), new Event('webkitendfullscreen'));
+    at(video(), { currentTime: 5, ended: true });
+    fireEvent.ended(video());
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(loadRecord().completions).toBe(1);
+  });
+
+  it('exiting element fullscreen part-way is an early exit', () => {
+    mount();
+    fireEvent.click(watchButton());
+    const element = video();
+    at(element, { readyState: 4, duration: 5, currentTime: 3 });
+    Object.defineProperty(document, 'fullscreenElement', {
+      configurable: true,
+      value: element,
+    });
+    fireEvent(document, new Event('fullscreenchange'));
+    Object.defineProperty(document, 'fullscreenElement', {
+      configurable: true,
+      value: null,
+    });
+    fireEvent(document, new Event('fullscreenchange'));
+    expect(screen.getByText(SCREENING_LINES.paused)).toBeInTheDocument();
+    expect(loadRecord().completedAt).toBeNull();
+  });
+
+  it('leaving the room mid-film (or refreshing) keeps her place', () => {
+    const { unmount } = mount();
+    fireEvent.click(watchButton());
+    at(video(), { readyState: 4, duration: 5, currentTime: 3.1 });
+    unmount();
+    expect(loadRecord().resume).toEqual({
+      filmId: TEST_FILM.id,
+      seconds: 3.1,
+    });
+    expect(loadRecord().completedAt).toBeNull();
+  });
+
+  it('a failed load returns her to the room with an honest notice', () => {
+    mount();
+    fireEvent.click(watchButton());
+    fireEvent.error(video());
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'The film could not be loaded just now.',
+    );
+    expect(watchButton()).toBeInTheDocument();
+  });
+
+  it('LIVE without a configured film: no Watch Movie, no video, honest words', () => {
+    mount(null);
+    speak();
+    expect(screen.getByText('Your screening is being prepared.')).toBeVisible();
+    expect(screen.getByText(SCREENING_LINES.preparing)).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Movie/ })).toBeNull();
+    expect(document.querySelector('video')).toBeNull();
+    expect(screen.queryByText(/test film/)).toBeNull();
+  });
+
+  it('a birthday film carries no rehearsal label', () => {
+    mount({ ...TEST_FILM, id: 'final', kind: 'birthday' });
+    expect(screen.queryByText(/test film/)).toBeNull();
   });
 });

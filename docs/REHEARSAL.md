@@ -49,6 +49,8 @@ The PIN is still only a convenience gate (ADR-011). It grants nothing on the ser
 
 Scenarios: before departure; Departure Lounge opening (13:59:30 UK Thursday); birthday eve; one minute before midnight; birthday midnight (−5 s); midnight without the card; immediately after entering (induction); Casino opening (13:59:30 JM); Casino jackpot (next spin); Gift Vault unlock; all rooms open.
 
+**The Screening Room journey (first visit)** opens the Members' Lounge with this rehearsal's screening progress and the room's completion cleared, so the Butler's escort, introduction, the five-second test film, the closing words and encores can be rehearsed end to end, as often as wanted (ADR-019). **The Private Screening Room** goes straight to the seat and keeps progress (returning visitor).
+
 Launches never bypass a gate. They move the rehearsal clock forward to when the room really opens (if earlier), mark the card presented and the membership inducted as Alise's device would record them, and create what the room checks for (e.g. three rehearsal compartments in the simulated vault, a rehearsal-realm concierge session for the Departure Lounge). Rooms: Grand Entrance, Departure Lounge (with or without the credential), Members' Lounge, Screening Room, Grand Casino, Gift Vault, My Correspondence, Shopping Privilege. The Privileges Collection is not built (registry `built: false`) and is listed honestly as "Being prepared".
 
 ## Production fixes in this release

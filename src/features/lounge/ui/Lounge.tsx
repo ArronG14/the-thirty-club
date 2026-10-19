@@ -19,11 +19,13 @@ import {
   INDUCTION,
   loungeBriefing,
   preparingLine,
+  SCREENING_ESCORT_LINE,
   type Arrival,
   type Briefing,
 } from '../../club/domain/loungeScript';
 import { findRoom, ROOMS, type RoomId } from '../../club/domain/rooms';
 import { formatClubTime } from '../../club/domain/schedule';
+import { preloadRoom } from '../../club/ui/roomViews';
 import { useClub } from '../../club/useClub';
 import { speechDuration } from '../../entrance/domain/butlerScript';
 import type { EntranceEnvironment } from '../../entrance/domain/environment';
@@ -42,6 +44,13 @@ const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
 type RenderMode = 'poster' | 'loading' | 'fading' | 'scene';
 type Overlay = 'card' | 'directory' | null;
 const FADE_MS = 1400;
+/**
+ * The Butler's escort to the Screening Room: the camera walks towards the
+ * doorway, the picture fades to black (lounge.css), then the room loads
+ * and fades in with her already seated. About 3.5 s door to seat.
+ */
+const ESCORT_MS = 2300;
+const ESCORT_REDUCED_MS = 400;
 
 const SCREENING = findRoom('screening-room')!;
 const DIRECTORY_NAMES = ROOMS.map((room) =>
@@ -99,6 +108,7 @@ export function Lounge({
   const [spoken, setSpoken] = useState(briefing);
   const [rings, setRings] = useState(0);
   const [eyeOnDoor, setEyeOnDoor] = useState(false);
+  const [escort, setEscort] = useState<string | null>(null);
   const voice = useRef<HTMLDivElement>(null);
   const [opener, setOpener] = useState<HTMLElement | null>(null);
   const openSheet = (sheet: Overlay, from: HTMLElement | null) => {
@@ -158,6 +168,15 @@ export function Lounge({
   }, []);
 
   useEffect(() => {
+    if (!escort) return;
+    const timer = setTimeout(
+      () => navigate(escort),
+      reducedMotion ? ESCORT_REDUCED_MS : ESCORT_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [escort, navigate, reducedMotion]);
+
+  useEffect(() => {
     if (mode !== 'fading') return;
     const timer = setTimeout(() => setMode('scene'), FADE_MS);
     return () => clearTimeout(timer);
@@ -212,7 +231,16 @@ export function Lounge({
     const view = club.views.find((v) => v.room.id === id);
     if (!view) return;
     if (view.enterable) {
+      if (escort) return;
       club.visit(id);
+      if (id === SCREENING.id) {
+        // He shows her to her seat rather than cutting to the room.
+        setOverlay(null);
+        say([SCREENING_ESCORT_LINE], 'concierge');
+        preloadRoom(id);
+        setEscort(view.room.path);
+        return;
+      }
       navigate(view.room.path);
       return;
     }
@@ -226,7 +254,8 @@ export function Lounge({
   const step = INDUCTION[Math.min(beat, INDUCTION.length - 1)]!;
 
   let focus: LoungeFocus = 'room';
-  if (overlay === 'directory') focus = 'directory';
+  if (escort) focus = 'escort';
+  else if (overlay === 'directory') focus = 'directory';
   else if (overlay === 'card') focus = 'hearth';
   else if (!inducted) focus = step.id === 'welcome' ? 'room' : 'hearth';
   else if (
@@ -244,7 +273,9 @@ export function Lounge({
       data-phase={inducted ? 'hub' : 'induction'}
       data-arrival={welcomed ? 'ceremony' : 'return'}
       data-overlay={overlay ?? 'none'}
+      data-escort={escort ? 'true' : 'false'}
       aria-labelledby="lounge-title"
+      aria-busy={escort !== null}
     >
       <div className="lounge-poster" aria-hidden="true">
         <div className="lounge-poster__chandelier" />
@@ -266,7 +297,7 @@ export function Lounge({
             onReady={() => setMode((m) => (m === 'loading' ? 'fading' : m))}
             onFallback={() => setMode('poster')}
             onSelect={(target) => {
-              if (!inducted || overlay) return;
+              if (!inducted || overlay || escort) return;
               if (target === 'directory') openSheet('directory', null);
               else enter(SCREENING.id);
             }}
@@ -290,8 +321,12 @@ export function Lounge({
         </>
       )}
       <div className="lounge__flare" aria-hidden="true" />
+      {escort && <div className="lounge__escort" aria-hidden="true" />}
 
-      <div className="lounge__frame" inert={overlay !== null}>
+      <div
+        className="lounge__frame"
+        inert={overlay !== null || escort !== null}
+      >
         <header className="lounge__place">
           <p className="lounge__eyebrow">The Thirty Club</p>
           <h1 id="lounge-title" className="lounge__title">

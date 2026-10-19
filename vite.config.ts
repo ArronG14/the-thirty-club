@@ -1,5 +1,4 @@
 import { butlersOfficeLocalApi } from './build/butlersOfficeLocalApi.ts';
-import { screeningPreviewMedia } from './build/screeningPreviewMedia.ts';
 import { conciergeLocalApi } from './build/conciergeLocalApi.ts';
 import { rehearsalShims } from './build/rehearsalShims.ts';
 import { defineConfig } from 'vitest/config';
@@ -12,7 +11,6 @@ import { VitePWA } from 'vite-plugin-pwa';
 export default defineConfig({
   plugins: [
     rehearsalShims(),
-    screeningPreviewMedia(),
     butlersOfficeLocalApi(),
     conciergeLocalApi(),
     react(),

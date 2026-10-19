@@ -3,7 +3,8 @@ import { defineConfig, devices } from '@playwright/test';
 export default defineConfig({
   testDir: './tests',
   testIgnore: [
-    'screening.dev.spec.ts',
+    // iPhone-profile real-film journey: playwright.screening.config.ts.
+    'screening-film.spec.ts',
     'butlers-office.spec.ts',
     'gift-vault.spec.ts',
     'correspondence.spec.ts',

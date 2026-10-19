@@ -21,7 +21,10 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
     );
   }, seen);
   await page.reload();
-  await expect(page.getByText('The messages are not ready yet.')).toBeVisible();
+  // LIVE before the birthday film is configured: honest, nothing to play.
+  await expect(
+    page.getByText('Your screening is being prepared.'),
+  ).toBeVisible();
   await expect(page.locator('canvas, video')).toHaveCount(0);
   await page
     .getByRole('link', { name: 'Return to the Members’ Lounge' })
@@ -31,7 +34,13 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
   await page
     .getByRole('button', { name: 'Enter: The Private Screening Room' })
     .click();
-  await expect(page.getByText('The messages are not ready yet.')).toBeVisible();
+  // The Butler's escort, then the room.
+  await expect(
+    page.getByText('This way, Madam. Your seat is ready.'),
+  ).toBeVisible();
+  await expect(page.getByText('Your screening is being prepared.')).toBeVisible(
+    { timeout: 10000 },
+  );
   const completed = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('thirty-club:membership')!).rooms[
@@ -40,7 +49,7 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
   );
   expect(completed).toBeUndefined();
 });
-test('production strips screening previews and synthetic media from precache', async ({
+test('production strips screening previews; the film is a normal MP4, never precached', async ({
   page,
 }) => {
   await page.goto('/?preview=screening-endframe');
@@ -48,7 +57,14 @@ test('production strips screening previews and synthetic media from precache', a
   await page.goto('/?preview=screening-demo');
   await expect(page.locator('.cinema')).toHaveCount(0);
   const worker = await page.request.get('/sw.js');
-  expect(await worker.text()).not.toMatch(
-    /screening-(landscape|portrait)\.mp4|test-landscape|test-portrait/,
+  expect(await worker.text()).not.toMatch(/\.mp4/);
+  // Served as a file with byte ranges (iOS Safari requires them).
+  const film = await page.request.get(
+    '/media/screening/screening-test-5s.mp4',
+    {
+      headers: { range: 'bytes=0-1' },
+    },
   );
+  expect(film.status()).toBe(206);
+  expect(film.headers()['content-type']).toMatch(/video\/mp4/);
 });

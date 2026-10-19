@@ -191,6 +191,31 @@
   }
 }
 
+/* The Butler's escort to the Screening Room: the camera walks towards the
+   doorway (scene), then the picture fades to black before the room loads. */
+.lounge__escort {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  background: #000;
+  pointer-events: none;
+  animation: lounge-escort 1.25s cubic-bezier(0.45, 0, 0.7, 1) 0.9s both;
+}
+@keyframes lounge-escort {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .lounge__escort {
+    animation-duration: 0.3s;
+    animation-delay: 0s;
+  }
+}
+
 /* ---------- Frame: place, deck ---------- */
 
 .lounge__frame {

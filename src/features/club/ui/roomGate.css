@@ -1,5 +1,11 @@
 /* The notice on the door of a room that is not open or not ready. */
 
+/* The Screening Room loads in the dark, between the escort and her seat. */
+.plain-page[data-room='screening-room'] {
+  color: #8d7a5c;
+  background: #000;
+}
+
 .room-gate__eyebrow {
   margin: 0;
   font-family: var(--font-caps);

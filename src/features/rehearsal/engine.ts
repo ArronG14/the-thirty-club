@@ -389,6 +389,30 @@ function memberAt(at: number) {
   }
 }
 
+/**
+ * A first visit to the Screening Room: no screening record, and the room
+ * not yet completed in the membership, so the Lounge recommends it again
+ * and the Butler gives his full introduction.
+ */
+function freshScreening() {
+  try {
+    sessionStorage.removeItem(`${OWNER_PREFIX}thirty-club:screening`);
+  } catch {
+    // Nothing to clear.
+  }
+  const record = browserMembershipStorage().load();
+  const room = record.rooms['screening-room'];
+  if (room) {
+    const kept = { ...room };
+    delete kept.visitedAt;
+    delete kept.completedAt;
+    writeMembership({
+      ...record,
+      rooms: { ...record.rooms, 'screening-room': kept },
+    });
+  }
+}
+
 export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
   {
     id: 'entrance',
@@ -435,9 +459,21 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
     },
   },
   {
+    id: 'screening-journey',
+    label: 'The Screening Room journey (first visit)',
+    detail:
+      'From the Members’ Lounge: accept the Butler’s invitation, watch the five-second test film, return to your seat. Clears screening progress first.',
+    launch: async () => {
+      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
+      freshScreening();
+      return '/';
+    },
+  },
+  {
     id: 'screening-room',
     label: 'The Private Screening Room',
-    detail: 'Opens with the membership at midnight.',
+    detail:
+      'Seated in the room, keeping earlier screening progress (returning visitor). Opens with the membership at midnight.',
     launch: async () => {
       memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
       return '/rooms/screening-room';
@@ -498,6 +534,7 @@ export async function resetRoom(id: string) {
     } catch {
       // Nothing to clear.
     }
+  if (id === 'screening-room') freshScreening();
   if (id === 'gift-vault' || id === 'correspondence') {
     // Server-side rooms reset with the whole simulated office.
     await resetSimulation();
