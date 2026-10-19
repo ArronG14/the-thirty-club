@@ -362,6 +362,24 @@ describe('the membership card (ADR-012)', () => {
 
 describe('the letter on the step (Phase One)', () => {
   const THURSDAY_2PM_UK = Date.parse('2026-10-22T13:00:00Z');
+  // An opened letter leaves the step on this device; each case starts unread.
+  beforeEach(() => localStorage.removeItem('thirty-club:step-letters'));
+
+  it('leaves the step once opened, and the next letter arrives unread', () => {
+    vi.setSystemTime(new Date(THURSDAY_2PM_UK - 3_600_000));
+    open(undefined, undefined, absentCard);
+    fireEvent.click(
+      screen.getByRole('button', { name: 'A letter has been left for you' }),
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'Close' }));
+    expect(
+      screen.queryByRole('button', { name: 'A letter has been left for you' }),
+    ).toBeNull();
+    advance(3_600_000 + 1_000);
+    expect(
+      screen.getByRole('button', { name: 'Your Departure Lounge is ready' }),
+    ).toBeInTheDocument();
+  });
 
   it('announces the Departure Lounge before Thursday', () => {
     vi.setSystemTime(new Date(THURSDAY_2PM_UK - 2 * 24 * 3_600_000));

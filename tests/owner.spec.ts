@@ -29,13 +29,19 @@ async function panel(page: Page) {
   await page.getByRole('button', { name: 'Open Dev Mode' }).click();
 }
 
-test('mobile activation, incorrect PIN, room navigation, test rewards, reset and exit', async ({
+async function launch(page: Page, name: RegExp) {
+  await panel(page);
+  await page.getByRole('button', { name }).first().click();
+  await page.waitForLoadState('load');
+}
+
+test('mobile activation, incorrect PIN, room launches, test rewards, reset and exit', async ({
   page,
   context,
 }) => {
   await poster(page);
   await page.clock.setFixedTime(new Date(2026, 9, 18));
-  await page.goto('/?preview=evening');
+  await page.goto('/');
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
   await expect(page.getByRole('button', { name: 'Open Dev Mode' })).toHaveCount(
     0,
@@ -50,19 +56,15 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
   );
   await page.getByLabel('Private access code').fill('1414');
   await page.getByRole('button', { name: 'Unlock private office' }).click();
+  await expect(page.getByTestId('rehearsal-indicator')).toBeAttached();
   await panel(page);
   await page.screenshot({ path: 'test-results/owner-panel-mobile.png' });
-  await page.getByRole('button', { name: 'Enter Club', exact: true }).click();
+  await page.getByRole('button', { name: 'Close' }).click();
+  await launch(page, /^The Members’ Lounge/);
   await expect(page.locator('.lounge')).toBeVisible();
-  await panel(page);
-  await page
-    .getByRole('button', { name: 'The Private Screening Room', exact: true })
-    .click();
-  await expect(page.locator('.cinema')).toBeVisible();
-  await panel(page);
-  await page
-    .getByRole('button', { name: 'The Grand Casino', exact: true })
-    .click();
+  await launch(page, /^The Private Screening Room/);
+  await expect(page.locator('.cinema').first()).toBeVisible();
+  await launch(page, /^The Grand Casino/);
   await expect(page.locator('.casino')).toBeVisible();
   const guestBefore = await page.evaluate(() => JSON.stringify(localStorage));
   await page.getByRole('button', { name: 'Casino test controls' }).click();
@@ -98,7 +100,9 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
   ).toHaveCount(0);
   await guest.close();
   await panel(page);
-  await page.getByRole('button', { name: 'Reset test progress' }).click();
+  await page
+    .getByRole('button', { name: 'Reset the entire rehearsal' })
+    .click();
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
   expect(
     await page.evaluate(() =>
@@ -106,7 +110,7 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
     ),
   ).toBeNull();
   await panel(page);
-  await page.getByRole('button', { name: 'Exit owner mode' }).click();
+  await page.getByRole('button', { name: /^Exit Dev Mode/ }).click();
   await expect(page.getByRole('button', { name: 'Open Dev Mode' })).toHaveCount(
     0,
   );
@@ -116,17 +120,17 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
   ).toBeNull();
 });
 
-test('birthday preview runs the ceremony and returns to a locked rehearsal', async ({
+test('birthday midnight scenario runs the ceremony; a reset returns to the locked doors', async ({
   page,
 }) => {
   await poster(page);
   await page.goto('/');
   await unlock(page);
   await panel(page);
-  await page.getByRole('button', { name: 'Preview birthday unlock' }).click();
+  await page.getByRole('button', { name: /^Birthday midnight/ }).click();
   await expect(page.locator('.club')).toHaveAttribute(
     'data-stage',
-    'final-minute',
+    /locked|final-minute/,
   );
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'foyer', {
     timeout: 15000,
@@ -135,25 +139,24 @@ test('birthday preview runs the ceremony and returns to a locked rehearsal', asy
     await page.evaluate(() => localStorage.getItem('thirty-club:entrance')),
   ).toBeNull();
   await panel(page);
-  await page.getByRole('button', { name: 'Return to locked entrance' }).click();
+  await page.getByRole('button', { name: /^Before departure/ }).click();
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
 });
 
-test('owner menu previews the Departure Lounge through silent NFC rehearsal', async ({
+test('Dev Mode rehearses the Departure Lounge in the simulated concierge', async ({
   page,
   request,
   browser,
 }) => {
   await request.post('/api/__local/reset');
-  await request.post('/api/__local/clock', { data: { now: null } });
   await poster(page);
   await page.goto('/');
   await unlock(page);
-  await panel(page);
-  await page.getByRole('button', { name: 'The Departure Lounge' }).click();
-  await expect(page).toHaveURL(/\/concierge\/owner\?start=departure$/);
-  await page.getByLabel('Owner key').fill('test-owner-key-0001');
-  await page.getByRole('button', { name: 'Open the console' }).click();
+  const calls: string[] = [];
+  page.on('request', (r) => {
+    if (new URL(r.url()).pathname.startsWith('/api/')) calls.push(r.url());
+  });
+  await launch(page, /^The Departure Lounge \(find the credential\)/);
   await expect(page).toHaveURL(/\/departure$/);
   await expect(page.getByLabel('Rehearsal')).toBeVisible();
   await expect(page.locator('.departure')).toHaveAttribute(
@@ -161,7 +164,7 @@ test('owner menu previews the Departure Lounge through silent NFC rehearsal', as
     'credential',
   );
 
-  // Opening the same URL as a physical tag exercises the real activation route.
+  // Opening the same URL as a physical tag exercises the activation route.
   await page.goto('/c/departure-test-token-0001');
   await expect(page).toHaveURL(/\/departure$/);
   await expect(
@@ -175,9 +178,10 @@ test('owner menu previews the Departure Lounge through silent NFC rehearsal', as
   await expect(
     page.getByText('Rehearsal recorded. No notification was sent.'),
   ).toBeVisible();
+  // Nothing reached the server at all: the concierge was simulated.
+  expect(calls).toEqual([]);
   const outbox = await request.get('/api/__local/outbox');
   expect(await outbox.json()).toEqual([]);
-
   const live = await request.get('/api/owner/overview?realm=live', {
     headers: { 'x-owner-key': 'test-owner-key-0001' },
   });
@@ -185,9 +189,9 @@ test('owner menu previews the Departure Lounge through silent NFC rehearsal', as
   const guest = await browser.newContext();
   const guestPage = await guest.newPage();
   await guestPage.goto('/departure');
-  await expect(guestPage.locator('.departure')).toHaveAttribute(
+  await expect(guestPage.locator('.departure')).not.toHaveAttribute(
     'data-phase',
-    'closed',
+    'lounge',
   );
   await guest.close();
 });

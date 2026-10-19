@@ -28,6 +28,14 @@ export interface OwnerOverview {
   schedule: EffectiveSchedule;
   overrides: ScheduleOverrides;
   activations: { credential: CredentialId; at: string; via: 'link' | 'code' }[];
+  /** The Shopping Privilege, read-only (absent from older servers). */
+  shopping?:
+    | { status: 'available' }
+    | {
+        status: 'awaiting-settlement';
+        amountPence: number;
+        requestedAt: string;
+      };
   redemptions: {
     privilegeId: PrivilegeId;
     redeemedAt: string;

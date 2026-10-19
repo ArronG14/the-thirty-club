@@ -41,6 +41,7 @@ import {
 import { LetterPresentation } from '../correspondence/ui/LetterPresentation';
 import { deliveryText, smsText, when } from './deskText';
 import './desk.css';
+import { appClock } from '../rehearsal/clock';
 
 const DEFAULT_SALUTATION = 'Dearest Alise,';
 
@@ -72,9 +73,9 @@ type Editing = { letter: OwnerLetter | null } | null;
 
 /** The time, refreshed every 20 seconds, for "is this still in the future?". */
 function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => appClock.now());
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 20_000);
+    const timer = setInterval(() => setNow(appClock.now()), 20_000);
     return () => clearInterval(timer);
   }, []);
   return now;

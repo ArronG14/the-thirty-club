@@ -340,3 +340,12 @@
 }
 
 /* ---------- The envelope at the doors (main bundle: arrived.css) ---------- */
+.bs-subhead {
+  margin: 1.4rem 0 0.4rem;
+  font:
+    0.72rem Jost,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #c5a66d;
+}

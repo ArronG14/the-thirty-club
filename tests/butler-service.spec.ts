@@ -205,8 +205,10 @@ test.describe.serial('the Butler’s service', () => {
     await expect(
       her.getByRole('heading', { name: 'Your Correspondence' }),
     ).toBeVisible();
-    await expect(her.getByText('Unread', { exact: true })).toHaveCount(1);
-    await expect(her.getByText('Thanked', { exact: true })).toHaveCount(1);
+    // The Desk's letters; the concierge's own letters are listed below them.
+    const deskList = her.locator('.bs-list').first();
+    await expect(deskList.getByText('Unread', { exact: true })).toHaveCount(1);
+    await expect(deskList.getByText('Thanked', { exact: true })).toHaveCount(1);
     await shot(her, '04-translucent-collection');
     await her
       .getByRole('button', { name: /On the subject of Thursday/ })
@@ -496,7 +498,8 @@ test.describe.serial('the Butler’s service', () => {
     const calls: string[] = [];
     page.on('request', (request) => {
       const url = new URL(request.url());
-      if (/^\/api\/v1\/(correspondence|service)/.test(url.pathname))
+      // Dev Mode answers every API call in the tab (ADR-018).
+      if (url.pathname.startsWith('/api/'))
         calls.push(`${request.method()} ${url.pathname}`);
     });
     await poster(page);
@@ -509,18 +512,21 @@ test.describe.serial('the Butler’s service', () => {
       name: 'Open Dev Mode',
     });
     await expect(toggle).toBeVisible();
-    await toggle.click();
-    const panel = page.getByRole('dialog', { name: 'Dev Mode' });
-    await panel
-      .getByRole('button', { name: 'Simulate three unread letters' })
-      .click();
+    // Letters are written and delivered in TEST, through the simulated Desk.
+    await page.goto('/concierge/owner/test');
     await expect(
-      panel.getByText('3 unread of 3 simulated letters'),
-    ).toBeVisible();
+      page.getByText('Starting the simulated club office'),
+    ).toBeHidden({ timeout: 90_000 });
+    for (let n = 0; n < 3; n++) {
+      await page
+        .getByRole('button', { name: /Deliver a rehearsal letter now/ })
+        .click();
+      await expect(
+        page.getByText(/A rehearsal letter was delivered/),
+      ).toBeVisible();
+    }
     await shot(page, '11-dev-mode-controls', 300);
-    await panel
-      .getByRole('button', { name: 'See the letter at the locked doors' })
-      .click();
+    await page.goto('/');
     await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
     const envelope = page.getByRole('button', {
       name: /Open your new letter: Rehearsal/,
@@ -551,7 +557,9 @@ test.describe.serial('the Butler’s service', () => {
       .fill('A rehearsal request.');
     await page.getByRole('button', { name: 'Hand it to the Butler' }).click();
     await expect(
-      page.getByText(/Dev Mode rehearsal: nothing was recorded for Alise/),
+      page.getByText(
+        /Dev Mode rehearsal: recorded only in the simulated office/,
+      ),
     ).toBeVisible();
     await page.getByRole('button', { name: 'Thank you, Butler' }).click();
 
@@ -571,7 +579,7 @@ test.describe.serial('the Butler’s service', () => {
     await toggle.click();
     await page
       .getByRole('dialog', { name: 'Dev Mode' })
-      .getByRole('button', { name: 'Enter Club' })
+      .getByRole('button', { name: /^The Members’ Lounge/ })
       .click();
     await expect(page.locator('.club')).toHaveAttribute('data-stage', 'foyer', {
       timeout: 20_000,

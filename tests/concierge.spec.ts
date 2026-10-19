@@ -211,7 +211,7 @@ test('the owner rehearses in isolation, at in-flight time', async ({
 }) => {
   // Rehearsal time is relative to the real clock, as in production.
   await serverClock(request, null);
-  await page.goto('/concierge/owner');
+  await page.goto('/concierge/owner?section=concierge');
   await page.getByLabel('Owner key').fill(OWNER_KEY);
   await page.getByRole('button', { name: 'Open the console' }).click();
   await expect(page.getByText('Telegram to Arron')).toBeVisible();

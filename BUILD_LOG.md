@@ -673,3 +673,27 @@
 - **Known issues:** No physical iPhone, Safari or installed-PWA run; no real SMS. The Departure Lounge keeps its own Thursday 22 October 14:00 UK opening and travel credential. On a phone over plain-HTTP LAN the local API's `Secure` cookie is refused, so sign-in previews need localhost or a hosted preview. `npm run functions:build` was not run (the Netlify CLI writes global preferences outside the worktree). Copy awaits owner approval.
 - **Remaining work:** BS09 (hosted migration after `20261020090000`, merge, deploy), BS10 (iPhone rehearsal), BS11 (authorised SMS exchange), BS12 (copy approval), BS13 (future panoramic lounge, not started).
 - **Commit:** recorded in the final report; this entry is committed with the work on `feature/butlers-service-2026-10-19` (not pushed).
+
+## 2026-10-19 09:20 BST (Europe/London) — Claude (Opus 5.5) — Owner Control Centre, universal rehearsal engine, production polish (ADR-018)
+
+- **Task:** One Owner Control Centre (LIVE / TEST), a rehearsal engine for every room and timed event, the Dev Menu as a rehearsal launcher, fixes for the Gift Vault rehearsal, the entrance letter lifecycle, the locked-Casino invitation and iPhone layout, and an owner-password process.
+- **Isolation:** New worktree `../the-thirty-club-control`, branch `feature/owner-control-centre`, from production `1a3be938d538c718314018a76fe406dc99bcd27d`. The original checkout, its uncommitted work and other worktrees were not touched (node_modules is an APFS clone of the integration worktree's identical lockfile).
+- **Summary:**
+  - `/concierge/owner` is the canonical Control Centre: LIVE = existing Butler's Office (all tabs) + existing Concierge console, with existing server auth; `/owner` redirects (`?tab=` kept). TEST = `/concierge/owner/test`: the same consoles plus Rehearsal.
+  - Rehearsal pages answer their own `/api/` calls: the real `netlify/backend` and `netlify/concierge` handlers with all nine real migrations in PGlite (IndexedDB), `now()` rewritten to follow one rehearsal clock, auto-signed simulated sessions in tab storage, fake providers, provider hosts blocked, fail-closed. Browser-only aliases for `node:crypto`/`node:util` and a ceiling-free Shopping stub (`build/rehearsalShims.ts`).
+  - Rehearsal clock, timeline (fixed + scheduled-in-office), 11 scenarios, manual triggers, room launches that satisfy real prerequisites, per-room and full reset, simulated notification log, rehearsal codes.
+  - Dev Menu rewritten as the launcher; amber hazard indicator; LIVE pages in a Dev tab are marked LIVE.
+  - Fixes: step letter read lifecycle + "From the concierge" in My Correspondence; room-aware letter invitations; rehearsal vault (seeded compartments, simulated key); Dev disc/back-link and Casino test-controls overlaps; read-only Shopping state in the owner overview.
+  - `npm run owner:set-password` (local scrypt hash → Netlify secret → redeploy).
+- **Created:** `src/features/rehearsal/**`, `src/features/control-centre/**`, `src/features/concierge/client/stepLetters.ts`, `src/features/correspondence/{ui/RoomInvitations.tsx,domain/roomMentions.ts}`, `src/features/butlers-office/tabs.ts`, `build/rehearsalShims.ts`, `tools/set-owner-password.mjs`, `netlify/backend/ownerPasswordTool.test.ts`, `tests/rehearsal.spec.ts`, `playwright.rehearsal.config.ts`, `docs/REHEARSAL.md`, `docs/rehearsal/screenshots/**`.
+- **Modified:** `src/app/App.tsx`, `src/main.tsx`, `vite.config.ts`, `package.json`, `playwright.config.ts`, `netlify/concierge/api.ts` (read-only `shopping` in owner overview), owner/entrance/butler-service/butlers-office/concierge/correspondence/vault/casino files listed in the commit, tests (`owner`, `butler-service`, `concierge` specs; `Entrance`, `butlerService` unit tests), `ARCHITECTURE.md`, `TASKS.md`, `docs/OWNER_ACCESS.md`, Butler's Service screenshots (regenerated).
+- **Checks/results:**
+  - `npm run check` PASS: strict types, ESLint, Prettier, **603 tests in 50 files**, production build. Main bundle +5 KB gzip; PGlite in `rehearsal-*` chunks excluded from the PWA precache (80 entries, 2.28 MB).
+  - Production Playwright (`--workers=1`) PASS 32/32 (incl. offline PWA and rewritten owner tests).
+  - Rehearsal journeys (`playwright.rehearsal.config.ts`) PASS 9/9 Chromium iPhone 13 and PASS 9/9 WebKit iPhone 13 (one earlier WebKit run failed 3/9 on 5 s waits under load; waits widened to 30 s, rerun green). Every TEST/rehearsal journey asserts zero requests reach the server.
+  - Office 5/5, Correspondence 3/3, Butler 7/7, WebKit entrance 6/6 PASS.
+  - `npm run functions:build` PASS: `api` (real Shopping with ceiling, no rehearsal code) and `concierge-dispatch`.
+  - Build grep: no Shopping ceiling in any browser asset.
+- **Known issues:** No physical iPhone run; PGlite (~5 MB compressed) first load and memory on a real phone unmeasured. Owner password not changed (needs Arron's choice). Travel-credential variables not visible in Netlify. Privileges room not built. Casino slots remain local; the jackpot → vault link is rehearsed only.
+- **Remaining work:** OC08 run by Arron, OC09 iPhone rehearsal, OC10 default-section decision; existing CD/BS/GV items unchanged.
+- **Commit:** recorded in the sprint report (this entry is committed with the work).

@@ -1,24 +1,32 @@
 import { useEffect, useRef, useState } from 'react';
-import { ROOMS } from '../club/domain/rooms';
-import { endRehearsal } from '../concierge/client/sessionStore';
-import {
-  clearRehearsal,
-  rehearsalCounts,
-  rehearseLetters,
-} from '../butler-service/client/desk';
+import { useRehearsalTime } from '../rehearsal/useRehearsalTime';
 import {
   BUTLER_LINES,
   type ButlerMoment,
 } from '../butler-service/domain/dialogue';
 import {
-  authenticateOwner,
-  clearOwnerProgress,
-  exitOwner,
-  ownerActive,
-  ownerMode,
-  setOwnerMode,
-  type OwnerMode,
-} from './session';
+  advanceRehearsal,
+  followsRealTime,
+  resetRehearsalClock,
+  setRehearsalTime,
+} from '../rehearsal/clock';
+import {
+  applyScenario,
+  formatRehearsalTime,
+  LAUNCH_TARGETS,
+  launchRoom,
+  nextEvent,
+  rehearsalLabel,
+  resetEverything,
+  resetRoom,
+  SCENARIOS,
+} from '../rehearsal/engine';
+import {
+  documentWorld,
+  LIVE_CENTRE_PATH,
+  TEST_CENTRE_PATH,
+} from '../rehearsal/mode';
+import { authenticateOwner, exitOwner, ownerActive } from './session';
 import './owner.css';
 
 const MOMENT_NAMES: Record<ButlerMoment, string> = {
@@ -30,18 +38,31 @@ const MOMENT_NAMES: Record<ButlerMoment, string> = {
   departure: 'Inviting her to the Departure Lounge',
 };
 
+const RESETTABLE = [
+  { id: 'entrance', label: 'Entrance' },
+  { id: 'lounge', label: 'Lounge & membership' },
+  { id: 'screening-room', label: 'Screening Room' },
+  { id: 'casino', label: 'Casino & prizes' },
+  { id: 'gift-vault', label: 'Gift Vault & office' },
+] as const;
+
+/**
+ * The secret Dev Menu (five taps on the timepiece, then the PIN): a
+ * rehearsal launcher. Everything here changes only this tab's rehearsal
+ * (ADR-018); the Owner Control Centre's LIVE tab still asks for the real
+ * owner password on the server.
+ */
 export default function OwnerAccess() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
+  const [busy, setBusy] = useState('');
   const opener = useRef<HTMLElement | null>(null);
-  const [counts, setCounts] = useState(() =>
-    ownerActive ? rehearsalCounts() : null,
-  );
-  const rehearse = (change: () => void) => {
-    change();
-    setCounts(rehearsalCounts());
-  };
+  const rehearsing = ownerActive && documentWorld === 'rehearsal';
+  const now = useRehearsalTime(ownerActive);
+  const time = formatRehearsalTime(now);
+  const upcoming = nextEvent(now);
+
   useEffect(() => {
     const show = () => {
       opener.current = document.activeElement as HTMLElement;
@@ -52,29 +73,43 @@ export default function OwnerAccess() {
     window.addEventListener('thirty-club:owner-prompt', show);
     return () => window.removeEventListener('thirty-club:owner-prompt', show);
   }, []);
-  function go(mode: OwnerMode, path = '/') {
+
+  async function act(label: string, action: () => Promise<void> | void) {
+    setBusy(label);
+    setError('');
     try {
-      setOwnerMode(mode);
-      window.location.assign(path);
-    } catch {
+      await action();
+    } catch (e) {
       setError(
-        'Session storage is unavailable. Please allow website storage and try again.',
+        e instanceof Error ? e.message : 'That rehearsal step did not finish.',
       );
+    } finally {
+      setBusy('');
     }
   }
+  const reload = () => window.location.reload();
+
   return (
     <>
       {ownerActive && (
         <button
           className="owner-toggle"
           aria-label="Open Dev Mode"
+          data-world={documentWorld}
           onClick={() => {
-            setCounts(rehearsalCounts());
+            opener.current = document.activeElement as HTMLElement;
             dialog.current?.showModal();
           }}
         >
           Dev
         </button>
+      )}
+      {rehearsing && (
+        <p className="rehearsal-indicator" data-testid="rehearsal-indicator">
+          <span>
+            Rehearsal in progress · {time.jm} Jamaica time (simulated)
+          </span>
+        </p>
       )}
       <dialog
         ref={dialog}
@@ -86,74 +121,161 @@ export default function OwnerAccess() {
         <h2 id="owner-title">
           {ownerActive ? 'Dev Mode' : 'A private appointment'}
         </h2>
-        {ownerActive ? (
+        {ownerActive && !rehearsing && (
           <>
             <p>
-              Isolated rehearsal ·{' '}
-              {ownerMode === 'locked'
-                ? 'Pre-birthday'
-                : ownerMode === 'birthday'
-                  ? 'Birthday preview'
-                  : 'Club open'}
+              This page is <strong>LIVE</strong>: it works on the real club.
+              Rehearsal controls work on any club page and in TEST.
             </p>
             <div className="owner-actions">
-              <button onClick={() => go('open')}>Enter Club</button>
-              <button onClick={() => go('birthday')}>
-                Preview birthday unlock
+              <button onClick={() => window.location.assign(TEST_CENTRE_PATH)}>
+                Open Owner Control Centre · TEST
               </button>
-              <button onClick={() => go('locked')}>
-                Return to locked entrance
+              <button onClick={() => window.location.assign('/')}>
+                Return to the rehearsal
               </button>
             </div>
-            <h3>Visit a room</h3>
+          </>
+        )}
+        {rehearsing && (
+          <>
+            <p className="owner-time" role="status">
+              <strong>Rehearsal time</strong>
+              <span>{time.jm} · Jamaica</span>
+              <span>{time.uk} · UK</span>
+              <span>
+                {followsRealTime()
+                  ? 'Following the real clock'
+                  : (rehearsalLabel() ?? 'Simulated clock')}
+              </span>
+            </p>
+            <div className="owner-actions owner-actions--row">
+              <button
+                onClick={() =>
+                  void act('clock', () => {
+                    advanceRehearsal(10 * 60_000);
+                    reload();
+                  })
+                }
+              >
+                +10 min
+              </button>
+              <button
+                onClick={() =>
+                  void act('clock', () => {
+                    advanceRehearsal(3_600_000);
+                    reload();
+                  })
+                }
+              >
+                +1 hour
+              </button>
+              <button
+                onClick={() =>
+                  void act('clock', () => {
+                    resetRehearsalClock();
+                    reload();
+                  })
+                }
+              >
+                Real time
+              </button>
+            </div>
+            {upcoming && (
+              <div className="owner-actions">
+                <button
+                  onClick={() =>
+                    void act('clock', () => {
+                      setRehearsalTime(upcoming.at - 10_000);
+                      reload();
+                    })
+                  }
+                >
+                  Next event, 10 s before: {upcoming.label}
+                </button>
+              </div>
+            )}
+
+            <h3>Launch a room in rehearsal</h3>
+            <p className="owner-note">
+              Each room opens as Alise would find it: the rehearsal clock moves
+              forward to when it opens and its prerequisites are created.
+            </p>
             <div className="owner-actions">
-              {ROOMS.filter(
-                (r) =>
-                  r.built && r.id !== 'entrance' && r.id !== 'departure-lounge',
-              ).map((room) => (
-                <button key={room.id} onClick={() => go('open', room.path)}>
-                  {room.name}
+              {LAUNCH_TARGETS.map((target) => (
+                <button
+                  key={target.id}
+                  disabled={busy !== ''}
+                  onClick={() =>
+                    void act(target.id, () => launchRoom(target.id))
+                  }
+                >
+                  {busy === target.id ? 'Preparing…' : target.label}
+                  <small>{target.detail}</small>
                 </button>
               ))}
+            </div>
+
+            <h3>Scenario</h3>
+            <div className="owner-actions">
+              {SCENARIOS.map((scenario) => (
+                <button
+                  key={scenario.id}
+                  disabled={busy !== ''}
+                  onClick={() =>
+                    void act(scenario.id, () => applyScenario(scenario.id))
+                  }
+                >
+                  {busy === scenario.id ? 'Preparing…' : scenario.label}
+                  <small>{scenario.detail}</small>
+                </button>
+              ))}
+            </div>
+
+            <h3>Owner Control Centre</h3>
+            <div className="owner-actions">
+              <button onClick={() => window.location.assign(TEST_CENTRE_PATH)}>
+                Concierge Owner · TEST (simulated office and timeline)
+              </button>
+              <button onClick={() => window.location.assign(LIVE_CENTRE_PATH)}>
+                Concierge Owner · LIVE (real club, password)
+              </button>
+            </div>
+
+            <h3>Reset</h3>
+            <div className="owner-actions owner-actions--row">
+              {RESETTABLE.map((room) => (
+                <button
+                  key={room.id}
+                  disabled={busy !== ''}
+                  onClick={() =>
+                    void act(`reset-${room.id}`, async () => {
+                      await resetRoom(room.id);
+                      reload();
+                    })
+                  }
+                >
+                  Reset {room.label}
+                </button>
+              ))}
+            </div>
+            <div className="owner-actions">
               <button
-                onClick={() => go('open', '/concierge/owner?start=departure')}
+                disabled={busy !== ''}
+                onClick={() =>
+                  void act('reset', async () => {
+                    await resetEverything();
+                    window.location.assign('/');
+                  })
+                }
               >
-                The Departure Lounge
+                {busy === 'reset' ? 'Resetting…' : 'Reset the entire rehearsal'}
+              </button>
+              <button onClick={() => window.location.assign('/?verify=replay')}>
+                Replay first-visit verification
               </button>
             </div>
-            <div className="owner-actions">
-              <button onClick={() => go('open', '/concierge/owner')}>
-                Concierge Owner Console
-              </button>
-            </div>
-            <h3>The Butler’s service</h3>
-            <p>
-              Rehearse letters, the service bell and requests exactly as Alise
-              sees them. Everything stays in this tab: no SMS is sent and no
-              real correspondence is read or changed.
-            </p>
-            <p role="status">
-              {counts
-                ? `${counts.unread} unread of ${counts.letters} simulated letters · ${counts.requests} simulated requests`
-                : ''}
-            </p>
-            <div className="owner-actions">
-              <button onClick={() => rehearse(() => rehearseLetters(1))}>
-                Simulate one unread letter
-              </button>
-              <button onClick={() => rehearse(() => rehearseLetters(3))}>
-                Simulate three unread letters
-              </button>
-              <button onClick={() => rehearse(clearRehearsal)}>
-                Clear simulated correspondence
-              </button>
-              <button onClick={() => go('locked')}>
-                See the letter at the locked doors
-              </button>
-              <button onClick={() => window.location.assign('/correspondence')}>
-                Open the correspondence page
-              </button>
-            </div>
+
             <details className="owner-lines">
               <summary>Every line the Butler can say</summary>
               {(Object.keys(BUTLER_LINES) as ButlerMoment[]).map((moment) => (
@@ -167,49 +289,29 @@ export default function OwnerAccess() {
                 </section>
               ))}
             </details>
-            <p>
-              Casino test controls are available inside the Grand Casino. Test
-              rewards never affect Alise’s collection.
-            </p>
-            <div className="owner-actions">
-              <button
-                onClick={() => {
-                  try {
-                    clearOwnerProgress();
-                    endRehearsal();
-                    go('locked');
-                  } catch {
-                    setError('Unable to reset session storage.');
-                  }
-                }}
-              >
-                Reset test progress
-              </button>
-              <button onClick={() => window.location.assign('/?verify=replay')}>
-                Replay first-visit verification
-              </button>
-              <button
-                onClick={() => {
-                  try {
-                    exitOwner();
-                    endRehearsal();
-                    window.location.replace('/');
-                  } catch {
-                    setError(
-                      'Unable to clear session. Close this tab to leave owner mode.',
-                    );
-                  }
-                }}
-              >
-                Exit owner mode
-              </button>
-            </div>
           </>
-        ) : (
+        )}
+        {ownerActive && (
+          <div className="owner-actions">
+            <button
+              disabled={busy !== ''}
+              onClick={() =>
+                void act('exit', async () => {
+                  if (rehearsing) await resetEverything();
+                  exitOwner();
+                  window.location.replace('/');
+                })
+              }
+            >
+              Exit Dev Mode · return to the normal experience
+            </button>
+          </div>
+        )}
+        {!ownerActive && (
           <form
             onSubmit={(event) => {
               event.preventDefault();
-              if (authenticateOwner(pin)) window.location.replace('/');
+              if (authenticateOwner(pin)) window.location.reload();
               else {
                 setError('Access not granted. Please try again.');
                 setPin('');

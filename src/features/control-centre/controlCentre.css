@@ -1,0 +1,306 @@
+/* The Owner Control Centre (ADR-018): LIVE is oxblood and brass, TEST is
+   amber with a hazard rule, so the two can never be mistaken. */
+.control-centre {
+  --cc-accent: #c9ad76;
+  --cc-world: #9b2f27;
+  --cc-world-ink: #f6d7cf;
+  min-height: 100dvh;
+  background: #0d0b0a;
+  color: #eadfc9;
+  padding: max(16px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right)) max(40px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  font-family: var(--font-body, Jost, sans-serif);
+}
+.control-centre[data-world='test'] {
+  --cc-world: #b97a12;
+  --cc-world-ink: #1a1206;
+  background:
+    repeating-linear-gradient(-45deg, #b97a12 0 10px, #1a1206 10px 20px) top /
+      100% 6px no-repeat,
+    #0f0d0a;
+}
+.cc-header {
+  width: min(100%, 72rem);
+  margin: 0 auto 12px;
+  /* Clear of the Dev disc and the rehearsal indicator. */
+  padding-top: 48px;
+}
+.cc-eyebrow {
+  color: #c7af7e;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  text-decoration: none;
+}
+.cc-header h1 {
+  font-family: var(--font-display, 'Bodoni Moda', Georgia, serif);
+  font-weight: 400;
+  font-size: clamp(1.9rem, 8vw, 3.2rem);
+  margin: 6px 0 14px;
+}
+.cc-worlds {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+.cc-worlds a {
+  display: grid;
+  gap: 2px;
+  min-height: 56px;
+  padding: 10px 14px;
+  border: 1px solid #5a482e;
+  border-radius: 6px;
+  color: #c9b48b;
+  text-decoration: none;
+  background: #17120f;
+}
+.cc-worlds a strong {
+  font-size: 1.15rem;
+  letter-spacing: 0.18em;
+}
+.cc-worlds a span {
+  font-size: 0.8rem;
+}
+.cc-worlds a[aria-current='page'][data-world='live'] {
+  background: #6e1f1a;
+  border-color: #d8786b;
+  color: #fde6df;
+}
+.cc-worlds a[aria-current='page'][data-world='test'] {
+  background: #b97a12;
+  border-color: #f3c36a;
+  color: #1a1206;
+}
+.cc-banner {
+  width: min(100%, 72rem);
+  margin: 0 auto 14px;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: var(--cc-world);
+  color: var(--cc-world-ink);
+  line-height: 1.45;
+}
+.cc-banner[data-world='live'] {
+  color: #fde6df;
+}
+.cc-sections {
+  width: min(100%, 72rem);
+  margin: 0 auto 6px;
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  scrollbar-width: none;
+  padding-bottom: 4px;
+}
+.cc-sections button,
+.cc-gate button,
+.rehearsal-desk button {
+  min-height: 44px;
+  padding: 10px 14px;
+  border: 1px solid #8c734b;
+  border-radius: 6px;
+  background: #211a14;
+  color: #f0dfb9;
+  font: inherit;
+  cursor: pointer;
+}
+.cc-sections button {
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
+.cc-sections button[aria-pressed='true'] {
+  background: var(--cc-accent);
+  color: #17130e;
+  border-color: var(--cc-accent);
+}
+.control-centre .butlers-office[data-embedded='true'] {
+  width: min(100%, 72rem);
+  padding-top: 0.5rem;
+}
+.control-centre .owner {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+}
+.cc-status,
+.cc-notice {
+  width: min(100%, 72rem);
+  margin: 10px auto;
+  line-height: 1.5;
+}
+.cc-notice:empty {
+  display: none;
+}
+.cc-notice {
+  position: sticky;
+  top: max(8px, env(safe-area-inset-top));
+  z-index: 5;
+  padding: 10px 14px;
+  border-radius: 6px;
+  background: #2a2117;
+  border: 1px solid var(--cc-accent);
+}
+.cc-gate,
+.rehearsal-desk {
+  width: min(100%, 72rem);
+  margin: 0 auto;
+}
+.cc-card {
+  margin: 14px 0;
+  padding: 16px;
+  border: 1px solid #3a2f22;
+  border-radius: 8px;
+  background: #15110e;
+}
+.cc-card h2,
+.cc-gate h2 {
+  font-family: var(--font-display, 'Bodoni Moda', Georgia, serif);
+  font-weight: 400;
+  font-size: 1.5rem;
+  margin: 0 0 8px;
+}
+.cc-small {
+  font-size: 0.9rem;
+  color: #c9b48b;
+  line-height: 1.45;
+}
+.cc-clock {
+  display: grid;
+  gap: 6px;
+  font-variant-numeric: tabular-nums;
+  font-size: 1.15rem;
+  margin: 6px 0;
+}
+.cc-clock span {
+  display: grid;
+}
+.cc-clock small {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  color: #f1b04b;
+}
+.cc-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 8px 0;
+}
+.cc-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 15rem), 1fr));
+  gap: 8px;
+}
+.cc-grid button {
+  display: grid;
+  gap: 4px;
+  text-align: left;
+  line-height: 1.3;
+}
+.cc-grid button small {
+  color: #c9b48b;
+  font-size: 0.85rem;
+}
+.cc-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+}
+.cc-form label {
+  display: grid;
+  gap: 4px;
+  font-size: 0.9rem;
+  color: #c9b48b;
+}
+.cc-form input,
+.cc-form select,
+.cc-form textarea {
+  min-height: 44px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border: 1px solid #5a482e;
+  background: #0d0b0a;
+  color: #f0dfb9;
+  /* 16 px stops iPhone Safari zooming into the field. */
+  font: 16px/1.4 inherit;
+  font-size: 16px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.cc-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+.cc-timeline li {
+  padding: 10px 12px;
+  border-left: 3px solid #5a482e;
+  background: #1a1511;
+}
+.cc-timeline li[data-state='past'] {
+  opacity: 0.6;
+}
+.cc-timeline li[data-state='next'] {
+  border-left-color: #f1b04b;
+}
+.cc-timeline p {
+  margin: 0 0 4px;
+  display: grid;
+  gap: 2px;
+}
+.cc-timeline span {
+  font-size: 0.85rem;
+  color: #c9b48b;
+  font-variant-numeric: tabular-nums;
+}
+.cc-codes {
+  display: grid;
+  gap: 4px 12px;
+  margin: 0;
+}
+.cc-codes dt {
+  font-size: 0.85rem;
+  color: #c9b48b;
+}
+.cc-codes dd {
+  margin: 0 0 8px;
+  font-family: ui-monospace, Menlo, monospace;
+  font-size: 1rem;
+  overflow-wrap: anywhere;
+  user-select: all;
+}
+.cc-log {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+}
+.cc-log span {
+  font-size: 0.8rem;
+  color: #c9b48b;
+}
+.cc-log pre {
+  margin: 4px 0 0;
+  white-space: pre-wrap;
+  font:
+    0.9rem/1.4 ui-monospace,
+    Menlo,
+    monospace;
+}
+.rehearsal-desk button:disabled {
+  opacity: 0.55;
+}
+.rehearsal-desk :focus-visible,
+.cc-sections :focus-visible,
+.cc-worlds :focus-visible {
+  outline: 2px solid #ecd7a3;
+  outline-offset: 2px;
+}
+@media (min-width: 720px) {
+  .cc-clock {
+    grid-template-columns: 1fr 1fr;
+  }
+}

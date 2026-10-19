@@ -4,6 +4,11 @@ import { BrowserRouter } from 'react-router';
 import { App } from './app/App';
 import { FirstVisitCinematic } from './features/verification/FirstVisitCinematic';
 import './styles/global.css';
+import { simulationActive } from './features/rehearsal/mode';
+import { installRehearsalFetch } from './features/rehearsal/sim/interceptor';
+
+// A rehearsal document answers its own API calls (ADR-018); nothing real.
+if (simulationActive) installRehearsalFetch();
 
 // DEV-MENU (remove with src/dev): statically false, so absent from production.
 const DevMenu = import.meta.env.DEV

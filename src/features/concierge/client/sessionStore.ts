@@ -9,6 +9,7 @@ import {
   type Realm,
   type SessionClaims,
 } from '../domain/session';
+import { deviceStorage } from '../../rehearsal/storage';
 
 export const SESSION_KEYS: Record<Realm, string> = {
   live: 'thirty-club:concierge-session',
@@ -36,7 +37,7 @@ function read(storage: Storage, key: string): StoredSession | null {
 
 function browserStorage(): Storage | null {
   try {
-    return window.localStorage;
+    return deviceStorage();
   } catch {
     return null;
   }

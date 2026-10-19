@@ -21,10 +21,12 @@ import type { Realm, Scope } from '../domain/session';
 import { JAMAICA_ZONE, UK_ZONE } from '../domain/time';
 import { OWNER_KEY_STORAGE, ownerApi, type OwnerOverview } from './ownerApi';
 import './owner.css';
+import { appClock } from '../../rehearsal/clock';
+import { deviceStorage } from '../../rehearsal/storage';
 
 function readKey(): string {
   try {
-    return window.localStorage.getItem(OWNER_KEY_STORAGE) ?? '';
+    return deviceStorage().getItem(OWNER_KEY_STORAGE) ?? '';
   } catch {
     return '';
   }
@@ -134,7 +136,12 @@ function Check({
  * resend, move release times and rehearse. Every action calls the service;
  * nothing here pretends.
  */
-export default function OwnerConsole() {
+export default function OwnerConsole({
+  embedded = false,
+}: {
+  embedded?: boolean;
+} = {}) {
+  const Title = embedded ? 'h2' : 'h1';
   const [key, setKey] = useState(readKey);
   const [draft, setDraft] = useState('');
   const [remember, setRemember] = useState(true);
@@ -159,7 +166,7 @@ export default function OwnerConsole() {
       ) {
         // Isolated test: a rehearsal session never touches Alise's records.
         startingDeparture.current = true;
-        const preview = await ownerApi(key).rehearsal(Date.now(), [
+        const preview = await ownerApi(key).rehearsal(appClock.now(), [
           'membership',
         ]);
         if (preview.ok) {
@@ -220,7 +227,7 @@ export default function OwnerConsole() {
     if (!value) return;
     if (remember) {
       try {
-        window.localStorage.setItem(OWNER_KEY_STORAGE, value);
+        deviceStorage().setItem(OWNER_KEY_STORAGE, value);
       } catch {
         // Kept for this visit only.
       }
@@ -231,7 +238,7 @@ export default function OwnerConsole() {
 
   function signOut() {
     try {
-      window.localStorage.removeItem(OWNER_KEY_STORAGE);
+      deviceStorage().removeItem(OWNER_KEY_STORAGE);
     } catch {
       // Nothing stored.
     }
@@ -242,7 +249,7 @@ export default function OwnerConsole() {
   if (!key) {
     return (
       <div className="owner">
-        <h1>Concierge — owner</h1>
+        <Title>Concierge — owner</Title>
         <form className="owner-signin" onSubmit={signIn}>
           <label htmlFor="owner-key">Owner key</label>
           <input
@@ -274,7 +281,7 @@ export default function OwnerConsole() {
   return (
     <div className="owner" aria-busy={busy}>
       <header className="owner-head">
-        <h1>Concierge — owner</h1>
+        <Title>Concierge — owner</Title>
         <div className="owner-realm" role="group" aria-label="Records">
           {(['live', 'rehearsal'] as const).map((r) => (
             <button
@@ -404,6 +411,26 @@ export default function OwnerConsole() {
                   </li>
                 ))}
               </ul>
+            )}
+            <h3>Shopping Privilege</h3>
+            {!data.shopping ? (
+              <p className="owner-small">Not reported by this server.</p>
+            ) : data.shopping.status === 'available' ? (
+              <p className="owner-small">Not yet requested.</p>
+            ) : (
+              <div className="owner-row" data-delivery="delivered">
+                <h4>
+                  Requested{' '}
+                  {new Intl.NumberFormat('en-GB', {
+                    style: 'currency',
+                    currency: 'GBP',
+                  }).format(data.shopping.amountPence / 100)}
+                </h4>
+                <p>
+                  {when(data.shopping.requestedAt)} · awaiting settlement ·
+                  redeemed once, cannot be requested again
+                </p>
+              </div>
             )}
             <h3>Privileges redeemed</h3>
             {data.redemptions.length === 0 ? (

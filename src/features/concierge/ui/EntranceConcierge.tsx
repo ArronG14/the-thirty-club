@@ -13,6 +13,12 @@ import { httpConciergeApi, type ConciergeApi } from '../client/api';
 import { recordMembership, markMembershipOffline } from '../client/membership';
 import { matchesOfflineMembership } from '../client/offlineMembership';
 import { activeSession, saveSession } from '../client/sessionStore';
+import {
+  markStepLetterOpened,
+  STEP_LETTERS_EVENT,
+  stepLetters,
+  type StepLetterId,
+} from '../client/stepLetters';
 import { ACTIVE_RIDDLES, DEPARTURE_LOUNGE_OPENS } from '../domain/catalogue';
 import {
   describeCountdown,
@@ -26,84 +32,137 @@ import { LetterCountdown } from './LetterCountdown';
 import { ConciergeLetter, PaperSheet } from './Paper';
 import './departure.css';
 import './entranceConcierge.css';
+import { appClock } from '../../rehearsal/clock';
 
+/**
+ * The newest unread concierge letter on the step. Opening it (the existing
+ * sheet) marks it read: it leaves the step and remains in My
+ * Correspondence; a newer letter arriving later appears unread.
+ */
 export function EntranceLetter({ now }: { now: number }) {
   // The button that opened the letter; focus returns to it on close.
   const [opener, setOpener] = useState<HTMLElement | null>(null);
-  const titleId = useId();
+  const [showing, setShowing] = useState<StepLetterId | null>(null);
   const opensAt = instantOf(DEPARTURE_LOUNGE_OPENS);
   // The letter's own clock can reach the hour before the entrance's does.
   const [elapsed, setElapsed] = useState(false);
+  const [, setVersion] = useState(0);
+  useEffect(() => {
+    const changed = () => setVersion((v) => v + 1);
+    window.addEventListener(STEP_LETTERS_EVENT, changed);
+    return () => window.removeEventListener(STEP_LETTERS_EVENT, changed);
+  }, []);
   const ready = elapsed || now >= opensAt;
+  const waiting = stepLetters(ready ? Math.max(now, opensAt) : now).find(
+    (l) => !l.opened,
+  );
 
   return (
     <>
-      <button
-        type="button"
-        className="step-letter"
-        data-ready={ready}
-        onClick={(event) => setOpener(event.currentTarget)}
-      >
-        <span className="step-letter__envelope" aria-hidden="true">
-          <span className="step-letter__flap" />
-          <span className="step-letter__seal">
-            <WaxSeal />
-          </span>
-        </span>
-        <span className="step-letter__caption">
-          {ready
-            ? 'Your Departure Lounge is ready'
-            : 'A letter has been left for you'}
-        </span>
-      </button>
-      {opener && (
-        <PaperSheet
-          labelledBy={titleId}
-          returnFocusTo={opener}
-          onClose={() => setOpener(null)}
-          footer={
-            ready ? (
-              <Link to="/departure" className="brass-button step-letter__go">
-                Proceed to the Departure Lounge
-              </Link>
-            ) : null
-          }
+      {waiting && !showing && (
+        <button
+          type="button"
+          className="step-letter"
+          data-ready={waiting.id === 'departure-ready'}
+          onClick={(event) => {
+            setOpener(event.currentTarget.parentElement);
+            setShowing(waiting.id);
+            markStepLetterOpened(waiting.id);
+          }}
         >
-          <h2 id={titleId} className="sr-only">
-            A letter from the concierge
-          </h2>
-          {ready ? (
-            <ConciergeLetter
-              greeting={`${greetingIn(now, UK_ZONE)}, Madam.`}
-              paragraphs={[
-                'Your Departure Lounge is now ready to receive you.',
-                'Certain arrangements have been made for your journey. Your concierge awaits.',
-              ]}
-            />
-          ) : (
-            <ConciergeLetter
-              greeting="Madam,"
-              paragraphs={[
-                'Your membership has been approved.',
-                'While the doors of The Thirty Club remain closed until your birthday, certain privileges have been arranged for your journey.',
-                'Your Departure Lounge will be ready to receive you on Thursday at two o’clock.',
-              ]}
-              signOff="We shall be in touch."
-            >
+          <span className="step-letter__envelope" aria-hidden="true">
+            <span className="step-letter__flap" />
+            <span className="step-letter__seal">
+              <WaxSeal />
+            </span>
+          </span>
+          <span className="step-letter__caption">
+            {waiting.id === 'departure-ready'
+              ? 'Your Departure Lounge is ready'
+              : 'A letter has been left for you'}
+          </span>
+        </button>
+      )}
+      {showing && (
+        <StepLetterSheet
+          id={ready ? 'departure-ready' : showing}
+          now={now}
+          returnFocusTo={opener}
+          onElapsed={() => setElapsed(true)}
+          onClose={() => setShowing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+/** One concierge letter on its laid paper (from the step or the collection). */
+export function StepLetterSheet({
+  id,
+  now,
+  returnFocusTo,
+  onClose,
+  onElapsed,
+}: {
+  id: StepLetterId;
+  now: number;
+  returnFocusTo: HTMLElement | null;
+  onClose(): void;
+  onElapsed?(): void;
+}) {
+  const titleId = useId();
+  const opensAt = instantOf(DEPARTURE_LOUNGE_OPENS);
+  const ready = id === 'departure-ready';
+  return (
+    <PaperSheet
+      labelledBy={titleId}
+      returnFocusTo={returnFocusTo}
+      onClose={onClose}
+      footer={
+        ready ? (
+          <Link to="/departure" className="brass-button step-letter__go">
+            Proceed to the Departure Lounge
+          </Link>
+        ) : null
+      }
+    >
+      <h2 id={titleId} className="sr-only">
+        A letter from the concierge
+      </h2>
+      {ready ? (
+        <ConciergeLetter
+          greeting={`${greetingIn(Math.max(now, opensAt), UK_ZONE)}, Madam.`}
+          paragraphs={[
+            'Your Departure Lounge is now ready to receive you.',
+            'Certain arrangements have been made for your journey. Your concierge awaits.',
+          ]}
+        />
+      ) : (
+        <ConciergeLetter
+          greeting="Madam,"
+          paragraphs={[
+            'Your membership has been approved.',
+            'While the doors of The Thirty Club remain closed until your birthday, certain privileges have been arranged for your journey.',
+            'Your Departure Lounge will be ready to receive you on Thursday at two o’clock.',
+          ]}
+          signOff="We shall be in touch."
+        >
+          {now < opensAt && (
+            <>
               <p className="letter__when">
                 <span>{describeInstant(opensAt, UK_ZONE)}</span>
                 <span>In {describeCountdown(now, opensAt)}</span>
               </p>
               <LetterCountdown
                 target={opensAt}
-                now={Date.now}
-                onElapsed={() => setElapsed(true)}
+                now={appClock.now}
+                onElapsed={() => onElapsed?.()}
               />
-            </ConciergeLetter>
+            </>
           )}
-        </PaperSheet>
+        </ConciergeLetter>
       )}
-    </>
+    </PaperSheet>
   );
 }
 

@@ -382,13 +382,15 @@ async function ownerAuthorised(
 
 async function overview(deps: ServiceDeps, url: URL) {
   const realm = realmParam(url.searchParams.get('realm'));
-  const [schedule, overrides, activations, redemptions, dispatches] =
+  const [schedule, overrides, activations, redemptions, dispatches, shopping] =
     await Promise.all([
       scheduleFor(deps, realm),
       loadOverrides(deps, realm),
       loadActivations(deps, realm),
       loadRedemptions(deps, realm),
       loadDispatches(deps, realm),
+      // Read-only: the Shopping Privilege's public state, for the owner.
+      readShopping(deps, realm),
     ]);
   const { credentials, siteUrl } = deps.config;
   return json(200, {
@@ -400,6 +402,7 @@ async function overview(deps: ServiceDeps, url: URL) {
     activations,
     redemptions,
     dispatches,
+    shopping,
     privileges: PRIVILEGES.map(({ id, title, kind, provisional }) => ({
       id,
       title,

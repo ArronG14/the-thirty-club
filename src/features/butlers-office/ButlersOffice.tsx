@@ -13,6 +13,7 @@ import { VaultOffice } from './VaultOffice';
 import { CorrespondenceDesk } from './CorrespondenceDesk';
 import { ButlerSmsDesk } from './ButlerSmsDesk';
 import { RequestsDesk } from './RequestsDesk';
+import { OFFICE_TABS, type OfficeTab } from './tabs';
 import './office.css';
 const fmtMoney = (pence: number) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
@@ -30,12 +31,20 @@ const errorText = (error: unknown) =>
   error instanceof Error
     ? error.message
     : 'The Butler is unavailable. Please try again.';
-export default function ButlersOffice() {
+export default function ButlersOffice({
+  embedded = false,
+  initialTab = 'overview',
+  onTab,
+}: {
+  embedded?: boolean;
+  initialTab?: OfficeTab;
+  onTab?(tab: OfficeTab): void;
+} = {}) {
   const [session, setSession] = useState<Session | null | undefined>(undefined);
   const [data, setData] = useState<OwnerOverview | null>(null);
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const [tab, setTab] = useState('overview');
+  const [tab, setTab] = useState<OfficeTab>(initialTab);
   const [editingPrivilege, setEditingPrivilege] = useState<Privilege | null>(
     null,
   );
@@ -113,14 +122,20 @@ export default function ButlersOffice() {
   const privileges = data?.privileges ?? [];
   const pending = data?.redemptions.filter((r) => r.state === 'pending') ?? [];
   return (
-    <section className="butlers-office" aria-label="Butler’s Office">
-      <header className="office-header">
-        <a href="/" className="office-eyebrow">
-          The Thirty Club
-        </a>
-        <h1>The Butler’s Office</h1>
-        <p>Every detail, attended to.</p>
-      </header>
+    <section
+      className="butlers-office"
+      data-embedded={embedded}
+      aria-label="Butler’s Office"
+    >
+      {!embedded && (
+        <header className="office-header">
+          <a href="/" className="office-eyebrow">
+            The Thirty Club
+          </a>
+          <h1>The Butler’s Office</h1>
+          <p>Every detail, attended to.</p>
+        </header>
+      )}
       {error && (
         <p role="alert" className="office-error">
           {error}
@@ -171,21 +186,14 @@ export default function ButlersOffice() {
             </button>
           </div>
           <nav className="office-tabs" aria-label="Office sections">
-            {[
-              'overview',
-              'correspondence',
-              'requests',
-              'privileges',
-              'redemptions',
-              'messages',
-              'vault',
-              'history',
-              'membership',
-            ].map((t) => (
+            {OFFICE_TABS.map((t) => (
               <button
                 key={t}
                 aria-pressed={tab === t}
-                onClick={() => setTab(t)}
+                onClick={() => {
+                  setTab(t);
+                  onTab?.(t);
+                }}
               >
                 {t}
               </button>

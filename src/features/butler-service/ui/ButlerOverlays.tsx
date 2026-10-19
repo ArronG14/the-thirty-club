@@ -36,6 +36,13 @@ import type {
   ServiceView,
 } from '../useButlerService';
 import { RequestComposer } from './RequestComposer';
+import { appClock } from '../../rehearsal/clock';
+import {
+  markStepLetterOpened,
+  stepLetters,
+  type StepLetterId,
+} from '../../concierge/client/stepLetters';
+import { StepLetterSheet } from '../../concierge/ui/EntranceConcierge';
 import '../../correspondence/ui/correspondence.css';
 import './butlerService.css';
 
@@ -329,6 +336,13 @@ function Standing({ standing }: { standing: ServiceStanding }) {
 
 function Collection({ letters, onView }: Inner) {
   const [line] = useState(() => nextLine('correspondence'));
+  const [now] = useState(() => appClock.now());
+  const [reading, setReading] = useState<{
+    id: StepLetterId;
+    from: HTMLElement;
+  } | null>(null);
+  const [, setVersion] = useState(0);
+  const concierge = stepLetters(now);
   const unread = letters.filter((l) => !l.openedAt).length;
   return (
     <>
@@ -379,6 +393,44 @@ function Collection({ letters, onView }: Inner) {
           );
         })}
       </ul>
+      <h3 className="bs-subhead">From the concierge</h3>
+      <ul className="cd-list bs-list">
+        {concierge.map((letter) => (
+          <li key={letter.id}>
+            <button
+              type="button"
+              className="cd-row bs-row"
+              data-unread={!letter.opened}
+              onClick={(event) => {
+                markStepLetterOpened(letter.id);
+                setVersion((v) => v + 1);
+                setReading({ id: letter.id, from: event.currentTarget });
+              }}
+            >
+              <span className="cd-row__seal" aria-hidden="true">
+                <WaxSeal lit={!letter.opened} />
+              </span>
+              <span className="cd-row__text">
+                <span className="cd-row__title">{letter.title}</span>
+                <span className="cd-row__meta">
+                  The Thirty Club · Concierge
+                </span>
+              </span>
+              <span className="cd-row__state">
+                {letter.opened ? 'Opened' : 'Unread'}
+              </span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {reading && (
+        <StepLetterSheet
+          id={reading.id}
+          now={now}
+          returnFocusTo={reading.from}
+          onClose={() => setReading(null)}
+        />
+      )}
     </>
   );
 }
@@ -451,7 +503,7 @@ function Composer({ desk, close, onView }: Inner) {
         </figure>
         <p className="bs-sent__truth">
           {desk.mode === 'rehearsal'
-            ? 'Dev Mode rehearsal: nothing was recorded for Alise, and no SMS was sent.'
+            ? 'Dev Mode rehearsal: recorded only in the simulated office (TEST → Butler’s Office → requests). Nothing reached Alise’s records and no SMS was sent.'
             : 'Your request has been received. Arron will see it in the Butler’s Office and reply in his own time.'}
         </p>
         <div className="bs-menu__options">
@@ -482,7 +534,7 @@ function Composer({ desk, close, onView }: Inner) {
       onCancel={() => close()}
       note={
         desk.mode === 'rehearsal'
-          ? 'Dev Mode rehearsal · this request stays on this device and sends nothing.'
+          ? 'Dev Mode rehearsal · this request goes to the simulated office in this tab and sends nothing.'
           : undefined
       }
     />

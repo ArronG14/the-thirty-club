@@ -1230,9 +1230,10 @@
 /* ---------- Casino testing tools (development or authenticated owner) ---------- */
 
 .devtools {
+  /* Top-left, under the Dev disc: clear of the station cards at the foot. */
   position: fixed;
-  left: 0.4rem;
-  bottom: 0.4rem;
+  left: max(0.5rem, env(safe-area-inset-left));
+  top: calc(max(8px, env(safe-area-inset-top)) + 52px);
   z-index: 40;
   max-width: calc(100vw - 0.8rem);
   font:

@@ -27,6 +27,7 @@ import {
   type VaultCommand,
 } from '../vault/client/vaultApi';
 import { encodeQr, qrPath } from './qr';
+import { simulatedOwnerDocument, TEST_CENTRE_PATH } from '../rehearsal/mode';
 
 const plate = (n: number) => String(n).padStart(3, '0');
 const when = (at: string | null, zone: string) =>
@@ -293,7 +294,7 @@ function VaultCard({
       <div className="office-actions">
         <Link
           className="office-button-link"
-          to={`/owner/vault-preview/${vault.id}`}
+          to={`${simulatedOwnerDocument ? TEST_CENTRE_PATH : '/owner'}/vault-preview/${vault.id}`}
         >
           Preview vault {plate(vault.number)}
         </Link>

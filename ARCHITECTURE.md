@@ -59,6 +59,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-012 (2026-10-18): the Concierge — pre-birthday journey, Netlify Functions + Blobs backend, Telegram notifications, NFC credentials and the membership-card gate; amends ADR-006 (Jamaica midnight). Recorded below; full design in docs/CONCIERGE.md. (ADR-011 is the PIN owner test mode, recorded below by another agent.)
 - ADR-015 (2026-10-18): the Private Gift Vault on PostgreSQL, NFC credentials, membership bridge and owner preview; amends ADR-008 (the vault room opens with the membership). Recorded below; full design in docs/GIFT_VAULT.md.
 - ADR-016 (2026-10-19): the Correspondence Desk — owner-scheduled letters published by the existing every-minute round, Butler SMS through the existing outbox. Recorded below; full design in docs/CORRESPONDENCE_DESK.md.
+- ADR-018 (2026-10-19): one Owner Control Centre (LIVE / TEST) and the universal rehearsal engine — rehearsal pages answer their own API calls with the real handlers and migrations in the browser; full design in docs/REHEARSAL.md.
 - ADR-017 (2026-10-19): the Butler's Service — one bell, menu, correspondence overlay and request composer for the locked entrance and the lounge; owner direct SMS and request responses on the existing outbox; Dev Mode rehearsal in owner session storage. Recorded below; full design in docs/BUTLERS_SERVICE.md.
 
 ## Open questions
@@ -353,3 +354,17 @@ Full design, API, rehearsal and preview: `docs/BUTLERS_SERVICE.md`. Branch `feat
 **Navigation.** The registry gains `departure-lounge` (always open, built, path `/departure`, never recommended): the directory lists it after the birthday, and the locked doors offer it through the Butler's invitation. The Departure Lounge keeps its own schedule and credential. A panoramic, camera-swivelling lounge is recorded as a future enhancement only.
 
 **Open questions.** Owner approval of the Butler's lines and the request notification text; the 60-day scheduling window; a physical iPhone rehearsal; an authorised real SMS exchange; applying the migration after `20261020090000` on the hosted project.
+
+## Owner Control Centre and the rehearsal engine (ADR-018, 2026-10-19)
+
+Full design: `docs/REHEARSAL.md`. Branch `feature/owner-control-centre` from production `1a3be93`.
+
+**One dashboard, two worlds.** `/concierge/owner` is the canonical Owner Control Centre. LIVE (`/concierge/owner`) holds the existing Butler's Office (all its tabs) and the existing Concierge console, unchanged, with their existing server authentication. `/owner` redirects there (`?tab=` preserved); `/owner/vault-preview/:id` still works. TEST (`/concierge/owner/test`) holds the same two consoles plus the rehearsal engine, answered by a simulated office in the browser.
+
+**Supersedes ADR-011's shifted clock and ADR-017's `rehearsalDesk`.** The PIN Dev Mode is now a rehearsal launcher. A page's world (LIVE or rehearsal) is fixed when it loads; LIVE owner paths are never simulated, even in a Dev Mode tab, and crossing worlds reloads the page. On rehearsal pages `fetch` is wrapped before render: same-origin `/api/` calls go to the simulation (fail closed), provider hosts are refused. The simulation runs the real `netlify/backend` and `netlify/concierge` handlers with the real migrations in PGlite (IndexedDB), a rewritten `now()` that follows one rehearsal clock, auto-signed simulated owner/member sessions in tab storage, fake providers and the existing test credentials. `deviceStorage()` maps `localStorage` users (concierge session and record, vault key and announcements, concierge owner key in TEST) to tab session storage on rehearsal pages. Nothing in the browser holds a real secret; the Shopping ceiling is replaced by a stub in the browser bundle.
+
+**Why not route guards.** Launches move the rehearsal clock to the room's real opening and create its prerequisites (card, induction, compartments, concierge session), so the actual gates, schedules and server logic are exercised.
+
+**Costs and limits.** PGlite (~17 MB raw, ~5 MB compressed) is downloaded only by owner rehearsal pages and excluded from the PWA precache (`rehearsal-*` chunks). Main bundle +5 KB gzip. Not yet run on a physical iPhone. Owner sign-in in TEST is simulated; LIVE is the real password.
+
+**Open questions.** Whether the old `/concierge/owner` default section should be the concierge console rather than the Butler's Office (currently Butler's Office; `?section=concierge` deep-links the console). Physical iPhone memory headroom for PGlite alongside the 3D vault.

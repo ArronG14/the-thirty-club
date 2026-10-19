@@ -26,6 +26,7 @@ import { useGiftVault, type VaultMode } from '../useGiftVault';
 import { VaultLetter } from './VaultLetter';
 import { VaultPoster } from './VaultPoster';
 import './vault.css';
+import { simulatedOwnerDocument, simulationActive } from '../../rehearsal/mode';
 
 const VaultCanvas = lazy(() => import('../scene/VaultCanvas'));
 
@@ -145,7 +146,15 @@ export default function GiftVault({
     vault.turnKey();
   }, [sounds, vault]);
 
-  const home = vault.rehearsal ? '/owner' : '/';
+  // An owner preview returns to the office it came from; a Dev Mode
+  // rehearsal is Alise's own journey and returns to the lounge.
+  const owner =
+    vault.rehearsal && !(simulationActive && mode.kind === 'member');
+  const home = owner
+    ? simulatedOwnerDocument
+      ? '/concierge/owner/test?section=office&tab=vault'
+      : '/concierge/owner?section=office&tab=vault'
+    : '/';
   const chamber = vault.phase.kind === 'chamber';
   const ceremonyRunning = opening?.stage === 'turning';
 
@@ -202,7 +211,7 @@ export default function GiftVault({
 
       <header className="gift-vault__header">
         <Link to={home} className="gift-vault__back">
-          {vault.rehearsal ? 'Butler’s Office' : 'The lounge'}
+          {owner ? 'Butler’s Office' : 'The lounge'}
         </Link>
         <div className="gift-vault__titles">
           <p className="gift-vault__eyebrow">The Thirty Club</p>
@@ -219,7 +228,9 @@ export default function GiftVault({
       </header>
       {vault.rehearsal && (
         <p className="gift-vault__rehearsal" role="note">
-          Owner rehearsal · nothing is opened, consumed, recorded or sent
+          {simulationActive
+            ? 'Rehearsal · the simulated vault; no real compartment is touched'
+            : 'Owner rehearsal · nothing is opened, consumed, recorded or sent'}
         </p>
       )}
 

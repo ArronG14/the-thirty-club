@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
 import { activeSession, endRehearsal } from '../client/sessionStore';
 import { JAMAICA_ZONE, UK_ZONE } from '../domain/time';
+import { appClock } from '../../rehearsal/clock';
+import { simulationActive, TEST_CENTRE_PATH } from '../../rehearsal/mode';
 import './entranceConcierge.css';
 
 function virtualTime(offsetMs: number): string {
-  const now = new Date(Date.now() + offsetMs);
+  const now = new Date(appClock.now() + offsetMs);
   const format = (zone: string) =>
     new Intl.DateTimeFormat('en-GB', {
       timeZone: zone,
@@ -39,7 +41,10 @@ export function RehearsalRibbon() {
         type="button"
         onClick={() => {
           endRehearsal();
-          window.location.assign('/concierge/owner');
+          // A Dev Mode rehearsal returns to its TEST centre, never LIVE.
+          window.location.assign(
+            simulationActive ? TEST_CENTRE_PATH : '/concierge/owner',
+          );
         }}
       >
         End

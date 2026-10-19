@@ -1,5 +1,7 @@
 # Private owner access
 
+> **Updated 19 October 2026 (ADR-018).** Dev Mode is now the rehearsal launcher described in `docs/REHEARSAL.md`: launch any room in a coherent rehearsal, pick a scenario, move the rehearsal clock, reset a room or everything, open the Owner Control Centre (TEST or LIVE) and exit. The "Enter Club", "Preview birthday unlock", "Return to locked entrance" and "Simulate letters" buttons were replaced by launches and scenarios. Everything below about the gesture, the PIN, session storage and isolation still holds. To set your own LIVE Owner Console password: `npm run owner:set-password`.
+
 On the Grand Entrance, tap the brass countdown clock **five times within three seconds**, then enter **1414**. There is no visible hint. The same gesture works on the SVG fallback and on the clock in the Three.js entrance. The transparent HTML hit area follows the projected clock plate and uses completed touch-generated clicks with `touch-action: manipulation`, avoiding Safari double-tap zoom and duplicate event counting. Activation waits for the completed click so WebKit cannot send the same tap through to a newly opened dialog control.
 
 After authentication, the **Owner · test mode** button opens the private office from every implemented room. The panel is a scrollable native modal with keyboard focus containment and Escape/Close support.

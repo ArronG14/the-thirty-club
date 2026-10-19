@@ -31,6 +31,7 @@ import {
   STAGE_LABEL,
 } from './serviceApi';
 import './desk.css';
+import { appClock } from '../rehearsal/clock';
 
 /** Plain GSM text is 160 characters a part; anything else is 70. */
 function parts(text: string): number {
@@ -44,9 +45,9 @@ function parts(text: string): number {
 }
 
 function useNow(): number {
-  const [now, setNow] = useState(() => Date.now());
+  const [now, setNow] = useState(() => appClock.now());
   useEffect(() => {
-    const timer = setInterval(() => setNow(Date.now()), 15_000);
+    const timer = setInterval(() => setNow(appClock.now()), 15_000);
     return () => clearInterval(timer);
   }, []);
   return now;

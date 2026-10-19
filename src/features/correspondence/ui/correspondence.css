@@ -786,3 +786,25 @@
   font-size: 1.04rem;
   white-space: nowrap;
 }
+/* Rooms a letter mentions: the way in, or honestly when it opens. */
+.cd-rooms {
+  display: grid;
+  gap: 0.6rem;
+  margin: 1rem auto 0;
+  max-width: 34rem;
+}
+.cd-rooms__room {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+.cd-rooms__room p {
+  margin: 0;
+  line-height: 1.5;
+  color: #e9dcc0;
+}
+a.cd-button {
+  display: inline-flex;
+  align-items: center;
+  text-decoration: none;
+}

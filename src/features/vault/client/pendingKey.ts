@@ -5,6 +5,7 @@
  * compartment, never a location: it is removed as soon as the server has
  * answered, and it expires after a few hours regardless.
  */
+import { deviceStorage } from '../../rehearsal/storage';
 const KEY = 'thirty-club:vault-key';
 const MAX_AGE_MS = 6 * 60 * 60 * 1000;
 
@@ -15,7 +16,7 @@ export interface PendingKey {
 
 function storage(): Storage | null {
   try {
-    return window.localStorage;
+    return deviceStorage();
   } catch {
     return null;
   }

@@ -1,18 +1,11 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import {
   BUTLER_LINES,
   lineAt,
   nextLine,
   type ButlerMoment,
 } from './domain/dialogue';
-import {
-  clearRehearsal,
-  rehearsalCounts,
-  rehearsalDesk,
-  rehearseLetters,
-  REHEARSAL_KEY,
-} from './client/desk';
-import { OWNER_PREFIX } from '../owner/session';
+import { activeDesk, liveDesk, rehearsalDesk } from './client/desk';
 import { cancellable, retryable, smsStage } from '../butlers-office/serviceApi';
 
 describe('the Butler’s repertoire', () => {
@@ -68,38 +61,12 @@ describe('the Butler’s repertoire', () => {
 });
 
 describe('Dev Mode rehearsal desk', () => {
-  afterEach(() => {
-    clearRehearsal();
-    vi.restoreAllMocks();
-  });
-
-  it('keeps simulated letters in owner session storage and never calls the network', async () => {
-    const network = vi.spyOn(globalThis, 'fetch');
-    rehearseLetters(3);
-    expect(REHEARSAL_KEY.startsWith(`${OWNER_PREFIX}thirty-club:`)).toBe(true);
-    expect(sessionStorage.getItem(REHEARSAL_KEY)).toContain('Rehearsal');
-    expect(localStorage.length).toBe(0);
-    expect(rehearsalCounts()).toEqual({ letters: 3, unread: 3, requests: 0 });
-
-    const listed = await rehearsalDesk.letters();
-    if (!listed.ok) throw new Error('rehearsal list failed');
-    const [newest] = listed.data.letters;
-    // Newest first.
-    expect(listed.data.letters.map((l) => l.deliveredAt)).toEqual(
-      [...listed.data.letters.map((l) => l.deliveredAt)].sort().reverse(),
-    );
-
-    const opened = await rehearsalDesk.open(newest!.id);
-    expect(opened.ok && opened.data.letter.openedAt).toBeTruthy();
-    const thanked = await rehearsalDesk.thank(newest!.id);
-    expect(thanked.ok && thanked.data.duplicate).toBe(false);
-    const again = await rehearsalDesk.thank(newest!.id);
-    expect(again.ok && again.data.duplicate).toBe(true);
-    const asked = await rehearsalDesk.request('A cocktail, please.', 'k');
-    expect(asked.ok && asked.data.request.body).toBe('A cocktail, please.');
-    expect(rehearsalCounts()).toEqual({ letters: 3, unread: 2, requests: 1 });
-    expect(network).not.toHaveBeenCalled();
-    expect(await rehearsalDesk.standing()).toEqual({ kind: 'member' });
+  it('is the live desk, labelled, so the simulated office answers it (ADR-018)', () => {
+    expect(rehearsalDesk.mode).toBe('rehearsal');
+    expect(rehearsalDesk.letters).toBe(liveDesk.letters);
+    expect(rehearsalDesk.request).toBe(liveDesk.request);
+    // Outside a rehearsal document the active desk is the live one.
+    expect(activeDesk).toBe(liveDesk);
   });
 });
 

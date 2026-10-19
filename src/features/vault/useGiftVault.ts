@@ -29,6 +29,7 @@ import {
   type VaultResult,
 } from './client/vaultApi';
 import { ANNOUNCEMENT, arrivalLine, VAULT_LINES } from './domain/vaultScript';
+import { simulationActive } from '../rehearsal/mode';
 
 export type VaultMode =
   /** `arrivalKey`: a key carried in from an NFC scan (also held in storage). */
@@ -94,7 +95,11 @@ export function useGiftVault(mode: VaultMode) {
   const [letter, setLetter] = useState<MemberVault | null>(null);
   const [busy, setBusy] = useState(false);
   const [codeError, setCodeError] = useState('');
-  const [rehearsal, setRehearsal] = useState(mode.kind === 'preview');
+  // Dev Mode (ADR-018): the member's own vault in the simulated office, so a
+  // rehearsal may stand in for finding a tag.
+  const [rehearsal, setRehearsal] = useState(
+    mode.kind === 'preview' || simulationActive,
+  );
   const source = useRef<Source>(memberSource());
   const queue = useRef<ReturnType<typeof setTimeout>[]>([]);
   const counter = useRef(0);
@@ -312,9 +317,17 @@ export function useGiftVault(mode: VaultMode) {
   const simulateScan = useCallback(async () => {
     if (!rehearsal || busy) return;
     setBusy(true);
-    settle(await source.current.open({}), false);
+    if (mode.kind === 'member' && simulationActive && focusId) {
+      // The simulated compartment's own NFC token, as if the tag was scanned.
+      const { rehearsalKeyFor } = await import('../rehearsal/office');
+      const credential = await rehearsalKeyFor(focusId).catch(() => null);
+      settle(
+        await source.current.open(credential ? { credential } : {}),
+        false,
+      );
+    } else settle(await source.current.open({}), false);
     setBusy(false);
-  }, [busy, rehearsal, settle]);
+  }, [busy, focusId, mode.kind, rehearsal, settle]);
 
   const turnKey = useCallback(() => {
     setOpening((o) =>

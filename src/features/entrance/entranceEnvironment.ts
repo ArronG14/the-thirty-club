@@ -1,15 +1,11 @@
-import { ownerActive, ownerMode } from '../owner/session';
-import { openingInstant } from './domain/countdown';
+import { ownerActive } from '../owner/session';
+import { appClock } from '../rehearsal/clock';
+import { simulationActive } from '../rehearsal/mode';
 import { browserMembershipStorage } from '../club/domain/membershipRecord';
 import { hasMembership } from '../concierge/client/membership';
 import { activeSession, realmKey } from '../concierge/client/sessionStore';
 import { browserEntranceStorage } from './domain/entranceRecord';
-import {
-  absentCard,
-  presentedCard,
-  systemClock,
-  type EntranceEnvironment,
-} from './domain/environment';
+import { systemClock, type EntranceEnvironment } from './domain/environment';
 import { resolveDevPreview } from './preview/devPreview';
 
 /**
@@ -17,35 +13,20 @@ import { resolveDevPreview } from './preview/devPreview';
  * branch is statically `false` in production builds and is eliminated.
  *
  * Two rehearsal modes keep the live journey on this device untouched:
- * - owner test mode (PIN, docs/OWNER_ACCESS.md): session-scoped records and a
- *   shifted clock; the card counts as presented in its birthday and open
- *   previews so their ceremonies run as before;
+ * - the rehearsal engine (PIN, docs/REHEARSAL.md): session-scoped records,
+ *   the rehearsal clock and the rehearsal's own card and concierge;
  * - a concierge rehearsal (docs/CONCIERGE.md): the server's rehearsal realm,
  *   its virtual clock, and records under `thirty-club:rehearsal:` keys.
  */
 export function createEntranceEnvironment(): EntranceEnvironment {
-  if (ownerActive) {
-    const start =
-      ownerMode === 'locked'
-        ? openingInstant() - 86400000
-        : ownerMode === 'birthday'
-          ? openingInstant() - 5000
-          : openingInstant() + 172800000;
-    const shift = start - Date.now();
-    const storage = browserEntranceStorage();
-    const membership = browserMembershipStorage();
-    if (ownerMode === 'open') {
-      const at = new Date(start).toISOString();
-      storage.save({ unlockedAt: at, ceremonySeenAt: at });
-      membership.save({ ...membership.load(), inductedAt: at });
-    }
+  if (simulationActive && ownerActive) {
+    // The rehearsal (ADR-018): the rehearsal clock, session-scoped records
+    // and the rehearsal's own membership card. Scenarios seed the records.
     return {
-      clock: { now: () => Date.now() + shift },
-      storage,
-      membership,
-      // Before the birthday nobody has the card; the birthday and open
-      // previews have it, so their ceremonies run as designed.
-      card: ownerMode === 'locked' ? absentCard : presentedCard,
+      clock: appClock,
+      storage: browserEntranceStorage(),
+      membership: browserMembershipStorage(),
+      card: { isPresented: () => hasMembership() },
       preview: null,
     };
   }

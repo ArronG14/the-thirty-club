@@ -7,6 +7,7 @@
 import { isPrivilegeId, type PrivilegeId } from '../domain/catalogue';
 import type { ConciergeState } from '../domain/contract';
 import { realmKey } from './sessionStore';
+import { deviceStorage } from '../../rehearsal/storage';
 
 const VERSION = 1;
 
@@ -101,14 +102,14 @@ export function browserConciergeStorage(): ConciergeStorage {
   return {
     load() {
       try {
-        return parseConciergeRecord(window.localStorage.getItem(key()));
+        return parseConciergeRecord(deviceStorage().getItem(key()));
       } catch {
         return emptyConciergeRecord;
       }
     },
     save(record) {
       try {
-        window.localStorage.setItem(
+        deviceStorage().setItem(
           key(),
           JSON.stringify({ version: VERSION, ...record }),
         );

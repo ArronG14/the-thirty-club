@@ -1,14 +1,20 @@
 import OwnerAccess from '../features/owner/OwnerAccess';
 import { lazy, Suspense } from 'react';
-import { Route, Routes, useSearchParams } from 'react-router';
+import {
+  Navigate,
+  Route,
+  Routes,
+  useLocation,
+  useSearchParams,
+} from 'react-router';
 import { RoomGate } from '../features/club/ui/RoomGate';
 import { RehearsalRibbon } from '../features/concierge/ui/RehearsalRibbon';
 import { Entrance } from '../features/entrance/ui/Entrance';
 import { AppShell } from '../shared/ui/AppShell';
 import { useConnectivity } from '../shared/state/useConnectivity';
 
-const ButlersOffice = lazy(
-  () => import('../features/butlers-office/ButlersOffice'),
+const ControlCentre = lazy(
+  () => import('../features/control-centre/ControlCentre'),
 );
 
 const DepartureLounge = lazy(
@@ -45,9 +51,17 @@ const CorrespondenceLetter = lazy(() =>
     default: m.CorrespondenceLetter,
   })),
 );
-const OwnerConsole = lazy(
-  () => import('../features/concierge/owner/OwnerConsole'),
-);
+
+/**
+ * `/owner` was the Butler's Office; it now lives in the Owner Control
+ * Centre's LIVE tab. Old links and bookmarks (with `?tab=`) still work.
+ */
+function OwnerRedirect() {
+  const { search, hash } = useLocation();
+  const query = new URLSearchParams(search);
+  query.set('section', 'office');
+  return <Navigate to={`/concierge/owner?${query}${hash}`} replace />;
+}
 
 /** Quiet holding state while a lazily loaded room arrives. */
 function Arriving() {
@@ -93,14 +107,7 @@ export function App() {
       )}
       <Routes>
         <Route path="/" element={<Entrance />} />
-        <Route
-          path="/owner"
-          element={
-            <Suspense fallback={<Arriving />}>
-              <ButlersOffice />
-            </Suspense>
-          }
-        />
+        <Route path="/owner" element={<OwnerRedirect />} />
         <Route
           path="/owner/vault-preview/:id"
           element={
@@ -162,7 +169,23 @@ export function App() {
           path="/concierge/owner"
           element={
             <Suspense fallback={<Arriving />}>
-              <OwnerConsole />
+              <ControlCentre world="live" />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/concierge/owner/test"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <ControlCentre world="test" />
+            </Suspense>
+          }
+        />
+        <Route
+          path="/concierge/owner/test/vault-preview/:id"
+          element={
+            <Suspense fallback={<Arriving />}>
+              <VaultPreviewRoute />
             </Suspense>
           }
         />
