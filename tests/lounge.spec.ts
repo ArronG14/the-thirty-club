@@ -41,6 +41,16 @@ test.describe('real-time lounge', () => {
         'thirty-club:membership',
         JSON.stringify({ version: 1, inductedAt: seen, rooms: {} }),
       );
+      // Admissions the office has confirmed, as the device remembers them
+      // (ADR-020; the preview server has no journey office).
+      localStorage.setItem(
+        'thirty-club:journey',
+        JSON.stringify({
+          version: 1,
+          admitted: ['screening-room', 'gift-vault'],
+          pending: [],
+        }),
+      );
     }, SEEN);
     await page.goto('/');
     await expect(page.locator('.lounge')).toHaveAttribute(

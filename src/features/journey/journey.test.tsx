@@ -342,7 +342,9 @@ describe('letter buttons', () => {
   const show = (journey: JourneyValue, a: ReturnType<typeof action>) =>
     render(
       <JourneyContext.Provider value={journey}>
-        <LetterActionButton action={a} />
+        <MemoryRouter>
+          <LetterActionButton action={a} />
+        </MemoryRouter>
       </JourneyContext.Provider>,
     );
 
@@ -369,8 +371,9 @@ describe('letter buttons', () => {
   });
 
   it('never offers a room that is locked (for example a withdrawn invitation)', () => {
-    const { container } = show(journeyWith({}), action('return', 'casino'));
-    expect(container).toBeEmptyDOMElement();
+    show(journeyWith({}), action('return', 'casino'));
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
   });
 });
 

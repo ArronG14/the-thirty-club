@@ -42,6 +42,7 @@ import {
   type AdmissionRoomId,
 } from '../../shared/journey/contract';
 import { rehearsalNow, resetRehearsalClock, setRehearsalTime } from './clock';
+import { PENDING_ADMISSIONS_KEY } from './office';
 import { clearRehearsalLocal } from './storage';
 
 const MINUTE = 60_000;
@@ -282,6 +283,7 @@ export const SCENARIOS: readonly Scenario[] = [
       writeCard(true, at);
       writeCasino('jackpot');
     },
+    admitted: ['casino'],
   },
   {
     id: 'vault-unlock',
@@ -297,6 +299,7 @@ export const SCENARIOS: readonly Scenario[] = [
       const { ensureRehearsalVaults } = await import('./office');
       await ensureRehearsalVaults();
     },
+    admitted: ['gift-vault'],
   },
   {
     id: 'all-open',
@@ -319,6 +322,7 @@ export const SCENARIOS: readonly Scenario[] = [
       const { ensureRehearsalVaults } = await import('./office');
       await ensureRehearsalVaults();
     },
+    admitted: ['screening-room', 'casino', 'gift-vault', 'privileges'],
   },
 ];
 
@@ -395,8 +399,13 @@ async function syncAdmissions(
     (room) => !ceremony.includes(room),
   );
   if (admitted.length === 0 && ceremony.length === 0) return;
-  const { rehearseAdmissions } = await import('./office');
-  await rehearseAdmissions(admitted, ceremony);
+  // Applied by the page the launch opens, before its first journey read
+  // (office.applyPendingAdmissions), so it never depends on the simulated
+  // database flushing to IndexedDB before this page unloads.
+  sessionStorage.setItem(
+    PENDING_ADMISSIONS_KEY,
+    JSON.stringify({ admitted, ceremony }),
+  );
 }
 
 /** Moves the rehearsal clock forward to `at` if it is earlier. */
@@ -490,6 +499,59 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
     },
   },
   {
+    id: 'screening-journey',
+    label: 'The Screening Room journey (first visit)',
+    detail:
+      'From the Members’ Lounge: the Letter of Admission, the Butler’s escort, the five-second test film, return to your seat. Clears screening progress first.',
+    ceremony: ['screening-room'],
+    launch: async () => {
+      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
+      freshScreening();
+      return '/';
+    },
+  },
+  {
+    id: 'screening-room',
+    label: 'The Private Screening Room',
+    detail:
+      'Seated in the room, keeping earlier screening progress (returning visitor). Opens with the membership at midnight.',
+    launch: async () => {
+      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
+      return '/rooms/screening-room';
+    },
+    admitted: ['screening-room'],
+  },
+  {
+    id: 'casino',
+    label: 'The Grand Casino',
+    detail: 'Opens at 14:00 Jamaica; fresh chips, test controls inside.',
+    launch: async () => {
+      memberAt(atLeast(CASINO_OPENS + MINUTE));
+      return '/rooms/casino';
+    },
+    admitted: ['casino'],
+  },
+  {
+    id: 'gift-vault',
+    label: 'The Gift Vault',
+    detail:
+      'Opens with the membership; three rehearsal compartments (one ready).',
+    launch: async () => {
+      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
+      const { ensureRehearsalVaults } = await import('./office');
+      await ensureRehearsalVaults();
+      return '/rooms/gift-vault';
+    },
+    admitted: ['gift-vault'],
+  },
+  {
+    id: 'correspondence',
+    label: 'My Correspondence',
+    detail:
+      'The correspondence page; deliver rehearsal letters from TEST first.',
+    launch: async () => '/correspondence',
+  },
+  {
     id: 'early-lounge',
     label: 'The Members’ Lounge before the birthday',
     detail:
@@ -516,56 +578,6 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
     },
     admitted: ['lounge'],
     ceremony: ['casino'],
-  },
-  {
-    id: 'screening-journey',
-    label: 'The Screening Room journey (first visit)',
-    detail:
-      'From the Members’ Lounge: the Letter of Admission, the Butler’s escort, the five-second test film, return to your seat. Clears screening progress first.',
-    ceremony: ['screening-room'],
-    launch: async () => {
-      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
-      freshScreening();
-      return '/';
-    },
-  },
-  {
-    id: 'screening-room',
-    label: 'The Private Screening Room',
-    detail:
-      'Seated in the room, keeping earlier screening progress (returning visitor). Opens with the membership at midnight.',
-    launch: async () => {
-      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
-      return '/rooms/screening-room';
-    },
-  },
-  {
-    id: 'casino',
-    label: 'The Grand Casino',
-    detail: 'Opens at 14:00 Jamaica; fresh chips, test controls inside.',
-    launch: async () => {
-      memberAt(atLeast(CASINO_OPENS + MINUTE));
-      return '/rooms/casino';
-    },
-  },
-  {
-    id: 'gift-vault',
-    label: 'The Gift Vault',
-    detail:
-      'Opens with the membership; three rehearsal compartments (one ready).',
-    launch: async () => {
-      memberAt(atLeast(BIRTHDAY + 5 * MINUTE));
-      const { ensureRehearsalVaults } = await import('./office');
-      await ensureRehearsalVaults();
-      return '/rooms/gift-vault';
-    },
-  },
-  {
-    id: 'correspondence',
-    label: 'My Correspondence',
-    detail:
-      'The correspondence page; deliver rehearsal letters from TEST first.',
-    launch: async () => '/correspondence',
   },
 ];
 

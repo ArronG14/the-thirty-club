@@ -232,7 +232,7 @@ export function Lounge({
     club.induct();
     setBriefing(
       loungeBriefing({
-        views: roomViews(now, record),
+        views: roomViews(now, record, ROOMS, journey?.snapshot.rooms),
         record,
         hour: currentHour(),
         arrival: 'induction',
@@ -506,6 +506,7 @@ export function Lounge({
                 <Guide
                   destination={destination}
                   upcoming={upcoming}
+                  more={club.views.some((v) => v.hidden)}
                   onContinue={(id) => enter(id)}
                   onAttention={setEyeOnDoor}
                 />
@@ -589,11 +590,14 @@ export function Lounge({
 function Guide({
   destination,
   upcoming,
+  more,
   onContinue,
   onAttention,
 }: {
   destination: RoomView | null;
   upcoming: RoomView | null;
+  /** Rooms still to be introduced by the Butler (ADR-020). */
+  more: boolean;
   onContinue(room: RoomId): void;
   onAttention(on: boolean): void;
 }) {
@@ -639,7 +643,9 @@ function Guide({
     <section className="guide" aria-labelledby="guide-room">
       <p className="guide__eyebrow">At your leisure</p>
       <p id="guide-room" className="guide__room">
-        Every room is open to you
+        {more
+          ? 'More of the club will be revealed in due course'
+          : 'Every room is open to you'}
       </p>
     </section>
   );

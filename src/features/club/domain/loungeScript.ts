@@ -126,11 +126,20 @@ export function loungeBriefing({
     );
     return { kind: 'later', destination: null, lines, introduces };
   }
+  // Rooms not yet introduced (ADR-020) are never named, only hinted at.
+  if (views.some((view) => view.hidden)) {
+    lines.push(MORE_TO_COME_LINE);
+    return { kind: 'later', destination: null, lines, introduces };
+  }
   lines.push(
     'You have seen everything the club has to offer, Alise. For now. Every room remains at your disposal.',
   );
   return { kind: 'complete', destination: null, lines, introduces };
 }
+
+/** While rooms are still to be introduced: a hint, never a name. */
+export const MORE_TO_COME_LINE =
+  'There is rather more to this club than meets the eye, Alise. I shall write the moment another door is ready for you.';
 
 /** Rung from the lounge. Played in order, then cycled. */
 export const CONCIERGE_LINES: readonly string[] = [

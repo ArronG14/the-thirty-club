@@ -144,8 +144,9 @@ test('production build ships no developer menu or preview bypass', async ({
     page.getByText('Alise, your table is being prepared.'),
   ).toBeVisible();
   await page.goto('/rooms/screening-room?preview=evening');
+  // The journey's gate refuses and names nothing (ADR-020).
   await expect(
-    page.getByRole('heading', { name: 'The Private Screening Room' }),
+    page.getByRole('heading', { name: 'Not this way, Madam.' }),
   ).toBeVisible();
-  await expect(page.getByText('not open yet')).toBeVisible();
+  await expect(page.getByText('Screening Room')).toHaveCount(0);
 });

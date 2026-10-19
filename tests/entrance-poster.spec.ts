@@ -58,6 +58,13 @@ test('reduced motion keeps the lounge still and its ceremony intact', async ({
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await presentMembershipCard(page);
+  // The Screening Room admission, as the device remembers it (ADR-020).
+  await page.addInitScript(() =>
+    localStorage.setItem(
+      'thirty-club:journey',
+      JSON.stringify({ version: 1, admitted: ['screening-room'], pending: [] }),
+    ),
+  );
   await page.clock.install({ time: BIRTHDAY_MORNING });
   await page.goto('/');
   await page.getByRole('button', { name: 'Enter the club' }).click();
@@ -88,6 +95,20 @@ test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
     page,
   }) => {
     await presentMembershipCard(page);
+    // The journey has admitted the Screening Room and the Gift Vault (their
+    // birthday milestones); the preview server has no journey office, so the
+    // device's remembered admissions stand in (ADR-020). The Casino is not
+    // admitted, so it is never named.
+    await page.addInitScript(() =>
+      localStorage.setItem(
+        'thirty-club:journey',
+        JSON.stringify({
+          version: 1,
+          admitted: ['screening-room', 'gift-vault'],
+          pending: [],
+        }),
+      ),
+    );
     // 23:59:57 on 23 October in Kingston; already 05:59:57 on the 24th in London.
     await page.clock.install({ time: new Date('2026-10-24T04:59:57Z') });
     await page.goto('/');
@@ -136,10 +157,11 @@ test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
       page.getByRole('button', { name: 'Accept your membership' }),
     ).toHaveCount(0);
 
-    // The directory: every room listed, locked rooms cannot be entered.
+    // The directory lists only rooms she has been admitted to (ADR-020).
     await page.getByRole('button', { name: 'Members’ Directory' }).click();
     const directory = page.getByRole('dialog', { name: 'Members’ Directory' });
-    await expect(directory.getByText('Opens at 2\u00a0pm')).toBeVisible();
+    await expect(directory).not.toContainText('Grand Casino');
+    await expect(directory).not.toContainText('Privileges');
     // The Gift Vault opens with the membership (ADR-015), so it has a way in;
     // the pre-birthday Departure Lounge remains open to her afterwards.
     await expect(directory.getByRole('button')).toHaveText([
@@ -195,8 +217,11 @@ test.describe('the membership card (ADR-012)', () => {
     ).toHaveCount(0);
     await page.clock.runFor(60 * 60_000);
     await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
-    // A direct visit to a room is refused too: the lounge is not reachable.
+    // A direct visit to a room is refused too, and names nothing (ADR-020).
     await page.goto('/rooms/screening-room');
-    await expect(page.getByText(/not open yet|not ready yet/i)).toBeVisible();
+    await expect(
+      page.getByRole('heading', { name: 'Not this way, Madam.' }),
+    ).toBeVisible();
+    await expect(page.getByText(/Screening Room/)).toHaveCount(0);
   });
 });

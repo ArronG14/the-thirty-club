@@ -39,9 +39,11 @@ Retired with the message collection: `ScreenPlayer`, `MessageList`, `EntranceFil
 
 Guests store it in `localStorage`; Dev Mode / TEST rehearsals store it in the tab's session storage under `thirty-club:owner:` (the existing `progressStorage`), so rehearsals never touch Alise's record. Local and non-authoritative (ADR-003); it unlocks nothing.
 
-## Access (unchanged)
+## Access
 
 The room still opens with the membership presented after 24 October 2026 00:00 Jamaica (`unlock: membership`, ADR-012), through `RoomGate`, on direct navigation, reloads and from the Directory. Nothing in this change alters the gate. LIVE before midnight: "This room is not open yet." LIVE after midnight with no configured film: the poster and "Your screening is being prepared.", no Watch Movie, no `<video>`, no test-film label. Rehearsals and the local dev server use the test film, labelled "Rehearsal · temporary five-second test film" beneath the screen.
+
+**Amended by ADR-020 (birthday journey, branch `feature/birthday-journey`):** the room is now also gated by its journey admission. The `birthday-screening` milestone (24 October 00:00 Jamaica) invites it, the Butler presents its Letter of Admission in the Lounge, and accepting it leads into the same escort, poster, film, return and closing words. The experience itself is unchanged. Admitted, it opens from the Directory and from direct links as before. The Dev Menu launch *The Screening Room journey (first visit)* now starts with the Letter of Admission. See `docs/BIRTHDAY_JOURNEY.md`.
 
 ## Rehearse the complete experience
 
@@ -102,6 +104,8 @@ On the birthday iPhone, in Safari and again from the Home Screen app, on Wi-Fi a
 9. Exit Dev Mode; as a guest before midnight the room is locked; after midnight with no film configured it says "Your screening is being prepared."
 
 Record the iOS version, results and any deviation in BUILD_LOG.md.
+
+**Owner-reported result (19 October 2026, before ADR-020):** the owner personally verified the deployed experience on a real iPhone in Safari: Members' Lounge → the Butler's escort → the 3D cinema → poster → WATCH MOVIE → the **native iPhone fullscreen player** → **automatic return to the cinema** at the end → the **Butler's closing message**. That covers steps 1, 2 and 4. The iOS version and the remaining steps (ringer switch, scrubbing, rotation, Home Screen app, lock/background, reload, airplane mode) were not reported. The birthday film is still being edited in CapCut and is deliberately deferred to a separate task (SR08); the test film was used.
 
 ## Checks and limitations
 

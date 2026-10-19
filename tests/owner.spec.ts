@@ -92,9 +92,11 @@ test('mobile activation, incorrect PIN, room launches, test rewards, reset and e
   await poster(guest);
   await guest.clock.setFixedTime(new Date(2026, 9, 18));
   await guest.goto('/rooms/casino');
+  // LIVE: not admitted, so the gate refuses and names nothing (ADR-020).
   await expect(
-    guest.getByText('This room is not open yet.', { exact: false }),
+    guest.getByRole('heading', { name: 'Not this way, Madam.' }),
   ).toBeVisible();
+  await expect(guest.getByText(/Casino/)).toHaveCount(0);
   await expect(
     guest.getByRole('button', { name: 'Casino test controls' }),
   ).toHaveCount(0);

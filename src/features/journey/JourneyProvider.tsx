@@ -20,6 +20,7 @@ import {
   failureText,
   memberStanding,
 } from '../correspondence/client/correspondenceApi';
+import { simulationActive } from '../rehearsal/mode';
 import { deviceStorage } from '../rehearsal/storage';
 import { acceptAdmission, journeyState } from './client/journeyApi';
 import {
@@ -72,6 +73,14 @@ export function JourneyProvider({
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
+    if (simulationActive) {
+      // A rehearsal launch may have asked for admissions (ADR-018/020).
+      try {
+        await (await import('../rehearsal/office')).applyPendingAdmissions();
+      } catch {
+        // The simulated office reports its own failures; read what exists.
+      }
+    }
     const standing = await memberStanding();
     if (mine !== generation.current) return;
     if (standing.kind === 'owner' || standing.kind === 'needs-membership') {

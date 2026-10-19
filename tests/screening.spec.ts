@@ -9,8 +9,18 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
       null) as typeof HTMLCanvasElement.prototype.getContext;
   });
   await page.goto('/rooms/screening-room');
-  await expect(page.getByText(/opens once your membership/)).toBeVisible();
+  // Not admitted (ADR-020): refused, and the room is not named.
+  await expect(
+    page.getByRole('heading', { name: 'Not this way, Madam.' }),
+  ).toBeVisible();
+  await expect(page.getByText(/Screening Room/)).toHaveCount(0);
   await page.evaluate((stamp) => {
+    // The admission the office confirmed, as the device remembers it (the
+    // preview server has no journey office).
+    localStorage.setItem(
+      'thirty-club:journey',
+      JSON.stringify({ version: 1, admitted: ['screening-room'], pending: [] }),
+    );
     localStorage.setItem(
       'thirty-club:membership',
       JSON.stringify({ version: 1, inductedAt: stamp, rooms: {} }),

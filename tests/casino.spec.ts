@@ -23,6 +23,12 @@ async function arrive(
         'thirty-club:membership',
         JSON.stringify({ version: 1, inductedAt: seen, rooms: {} }),
       );
+      // The preview server has no journey office: what the device remembers
+      // once the office has confirmed the Casino admission (ADR-020).
+      localStorage.setItem(
+        'thirty-club:journey',
+        JSON.stringify({ version: 1, admitted: ['casino'], pending: [] }),
+      );
       const e = extra as { ledger?: unknown; casino?: unknown } | null;
       if (e?.ledger)
         localStorage.setItem('thirty-club:prizes', JSON.stringify(e.ledger));
@@ -163,6 +169,10 @@ test.describe('grand casino', () => {
         JSON.stringify({ version: 1, inductedAt: seen, rooms: {} }),
       );
       localStorage.setItem('thirty-club:prizes', '{not json');
+      localStorage.setItem(
+        'thirty-club:journey',
+        JSON.stringify({ version: 1, admitted: ['casino'], pending: [] }),
+      );
       localStorage.setItem('thirty-club:casino', '[1,2,3]');
     }, SEEN);
     await page.goto('/rooms/casino');

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link, useNavigate } from 'react-router';
 import type { LetterAction } from '../../../shared/journey/contract';
 import { enterLabel } from '../../../shared/journey/templates';
 import { findRoom } from '../../club/domain/rooms';
@@ -26,6 +27,7 @@ export function LetterActionButton({
   preview?: boolean;
 }) {
   const journey = useJourney();
+  const navigate = useNavigate();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const state = journey?.stateOf(action.roomId) ?? 'locked';
@@ -44,13 +46,13 @@ export function LetterActionButton({
     if (state === 'locked') return null;
     const enter = async () => {
       if (state === 'admitted') {
-        window.location.assign('/lounge');
+        navigate('/lounge');
         return;
       }
       setBusy(true);
       setError(null);
       const outcome = await journey!.accept('lounge');
-      if (outcome.ok) window.location.assign('/lounge');
+      if (outcome.ok) navigate('/lounge');
       else {
         setBusy(false);
         setError(outcome.message);
@@ -79,20 +81,20 @@ export function LetterActionButton({
   if (state === 'admitted')
     return (
       <div className="journey-action">
-        <a className="journey-action__button" href={roomPath(action.roomId)}>
+        <Link className="journey-action__button" to={roomPath(action.roomId)}>
           {action.kind === 'return' ? action.label : enterLabel(action.roomId)}
-        </a>
+        </Link>
       </div>
     );
   if (action.kind === 'admission' && state === 'invited')
     return (
       <div className="journey-action">
-        <a
+        <Link
           className="journey-action__button"
-          href={`/lounge?admission=${action.roomId}`}
+          to={`/lounge?admission=${action.roomId}`}
         >
           {action.label}
-        </a>
+        </Link>
       </div>
     );
   return null;

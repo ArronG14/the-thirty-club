@@ -5,7 +5,11 @@
  * the same `/api/v1` handlers, as the simulated owner.
  */
 import type { OwnerVault } from '../../shared/concierge/types';
-import type { AdmissionRoomId } from '../../shared/journey/contract';
+import {
+  isAdmissionRoom,
+  type AdmissionRoomId,
+} from '../../shared/journey/contract';
+import { OWNER_PREFIX } from '../owner/session';
 import { simulationActive } from './mode';
 
 export class SimulationUnavailable extends Error {}
@@ -85,6 +89,29 @@ export async function rehearseAdmissions(
     await simOwner(`/owner/journey/rooms/${room}/invite`, {});
   for (const room of admitted)
     await simMember(`/journey/admissions/${room}/accept`, {});
+}
+
+/** Where a launch leaves the admissions its destination page applies. */
+export const PENDING_ADMISSIONS_KEY = `${OWNER_PREFIX}journey-admissions`;
+
+/**
+ * Applies the admissions a launch asked for (once), on the page the launch
+ * opened. Called by the journey provider before its first read.
+ */
+export async function applyPendingAdmissions() {
+  let pending: { admitted?: unknown; ceremony?: unknown } | null;
+  try {
+    pending = JSON.parse(
+      sessionStorage.getItem(PENDING_ADMISSIONS_KEY) ?? 'null',
+    ) as typeof pending;
+    sessionStorage.removeItem(PENDING_ADMISSIONS_KEY);
+  } catch {
+    return;
+  }
+  if (!pending) return;
+  const rooms = (value: unknown) =>
+    Array.isArray(value) ? value.filter(isAdmissionRoom) : [];
+  await rehearseAdmissions(rooms(pending.admitted), rooms(pending.ceremony));
 }
 
 /** Triggers a journey milestone now, as the owner would from TEST. */
