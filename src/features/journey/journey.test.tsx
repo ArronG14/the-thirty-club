@@ -63,6 +63,7 @@ function journeyWith(
     stateOf: (room) => all[room],
     accept,
     refresh: vi.fn(),
+    want: vi.fn(),
   };
 }
 
@@ -405,5 +406,43 @@ describe('the device cache', () => {
         JSON.stringify({ version: 1, admitted: ['kitchen', 'casino'] }),
       )!.rooms,
     ).toEqual({ ...LOCKED_EVERYWHERE, casino: 'admitted' });
+  });
+});
+
+describe('Jamaica time in the Owner Control Centre', () => {
+  it('converts the owner’s Jamaica wall-clock time, whatever the browser’s zone', async () => {
+    const { wallTimeToInstant, instantToWall } =
+      await import('../../shared/concierge/time');
+    // Jamaica keeps UTC−5 all year (no daylight saving).
+    expect(wallTimeToInstant('2026-10-23T09:00', 'America/Jamaica')).toBe(
+      '2026-10-23T14:00:00.000Z',
+    );
+    expect(wallTimeToInstant('2026-10-24T00:00', 'America/Jamaica')).toBe(
+      '2026-10-24T05:00:00.000Z',
+    );
+    expect(instantToWall('2026-10-24T15:30:00.000Z', 'America/Jamaica')).toBe(
+      '2026-10-24T10:30',
+    );
+    // London is on BST until 25 October: 09:00 Jamaica is 15:00 UK.
+    expect(instantToWall('2026-10-23T14:00:00.000Z', 'Europe/London')).toBe(
+      '2026-10-23T15:00',
+    );
+  });
+});
+
+describe('the Butler while rooms are still to be introduced', () => {
+  it('hints at more to come and never says she has seen everything', async () => {
+    const { loungeBriefing, MORE_TO_COME_LINE } =
+      await import('../club/domain/loungeScript');
+    const at = Date.parse('2026-10-24T20:00:00Z');
+    const briefing = loungeBriefing({
+      views: roomViews(at, inductedRecord, ROOMS, LOCKED_EVERYWHERE),
+      record: inductedRecord,
+      hour: 15,
+      arrival: 'return',
+    });
+    expect(briefing.lines).toContain(MORE_TO_COME_LINE);
+    expect(briefing.lines.join(' ')).not.toMatch(/seen everything/);
+    expect(briefing.destination).toBeNull();
   });
 });

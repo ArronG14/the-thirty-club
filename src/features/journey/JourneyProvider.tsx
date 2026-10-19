@@ -41,6 +41,21 @@ import {
 
 const REFRESH_MS = 60_000;
 
+let launchAdmissions: Promise<void> | null = null;
+/**
+ * Rehearsal pages only: the admissions a Dev Menu launch asked for
+ * (ADR-018/020), applied once per page as soon as it mounts, whether or not
+ * the page reads the journey, so the destination is in the launched state.
+ */
+function applyLaunchAdmissions(): Promise<void> {
+  launchAdmissions ??= simulationActive
+    ? import('../rehearsal/office')
+        .then((office) => office.applyPendingAdmissions())
+        .catch(() => undefined)
+    : Promise.resolve();
+  return launchAdmissions;
+}
+
 function readCache(): JourneySnapshot | null {
   try {
     return deserialise(deviceStorage().getItem(JOURNEY_CACHE_KEY));
@@ -69,18 +84,14 @@ export function JourneyProvider({
     () => readCache() ?? EMPTY_SNAPSHOT,
   );
   const [status, setStatus] = useState<JourneyStatus>('loading');
+  // Nothing is read until a page actually consults the journey.
+  const [wanted, setWanted] = useState(false);
+  const want = useCallback(() => setWanted(true), []);
   const generation = useRef(0);
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
-    if (simulationActive) {
-      // A rehearsal launch may have asked for admissions (ADR-018/020).
-      try {
-        await (await import('../rehearsal/office')).applyPendingAdmissions();
-      } catch {
-        // The simulated office reports its own failures; read what exists.
-      }
-    }
+    await applyLaunchAdmissions();
     const standing = await memberStanding();
     if (mine !== generation.current) return;
     if (standing.kind === 'owner' || standing.kind === 'needs-membership') {
@@ -109,7 +120,11 @@ export function JourneyProvider({
   }, []);
 
   useEffect(() => {
-    if (!enabled) return;
+    if (enabled) void applyLaunchAdmissions();
+  }, [enabled]);
+
+  useEffect(() => {
+    if (!enabled || !wanted) return;
     // The first read; its state updates arrive after the network answers.
     // eslint-disable-next-line react-hooks/set-state-in-effect
     void load();
@@ -126,7 +141,7 @@ export function JourneyProvider({
       window.removeEventListener('focus', refresh);
       window.removeEventListener('online', refresh);
     };
-  }, [enabled, load]);
+  }, [enabled, wanted, load]);
 
   const accept = useCallback(
     async (room: AdmissionRoomId): Promise<AcceptOutcome> => {
@@ -152,8 +167,9 @@ export function JourneyProvider({
       stateOf: (room) => snapshot.rooms[room],
       accept,
       refresh: () => void load(),
+      want,
     }),
-    [status, snapshot, accept, load],
+    [status, snapshot, accept, load, want],
   );
 
   return (

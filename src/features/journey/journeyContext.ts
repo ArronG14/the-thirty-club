@@ -1,5 +1,5 @@
 /** The journey's React context (ADR-020); the provider is JourneyProvider. */
-import { createContext, useContext } from 'react';
+import { createContext, useContext, useEffect } from 'react';
 import type {
   AdmissionRoomId,
   AdmissionState,
@@ -25,11 +25,20 @@ export interface JourneyValue {
   stateOf(room: AdmissionRoomId): AdmissionState;
   accept(room: AdmissionRoomId): Promise<AcceptOutcome>;
   refresh(): void;
+  /**
+   * Asks the provider to start reading the journey. Stable. Called by
+   * `useJourney`, so pages that never consult the journey (the locked
+   * doors) make no request for it.
+   */
+  want(): void;
 }
 
 export const JourneyContext = createContext<JourneyValue | null>(null);
 
 /** The journey, or null outside the application's provider. */
 export function useJourney(): JourneyValue | null {
-  return useContext(JourneyContext);
+  const journey = useContext(JourneyContext);
+  const want = journey?.want;
+  useEffect(() => want?.(), [want]);
+  return journey;
 }

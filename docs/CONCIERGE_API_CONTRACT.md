@@ -163,3 +163,11 @@ The vault adds `POST /auth/member/concierge`, `GET /vaults`, `POST /vaults/open`
 ## Correspondence Desk (additive)
 
 Member routes `GET /correspondence`, `GET /correspondence/summary` and `POST /correspondence/:id/{open,thank,reply}`, and owner routes under `/owner/correspondence`, are specified in `docs/CORRESPONDENCE_DESK.md`. Types (LetterInput, LetterSms, MemberLetter, MemberLetterReply, CorrespondenceSummary, OwnerLetter, OwnerLetterReply, OwnerCorrespondence) are in the same shared TypeScript file. `ScheduledMessage.category` gains `correspondence-alise` and `correspondence-arron`. The frontend now consumes an owner invitation from the fragment `/correspondence#invitation=<token>`, removing it from the address bar before the exchange. Existing routes are unchanged.
+
+## Birthday journey (additive, ADR-020)
+
+Full contract: `docs/BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md`; types `src/shared/journey/contract.ts`.
+
+- Member: `GET /api/v1/journey` → `{ now, admissions: MemberAdmission[] }` (invited and admitted rooms only); `POST /api/v1/journey/admissions/:roomId/accept` `{}` → `{ admission, duplicate }` (201, then 200 with `duplicate: true`); `403 not-open` when not invited.
+- Owner: `GET /api/v1/owner/journey`; `POST /owner/journey/milestones`; `PATCH /owner/journey/milestones/:key`; `POST /owner/journey/milestones/:key/{fire|hold|resume|retry}`; `POST /owner/journey/rooms/:roomId/{invite|withdraw}`; `POST /owner/journey/events/:id/retry`.
+- Correspondence letters (`MemberLetter`, `OwnerLetter`) gain an optional `action` `{ kind: 'admission' | 'return', roomId, label }`; owner letters also gain `journeyRef`.

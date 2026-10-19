@@ -217,7 +217,13 @@ test('Entrance letters: unread on the step, gone once opened, kept in My Corresp
   await expect(page.locator('.cd-paper__body')).toBeVisible({ timeout: 10000 });
   await shot(page, '23-desk-letter-open');
   await page.locator('.bs-return').click();
-  await expect(envelope).toHaveCount(0);
+  // The Desk letter has been read. "Before departure" (21 Oct) is after the
+  // default early-membership milestone (20 Oct 13:00 Jamaica, ADR-020), so
+  // the only letter still waiting is the Butler's Lounge invitation.
+  await expect(envelope).toHaveAttribute(
+    'aria-label',
+    'Open your new letter: The Members’ Lounge is open to you',
+  );
 
   // Both remain in My Correspondence.
   await page.getByRole('button', { name: 'Ring for service' }).first().click();
@@ -227,7 +233,7 @@ test('Entrance letters: unread on the step, gone once opened, kept in My Corresp
   await shot(page, '24-my-correspondence');
 });
 
-test('A letter that invites her to a locked Casino says when it opens', async ({
+test('A letter that mentions a Casino she has not been admitted to names nothing to her', async ({
   page,
 }) => {
   await unlock(page);
@@ -254,11 +260,12 @@ test('A letter that invites her to a locked Casino says when it opens', async ({
     .getByRole('button', { name: /Break the seal|Open the letter/ })
     .first()
     .click();
-  const rooms = page.locator('.cd-rooms');
-  await expect(rooms).toContainText('The Grand Casino is not open yet.', {
+  await expect(page.locator('.cd-paper__body')).toBeVisible({
     timeout: 10000,
   });
-  await expect(rooms).toContainText('opens at 2 pm, Jamaica time');
+  // ADR-020: not admitted, so no way in and no opening time; only the
+  // owner's rehearsal launch is offered in Dev Mode.
+  await expect(page.getByText(/is not open yet/)).toHaveCount(0);
   await expect(
     page.getByRole('link', { name: /Enter the Grand Casino/ }),
   ).toHaveCount(0);

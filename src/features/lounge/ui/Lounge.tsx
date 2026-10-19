@@ -288,7 +288,14 @@ export function Lounge({
   const service = useButlerService({
     place: 'lounge',
     say: useCallback((text: string) => say([text], 'concierge'), [say]),
-    enabled: club.inducted && overlay === null && letter === null,
+    // Never over a Letter of Admission (or the moment before it is
+    // presented) or during an escort.
+    enabled:
+      club.inducted &&
+      overlay === null &&
+      letter === null &&
+      escort === null &&
+      (letterReady || pending.length === 0),
     delayMs: welcomed ? 9000 : 3000,
   });
 

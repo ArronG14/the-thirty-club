@@ -393,8 +393,12 @@ async function syncAdmissions(
     .filter(([, progress]) => progress?.unlockedAt)
     .map(([room]) => room)
     .filter(isAdmissionRoom);
-  // Inducted means she is already a member of the Lounge.
+  // Inducted means she is already a member of the Lounge; past the default
+  // Casino milestone she has accepted that letter too, so a later moment
+  // starts with only its own ceremonies waiting.
   if (record.inductedAt) open.push('lounge');
+  if (record.inductedAt && rehearsalNow() >= CASINO_MILESTONE)
+    open.push('casino');
   const admitted = [...new Set([...open, ...extra])].filter(
     (room) => !ceremony.includes(room),
   );
@@ -553,7 +557,7 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
   },
   {
     id: 'early-lounge',
-    label: 'The Members’ Lounge before the birthday',
+    label: 'Founding membership: the Lounge before the birthday',
     detail:
       'Tuesday 20 Oct after 13:00 Jamaica: the early-membership letter at the locked doors; ENTER THE MEMBERS’ LOUNGE accepts it and the founding-membership induction follows.',
     launch: async () => {
@@ -565,7 +569,7 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
   },
   {
     id: 'casino-admission',
-    label: 'The Grand Casino admission ceremony',
+    label: 'Admission ceremony: the Grand Casino',
     detail:
       'Friday 23 Oct after 09:00 Jamaica, as a founding member: the Butler’s summons at the doors, then the Letter of Admission in the Lounge and the escort into the Casino.',
     launch: async () => {

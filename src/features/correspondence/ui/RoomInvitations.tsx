@@ -41,7 +41,10 @@ export function RoomInvitations({ text }: { text: string }) {
   );
   const rooms = mentionedRooms(text)
     .map((id) => views.find((v) => v.room.id === id))
-    .filter((v): v is RoomView => Boolean(v) && !v!.hidden);
+    .filter((v): v is RoomView => Boolean(v))
+    // A room not yet introduced is never named to her; a rehearsal still
+    // offers the owner its launch (below).
+    .filter((v) => !v.hidden || (simulationActive && v.room.built));
   if (rooms.length === 0) return null;
   return (
     <aside className="cd-rooms" aria-label="Rooms mentioned in this letter">
@@ -55,10 +58,12 @@ export function RoomInvitations({ text }: { text: string }) {
               </a>
             ) : (
               <>
-                <p>
-                  <strong>{view.room.name}</strong> is not open yet.{' '}
-                  {opening(view)}
-                </p>
+                {!view.hidden && (
+                  <p>
+                    <strong>{view.room.name}</strong> is not open yet.{' '}
+                    {opening(view)}
+                  </p>
+                )}
                 {simulationActive && view.room.built && (
                   <button
                     type="button"

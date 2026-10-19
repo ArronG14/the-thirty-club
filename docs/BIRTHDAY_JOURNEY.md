@@ -7,31 +7,31 @@ The club now reveals itself through the Butler. Every exclusive room is **LOCKED
 
 ## What exists
 
-| Concern | Where |
-| --- | --- |
-| Schema, RPC `ttc_journey_action`, `ttc_journey_publish`, `ttc_room_admitted`, hook point, default milestones | `supabase/migrations/20261022090000_birthday_journey.sql` |
-| HTTP routes, event publishing, the round | `netlify/backend/journey.ts` (routes wired in `api.ts`; round in `scheduledRound.ts` → `netlify/functions/concierge-dispatch.ts`) |
-| Shared types and the Butler's words (PROVISIONAL) | `src/shared/journey/contract.ts`, `src/shared/journey/templates.ts` |
-| Device: admissions for every page, offline memory | `src/features/journey/JourneyProvider.tsx`, `journeyContext.ts`, `domain/access.ts` |
-| Routing enforcement | `src/features/journey/ui/AdmissionGate.tsx` (used by `club/ui/RoomGate.tsx` and the keyless `/vault`) |
-| Letter of Admission | `src/features/journey/ui/AdmissionLetter.tsx`, presented by `lounge/ui/Lounge.tsx` |
-| Letter buttons (ENTER / RETURN) | `src/features/journey/ui/LetterActionButton.tsx`, in `correspondence/ui/LetterPresentation.tsx` |
-| The Lounge before the birthday doors | `/lounge` → `src/features/lounge/ui/LoungeRoute.tsx` |
-| Owner controls | Control Centre → Butler's Office → **journey** (`src/features/butlers-office/JourneyOffice.tsx`) |
-| Rehearsal | `src/features/rehearsal/engine.ts` (scenarios and launches), `office.ts` (`rehearseAdmissions`, `fireRehearsalMilestone`) |
-| Tests | `netlify/backend/journey.test.ts` (PGlite with every migration), `src/features/journey/journey.test.tsx` |
+| Concern                                                                                                      | Where                                                                                                                             |
+| ------------------------------------------------------------------------------------------------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
+| Schema, RPC `ttc_journey_action`, `ttc_journey_publish`, `ttc_room_admitted`, hook point, default milestones | `supabase/migrations/20261022090000_birthday_journey.sql`                                                                         |
+| HTTP routes, event publishing, the round                                                                     | `netlify/backend/journey.ts` (routes wired in `api.ts`; round in `scheduledRound.ts` → `netlify/functions/concierge-dispatch.ts`) |
+| Shared types and the Butler's words (PROVISIONAL)                                                            | `src/shared/journey/contract.ts`, `src/shared/journey/templates.ts`                                                               |
+| Device: admissions for every page, offline memory                                                            | `src/features/journey/JourneyProvider.tsx`, `journeyContext.ts`, `domain/access.ts`                                               |
+| Routing enforcement                                                                                          | `src/features/journey/ui/AdmissionGate.tsx` (used by `club/ui/RoomGate.tsx` and the keyless `/vault`)                             |
+| Letter of Admission                                                                                          | `src/features/journey/ui/AdmissionLetter.tsx`, presented by `lounge/ui/Lounge.tsx`                                                |
+| Letter buttons (ENTER / RETURN)                                                                              | `src/features/journey/ui/LetterActionButton.tsx`, in `correspondence/ui/LetterPresentation.tsx`                                   |
+| The Lounge before the birthday doors                                                                         | `/lounge` → `src/features/lounge/ui/LoungeRoute.tsx`                                                                              |
+| Owner controls                                                                                               | Control Centre → Butler's Office → **journey** (`src/features/butlers-office/JourneyOffice.tsx`)                                  |
+| Rehearsal                                                                                                    | `src/features/rehearsal/engine.ts` (scenarios and launches), `office.ts` (`rehearseAdmissions`, `fireRehearsalMilestone`)         |
+| Tests                                                                                                        | `netlify/backend/journey.test.ts` (PGlite with every migration), `src/features/journey/journey.test.tsx`                          |
 
 ## Rooms
 
-| Room | Admission | Notes |
-| --- | --- | --- |
-| Grand Entrance | none | Midnight doors and membership card unchanged (ADR-006/012). |
-| Members' Lounge | `lounge` | Admitted from the Butler's letter (ENTER THE MEMBERS' LOUNGE). `/lounge` opens when the Lounge is admitted, when a Letter of Admission is waiting, or once the membership is presented. After the birthday the doors still lead there. |
-| Private Screening Room | `screening-room` | Experience unchanged (ADR-019); only the gate and the letter before the escort are new. |
-| Grand Casino | `casino` | Codex owns spins and prizes; the journey only gates and writes letters. |
-| Gift Vault | `gift-vault` | `/rooms/gift-vault` and a keyless `/vault` need admission. A physical NFC key (`/v/<token>`, or a key held from a scan) still goes straight in by design (ADR-015); the server decides each compartment. |
-| Privileges Collection | `privileges` | Not built; once admitted it reads "Being prepared". |
-| Departure Lounge | none | Keeps its own schedule and credential (ADR-012). |
+| Room                   | Admission        | Notes                                                                                                                                                                                                                                  |
+| ---------------------- | ---------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Grand Entrance         | none             | Midnight doors and membership card unchanged (ADR-006/012).                                                                                                                                                                            |
+| Members' Lounge        | `lounge`         | Admitted from the Butler's letter (ENTER THE MEMBERS' LOUNGE). `/lounge` opens when the Lounge is admitted, when a Letter of Admission is waiting, or once the membership is presented. After the birthday the doors still lead there. |
+| Private Screening Room | `screening-room` | Experience unchanged (ADR-019); only the gate and the letter before the escort are new.                                                                                                                                                |
+| Grand Casino           | `casino`         | Codex owns spins and prizes; the journey only gates and writes letters.                                                                                                                                                                |
+| Gift Vault             | `gift-vault`     | `/rooms/gift-vault` and a keyless `/vault` need admission. A physical NFC key (`/v/<token>`, or a key held from a scan) still goes straight in by design (ADR-015); the server decides each compartment.                               |
+| Privileges Collection  | `privileges`     | Not built; once admitted it reads "Being prepared".                                                                                                                                                                                    |
+| Departure Lounge       | none             | Keeps its own schedule and credential (ADR-012).                                                                                                                                                                                       |
 
 LOCKED rooms are never named to her: not in the Directory, the 3D directory board, the doorway engraving (it reads "Private"), letter room mentions or the gate notice. INVITED rooms stay hidden; a deep link leads to `/lounge?admission=<room>`. ADMITTED rooms behave as before. An admission can never be revoked. Withdrawing an invitation is only possible before she accepts.
 
@@ -39,18 +39,18 @@ LOCKED rooms are never named to her: not in the Directory, the 3D directory boar
 
 Seeded with `on conflict do nothing`, so an owner's edits are never overwritten.
 
-| Key | When (Jamaica) | Does | Seeded |
-| --- | --- | --- | --- |
-| `early-membership` | Tue 20 Oct 13:00 | Invite the Members' Lounge (founding membership) | **armed** |
-| `departure-ugg` | Thu 22 Oct 03:00 | Butler letter (wording provisional) | held |
-| `departure-privileges` | Thu 22 Oct 08:00 | Butler note pointing to the Departure Lounge (which releases the privileges itself) | held |
-| `departure-airpods` | Thu 22 Oct 09:00 | Butler hint for the hidden NFC tag | held |
-| `casino-opening` | Fri 23 Oct 09:00 | Invite the Grand Casino | **armed** |
-| `casino-opening-spins` | Fri 23 Oct 09:00 | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook | held |
-| `casino-evening-mystery` | Fri 23 Oct 20:00 | Butler letter with RETURN TO THE GRAND CASINO | held |
-| `birthday-screening` | Sat 24 Oct 00:00 | Invite the Private Screening Room | **armed** |
-| `birthday-vault` | Sat 24 Oct 00:00 | Invite the Gift Vault | **armed** |
-| `birthday-breakfast` | Sat 24 Oct 10:30 | Butler letter "Breakfast is served" | held |
+| Key                      | When (Jamaica)   | Does                                                                                | Seeded    |
+| ------------------------ | ---------------- | ----------------------------------------------------------------------------------- | --------- |
+| `early-membership`       | Tue 20 Oct 13:00 | Invite the Members' Lounge (founding membership)                                    | **armed** |
+| `departure-ugg`          | Thu 22 Oct 03:00 | Butler letter (wording provisional)                                                 | held      |
+| `departure-privileges`   | Thu 22 Oct 08:00 | Butler note pointing to the Departure Lounge (which releases the privileges itself) | held      |
+| `departure-airpods`      | Thu 22 Oct 09:00 | Butler hint for the hidden NFC tag                                                  | held      |
+| `casino-opening`         | Fri 23 Oct 09:00 | Invite the Grand Casino                                                             | **armed** |
+| `casino-opening-spins`   | Fri 23 Oct 09:00 | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook         | held      |
+| `casino-evening-mystery` | Fri 23 Oct 20:00 | Butler letter with RETURN TO THE GRAND CASINO                                       | held      |
+| `birthday-screening`     | Sat 24 Oct 00:00 | Invite the Private Screening Room                                                   | **armed** |
+| `birthday-vault`         | Sat 24 Oct 00:00 | Invite the Gift Vault                                                               | **armed** |
+| `birthday-breakfast`     | Sat 24 Oct 10:30 | Butler letter "Breakfast is served"                                                 | held      |
 
 Held milestones carry provisional wording or depend on Codex. Review each one, then **Resume** it. Change times in the journey tab. If the migration is applied after a milestone's time, that milestone fires at the next round.
 
@@ -79,9 +79,9 @@ Status words: Scheduled, Held, Failed, Triggered, Delivered (in-app), Opened, Co
 
 Dev Menu (PIN), or TEST → Rehearsal:
 
-1. **Early membership**: scenario *Early membership* (20 Oct 12:59:30 Jamaica). At 13:00 the Butler's letter arrives at the locked doors. Open it → **ENTER THE MEMBERS' LOUNGE** → the Lounge and the founding-membership induction. Launch *The Members' Lounge before the birthday* to start straight after 13:00.
-2. **Casino**: launch *The Grand Casino admission ceremony* (summons at the doors → Lounge → Letter of Admission → **ENTER THE GRAND CASINO** → escort). Alternatively, use scenario *Casino opening*: the milestone fires at 09:00 while you sit in the Lounge.
-3. **Screening Room**: launch *The Screening Room journey (first visit)*. The Letter of Admission comes first, then the existing escort, film, return and closing words.
+1. **Early membership**: scenario _Early membership_ (20 Oct 12:59:30 Jamaica). At 13:00 the Butler's letter arrives at the locked doors. Open it → **ENTER THE MEMBERS' LOUNGE** → the Lounge and the founding-membership induction. Launch _The Members' Lounge before the birthday_ to start straight after 13:00.
+2. **Casino**: launch _Admission ceremony: the Grand Casino_ (summons at the doors → Lounge → Letter of Admission → **ENTER THE GRAND CASINO** → escort). Alternatively, use scenario _Casino opening_: the milestone fires at 09:00 while you sit in the Lounge.
+3. **Screening Room**: launch _The Screening Room journey (first visit)_. The Letter of Admission comes first, then the existing escort, film, return and closing words.
 4. **New spins** (until Codex's Casino publishes events): in TEST the event inbox can be exercised from the backend tests. After Codex's work lands, the spins arrive as "Additional spins credited" with **RETURN TO THE GRAND CASINO**.
 5. **Milestone controls**: TEST → Office → journey. Hold, move, trigger or resume milestones against the rehearsal clock.
 

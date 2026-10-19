@@ -17,11 +17,33 @@ export interface VaultArrivalState {
   vaultKey?: string;
 }
 
+/**
+ * This tab arrived with a physical key (ADR-020). The vault consumes the key
+ * once it opens a compartment, so the tab remembers the arrival: a reload or
+ * a return within the same visit is not sent away by the admission gate.
+ */
+const KEY_ARRIVAL = 'thirty-club:vault-key-arrival';
+function rememberKeyArrival() {
+  try {
+    sessionStorage.setItem(KEY_ARRIVAL, '1');
+  } catch {
+    // Without session storage the history state still carries the key.
+  }
+}
+function arrivedWithKey(): boolean {
+  try {
+    return sessionStorage.getItem(KEY_ARRIVAL) === '1';
+  } catch {
+    return false;
+  }
+}
+
 export function VaultKeyArrival() {
   const { token = '' } = useParams();
   const plausible = isPlausibleVaultToken(token);
   useEffect(() => {
     if (plausible) holdKey(token);
+    rememberKeyArrival();
   }, [plausible, token]);
   // An implausible token still goes to the vault, which explains kindly.
   return (
@@ -48,7 +70,7 @@ export function VaultRoute() {
   const arrival =
     (location.state as VaultArrivalState | null)?.vaultKey ?? null;
   const vault = <GiftVault mode={{ kind: 'member', arrivalKey: arrival }} />;
-  if (arrival || heldKey()) return vault;
+  if (arrival || heldKey() || arrivedWithKey()) return vault;
   return <AdmissionGate roomId="gift-vault">{vault}</AdmissionGate>;
 }
 

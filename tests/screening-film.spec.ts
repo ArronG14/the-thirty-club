@@ -100,13 +100,16 @@ test('the full journey: escort, introduction, real film, closing words, encore',
   await launch(page, /^The Screening Room journey/);
   await expect(page.locator('.lounge')).toBeVisible({ timeout: 60000 });
 
-  // Stage A: the Butler's escort.
-  const continueButton = page.getByRole('button', {
-    name: 'Continue your evening',
+  // Stage A: the Letter of Admission (ADR-020), then the Butler's escort.
+  const letter = page.getByRole('dialog', {
+    name: 'The Private Screening Room',
   });
-  await expect(continueButton).toBeVisible({ timeout: 30000 });
+  await expect(letter).toBeVisible({ timeout: 30000 });
+  await shot(page, '00-letter-of-admission', 900);
   const started = Date.now();
-  await continueButton.click();
+  await letter
+    .getByRole('button', { name: 'ENTER THE PRIVATE SCREENING ROOM' })
+    .click();
   await expect(
     page.getByText('This way, Madam. Your seat is ready.'),
   ).toBeVisible();
@@ -209,8 +212,8 @@ test('leaving early keeps her place; refresh resumes; no false completion', asyn
   page,
 }) => {
   await unlock(page);
-  await launch(page, /^The Screening Room journey/);
-  await page.goto('/rooms/screening-room');
+  await launch(page, /^The Private Screening Room/);
+  await expect(page.locator('.cinema')).toBeVisible({ timeout: 30000 });
   await page.getByRole('button', { name: 'Watch Movie' }).click();
   await expect.poll(() => time(page), { timeout: 10000 }).toBeGreaterThan(1.6);
   await closePlayer(page);
@@ -258,13 +261,22 @@ test('LIVE: no early unlock, no test film for Alise, rehearsal records stay apar
   // The night before the birthday: the room is locked.
   await page.clock.setFixedTime(new Date('2026-10-24T04:30:00Z'));
   await page.goto('/rooms/screening-room');
-  await expect(page.getByText(/opens once your membership/)).toBeVisible();
+  // Not admitted (ADR-020): refused without naming the room.
+  await expect(
+    page.getByRole('heading', { name: 'Not this way, Madam.' }),
+  ).toBeVisible();
   await expect(page.locator('video')).toHaveCount(0);
 
   // After midnight, inducted: the room opens but the birthday film is not
   // configured, so nothing pretends to be her screening.
   await page.clock.setFixedTime(new Date('2026-10-24T06:00:00Z'));
   await page.evaluate((stamp) => {
+    // Admitted by the journey, as the device remembers it (the preview
+    // server has no journey office).
+    localStorage.setItem(
+      'thirty-club:journey',
+      JSON.stringify({ version: 1, admitted: ['screening-room'], pending: [] }),
+    );
     localStorage.setItem(
       'thirty-club:membership',
       JSON.stringify({ version: 1, inductedAt: stamp, rooms: {} }),

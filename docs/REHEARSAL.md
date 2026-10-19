@@ -68,3 +68,9 @@ Launches never bypass a gate. They move the rehearsal clock forward to when the 
 - The simulated office is per browser. Two devices never share a rehearsal.
 - Owner sign-in inside TEST is simulated (no password). The LIVE password is the real one.
 - The Casino still plays slots locally; in rehearsal, "Simulate a Casino jackpot" records the jackpot in the rehearsal prize ledger and releases the casino-bound compartment in the simulated vault, as the server would after a recorded jackpot.
+
+## The birthday journey (ADR-020)
+
+The journey's tables and RPC run in the simulated office like everything else. Its milestones follow the rehearsal clock, so moving the clock past 09:00 Jamaica on Friday introduces the Casino, and they appear on the TEST timeline as "Journey: …". Launches and scenarios declare the admissions their moment includes. The page a launch opens applies them through the real invite/accept actions before its first journey read, so they never depend on the simulated database flushing to IndexedDB before navigation. Ceremony launches (_The Members' Lounge before the birthday_, _Admission ceremony: the Grand Casino_, _The Screening Room journey_) invite without accepting, so the Letter of Admission can be rehearsed. A rehearsal may restart a ceremony; the real office never can. Owner controls: TEST → Office → journey. Browser test: `tests/journey.spec.ts` (in `playwright.rehearsal.config.ts`).
+
+Observed while testing: under a frozen Playwright clock (`page.clock.setFixedTime`) the simulated database's IndexedDB flush does not complete before the next page, so that page rebuilds a fresh simulated office. This is why launches apply admissions on arrival. Other simulated state written just before a navigation (seeded vault compartments, delivered letters) is subject to the same effect in such tests. Normal browsers with a running clock were not observed to lose data.
