@@ -6,7 +6,14 @@ import {
   useRef,
   useState,
 } from 'react';
-import { useNavigate } from 'react-router';
+import { useLocation, useNavigate } from 'react-router';
+import {
+  isAdmissionRoom,
+  type AdmissionRoomId,
+} from '../../../shared/journey/contract';
+import { ADMISSION_ESCORT_LINE } from '../../../shared/journey/templates';
+import { useJourney } from '../../journey/journeyContext';
+import { AdmissionLetter } from '../../journey/ui/AdmissionLetter';
 import {
   inductMember,
   nextOpening,
@@ -53,9 +60,14 @@ const ESCORT_MS = 2300;
 const ESCORT_REDUCED_MS = 400;
 
 const SCREENING = findRoom('screening-room')!;
-const DIRECTORY_NAMES = ROOMS.map((room) =>
-  room.name.replace(/^The /, '').replace('Private ', ''),
-);
+const directoryNames = (views: readonly RoomView[]) =>
+  ROOMS.filter((room) =>
+    views.some((view) => view.room.id === room.id && !view.hidden),
+  ).map((room) => room.name.replace(/^The /, '').replace('Private ', ''));
+/** The doorway's engraving before the Screening Room is introduced. */
+const UNNAMED_DOORWAY = 'Private';
+/** The Butler presents a waiting letter a moment after she sits down. */
+const LETTER_DELAY_MS = 1200;
 
 interface Speech {
   lines: readonly string[];
@@ -76,12 +88,17 @@ export function Lounge({
   model,
   environment,
 }: {
-  model: EntranceModel;
+  model: Pick<
+    EntranceModel,
+    'welcomed' | 'replay' | 'reducedMotion' | 'currentHour'
+  >;
   environment: EntranceEnvironment;
 }) {
   const { welcomed, replay, reducedMotion, currentHour } = model;
-  const club = useClub(environment);
+  const journey = useJourney();
+  const club = useClub(environment, journey?.snapshot.rooms);
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState<RenderMode>(() =>
     canRender3D() ? 'loading' : 'poster',
   );
@@ -109,6 +126,16 @@ export function Lounge({
   const [rings, setRings] = useState(0);
   const [eyeOnDoor, setEyeOnDoor] = useState(false);
   const [escort, setEscort] = useState<string | null>(null);
+  // Letters of Admission (ADR-020): the one asked for by a link first.
+  const [requested] = useState(() => {
+    const room = new URLSearchParams(location.search).get('admission');
+    return isAdmissionRoom(room) ? room : null;
+  });
+  const [laterRooms, setLaterRooms] = useState<readonly AdmissionRoomId[]>([]);
+  const [letterReady, setLetterReady] = useState(false);
+  const [accepting, setAccepting] = useState(false);
+  const [letterError, setLetterError] = useState<string | null>(null);
+  const [names] = useState(() => directoryNames(club.views));
   const voice = useRef<HTMLDivElement>(null);
   const [opener, setOpener] = useState<HTMLElement | null>(null);
   const openSheet = (sheet: Overlay, from: HTMLElement | null) => {
@@ -177,6 +204,14 @@ export function Lounge({
   }, [escort, navigate, reducedMotion]);
 
   useEffect(() => {
+    const timer = setTimeout(
+      () => setLetterReady(true),
+      reducedMotion ? 0 : LETTER_DELAY_MS,
+    );
+    return () => clearTimeout(timer);
+  }, [reducedMotion]);
+
+  useEffect(() => {
     if (mode !== 'fading') return;
     const timer = setTimeout(() => setMode('scene'), FADE_MS);
     return () => clearTimeout(timer);
@@ -209,10 +244,51 @@ export function Lounge({
   // The Butler's service: the same bell, menu and correspondence as at the
   // doors. He speaks through his own voice here, and never during the
   // induction or over a sheet.
+  const pending = journey?.snapshot.pending ?? [];
+  const waiting = pending.filter((p) => !laterRooms.includes(p.roomId));
+  const letter =
+    club.inducted && letterReady && overlay === null && escort === null
+      ? (waiting.find((p) => p.roomId === requested) ?? waiting[0] ?? null)
+      : null;
+  const later = useCallback((room: AdmissionRoomId) => {
+    setLetterError(null);
+    setLaterRooms((rooms) => [...rooms, room]);
+  }, []);
+
+  async function acceptLetter(room: AdmissionRoomId) {
+    if (!journey || accepting) return;
+    setAccepting(true);
+    setLetterError(null);
+    const outcome = await journey.accept(room);
+    setAccepting(false);
+    if (!outcome.ok) {
+      setLetterError(outcome.message);
+      return;
+    }
+    // He has introduced it in person; no announcement later.
+    club.introduce([room]);
+    if (room === 'lounge') {
+      say(['Welcome, Madam. Do make yourself at home.'], 'concierge');
+      return;
+    }
+    const target = findRoom(room);
+    if (!target?.built) {
+      say([preparingLine(target?.name ?? 'the room')], 'concierge');
+      return;
+    }
+    club.visit(room);
+    say(
+      [room === SCREENING.id ? SCREENING_ESCORT_LINE : ADMISSION_ESCORT_LINE],
+      'concierge',
+    );
+    preloadRoom(room);
+    setEscort(target.path);
+  }
+
   const service = useButlerService({
     place: 'lounge',
     say: useCallback((text: string) => say([text], 'concierge'), [say]),
-    enabled: club.inducted && overlay === null,
+    enabled: club.inducted && overlay === null && letter === null,
     delayMs: welcomed ? 9000 : 3000,
   });
 
@@ -250,6 +326,9 @@ export function Lounge({
   const destination = briefing?.destination ?? null;
   const upcoming = nextOpening(club.views);
   const screeningView = club.views.find((v) => v.room.id === SCREENING.id);
+  const screeningLabel = screeningView?.hidden
+    ? UNNAMED_DOORWAY
+    : 'Screening Room';
   const inducted = club.inducted;
   const step = INDUCTION[Math.min(beat, INDUCTION.length - 1)]!;
 
@@ -292,8 +371,8 @@ export function Lounge({
             arriving={welcomed}
             screeningOpen={Boolean(screeningView?.open)}
             reducedMotion={reducedMotion}
-            directoryNames={DIRECTORY_NAMES}
-            screeningName="Screening Room"
+            directoryNames={names}
+            screeningName={screeningLabel}
             onReady={() => setMode((m) => (m === 'loading' ? 'fading' : m))}
             onFallback={() => setMode('poster')}
             onSelect={(target) => {
@@ -310,7 +389,7 @@ export function Lounge({
             className="lounge__mark lounge__mark--screening"
             aria-hidden="true"
           >
-            Screening Room
+            {screeningLabel}
           </span>
           <span
             className="lounge__mark lounge__mark--directory"
@@ -325,7 +404,7 @@ export function Lounge({
 
       <div
         className="lounge__frame"
-        inert={overlay !== null || escort !== null}
+        inert={overlay !== null || escort !== null || letter !== null}
       >
         <header className="lounge__place">
           <p className="lounge__eyebrow">The Thirty Club</p>
@@ -406,12 +485,31 @@ export function Lounge({
             </div>
           ) : (
             <>
-              <Guide
-                destination={destination}
-                upcoming={upcoming}
-                onContinue={(id) => enter(id)}
-                onAttention={setEyeOnDoor}
-              />
+              {pending.length > 0 && letter === null && !escort ? (
+                <section className="guide" aria-labelledby="guide-room">
+                  <p className="guide__eyebrow">The Butler has a letter</p>
+                  <p id="guide-room" className="guide__room">
+                    A Letter of Admission awaits you
+                  </p>
+                  <button
+                    type="button"
+                    className="cta"
+                    onClick={() => {
+                      setOverlay(null);
+                      setLaterRooms([]);
+                    }}
+                  >
+                    Read your letter
+                  </button>
+                </section>
+              ) : (
+                <Guide
+                  destination={destination}
+                  upcoming={upcoming}
+                  onContinue={(id) => enter(id)}
+                  onAttention={setEyeOnDoor}
+                />
+              )}
               {service.view.kind === 'none' && (
                 <ArrivedEnvelope
                   unread={service.unread}
@@ -466,11 +564,21 @@ export function Lounge({
           onClose={closeSheet}
         >
           <Directory
-            views={club.views}
+            views={club.views.filter((v) => !v.hidden)}
             recommended={destination?.room.id ?? null}
             onEnter={enter}
           />
         </Sheet>
+      )}
+      {letter && (
+        <AdmissionLetter
+          key={letter.roomId}
+          admission={letter}
+          busy={accepting}
+          error={letterError}
+          onAccept={() => void acceptLetter(letter.roomId)}
+          onLater={() => later(letter.roomId)}
+        />
       )}
       {inducted && service.overlays}
     </section>

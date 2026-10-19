@@ -18,6 +18,7 @@ import { failureText, type DeskResult } from '../client/correspondenceApi';
 import { ALREADY_THANKED } from '../domain/butlerLines';
 import { letterDate, paragraphs } from '../domain/format';
 import { RoomInvitations } from './RoomInvitations';
+import { LetterActionButton } from '../../journey/ui/LetterActionButton';
 import './correspondence.css';
 
 type Phase = 'sealed' | 'breaking' | 'unfolding' | 'reading';
@@ -154,7 +155,11 @@ export function LetterPresentation({
               ◆
             </p>
           </article>
-          {!preview && <RoomInvitations text={letter.body} />}
+          {letter.action ? (
+            <LetterActionButton action={letter.action} preview={preview} />
+          ) : (
+            !preview && <RoomInvitations text={letter.body} />
+          )}
           <ButlerAtTheFoot
             letter={letter}
             preview={preview}

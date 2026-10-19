@@ -9,7 +9,8 @@
  */
 import { useEffect } from 'react';
 import { Navigate, useLocation, useParams } from 'react-router';
-import { holdKey, isPlausibleVaultToken } from '../client/pendingKey';
+import { AdmissionGate } from '../../journey/ui/AdmissionGate';
+import { heldKey, holdKey, isPlausibleVaultToken } from '../client/pendingKey';
 import GiftVault from './GiftVault';
 
 export interface VaultArrivalState {
@@ -36,12 +37,19 @@ export function VaultKeyArrival() {
   );
 }
 
-/** `/vault`: the member's vault, reachable directly (and after any scan). */
+/**
+ * `/vault`: the member's vault. Arriving with a physical key (a scan, or a
+ * key still held from one) goes straight in, as the tags were designed to;
+ * the key is the proof and the server decides each compartment. Without a
+ * key, the vault needs its admission like any other room (ADR-020).
+ */
 export function VaultRoute() {
   const location = useLocation();
   const arrival =
     (location.state as VaultArrivalState | null)?.vaultKey ?? null;
-  return <GiftVault mode={{ kind: 'member', arrivalKey: arrival }} />;
+  const vault = <GiftVault mode={{ kind: 'member', arrivalKey: arrival }} />;
+  if (arrival || heldKey()) return vault;
+  return <AdmissionGate roomId="gift-vault">{vault}</AdmissionGate>;
 }
 
 /** `/owner/vault-preview/:id`: owner rehearsal; the server checks the owner session. */

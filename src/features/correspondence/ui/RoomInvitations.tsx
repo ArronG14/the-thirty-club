@@ -4,12 +4,15 @@
  * Otherwise it says honestly when it opens. A letter can therefore never
  * send her to a locked Casino. In a rehearsal (ADR-018) a locked room can
  * also be launched in its unlocked rehearsal state; that never touches the
- * real room, her clock or her records.
+ * real room, her clock or her records. A room that needs an admission is
+ * never mentioned until she has accepted it (ADR-020).
  */
 import { useState } from 'react';
 import { roomViews, type RoomView } from '../../club/domain/clubState';
 import { formatClubTime } from '../../club/domain/schedule';
 import { createEntranceEnvironment } from '../../entrance/entranceEnvironment';
+import { ROOMS } from '../../club/domain/rooms';
+import { useJourney } from '../../journey/journeyContext';
 import { simulationActive } from '../../rehearsal/mode';
 import { MENTIONS, mentionedRooms } from '../domain/roomMentions';
 
@@ -28,13 +31,17 @@ function opening(view: RoomView): string {
 }
 
 export function RoomInvitations({ text }: { text: string }) {
-  const [views] = useState(() => {
-    const env = createEntranceEnvironment();
-    return roomViews(env.clock.now(), env.membership.load());
-  });
+  const access = useJourney()?.snapshot.rooms;
+  const [env] = useState(() => createEntranceEnvironment());
+  const views = roomViews(
+    env.clock.now(),
+    env.membership.load(),
+    ROOMS,
+    access,
+  );
   const rooms = mentionedRooms(text)
     .map((id) => views.find((v) => v.room.id === id))
-    .filter((v): v is RoomView => Boolean(v));
+    .filter((v): v is RoomView => Boolean(v) && !v!.hidden);
   if (rooms.length === 0) return null;
   return (
     <aside className="cd-rooms" aria-label="Rooms mentioned in this letter">

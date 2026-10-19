@@ -82,6 +82,10 @@ export const ADMISSION_COPY: Record<AdmissionRoomId, AdmissionCopy> = {
   },
 };
 
+/** What the Butler says as he shows her into a newly admitted room. */
+export const ADMISSION_ESCORT_LINE =
+  'Splendid. If you would follow me, Madam — allow me to show you the way.';
+
 /** Default letters for events that earn one (see the contract §3). */
 export const EVENT_LETTERS: Partial<
   Record<JourneyEventType, { title: string; body: string }>

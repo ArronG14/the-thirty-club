@@ -5,28 +5,33 @@ import {
   markAnnounced,
   roomViews,
   settleUnlocks,
+  type JourneyAccess,
 } from './domain/clubState';
 import {
   stampRoom,
   type MembershipRecord,
   type MembershipStorage,
 } from './domain/membershipRecord';
-import type { RoomId } from './domain/rooms';
+import { ROOMS, type RoomId } from './domain/rooms';
 
 /** Scheduled rooms open on the hour; checking twice a minute is plenty. */
 const RECHECK_MS = 30_000;
 
 /**
- * Membership and room availability for this device. Composes the clock
- * and the persisted record; every rule lives in the pure domain.
+ * Membership and room availability for this device. Composes the clock,
+ * the persisted record and (when given) the journey's admissions; every
+ * rule lives in the pure domain.
  */
-export function useClub({
-  clock,
-  membership,
-}: {
-  clock: Clock;
-  membership: MembershipStorage;
-}) {
+export function useClub(
+  {
+    clock,
+    membership,
+  }: {
+    clock: Clock;
+    membership: MembershipStorage;
+  },
+  access?: JourneyAccess,
+) {
   const [now, setNow] = useState(() => clock.now());
   const [record, setRecord] = useState<MembershipRecord>(() =>
     settleUnlocks(membership.load(), clock.now()),
@@ -60,7 +65,10 @@ export function useClub({
     membership.save(record);
   }, [membership, record]);
 
-  const views = useMemo(() => roomViews(now, record), [now, record]);
+  const views = useMemo(
+    () => roomViews(now, record, ROOMS, access),
+    [now, record, access],
+  );
 
   const induct = useCallback(() => {
     const current = clock.now();

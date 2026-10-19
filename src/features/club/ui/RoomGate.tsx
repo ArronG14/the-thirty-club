@@ -1,6 +1,8 @@
 import { Suspense, useCallback, useEffect, useState } from 'react';
 import { useParams } from 'react-router';
 import { createEntranceEnvironment } from '../../entrance/entranceEnvironment';
+import { useJourney } from '../../journey/journeyContext';
+import { AdmissionGate } from '../../journey/ui/AdmissionGate';
 import { isRoomId, type RoomId } from '../domain/rooms';
 import { ROOM_VIEWS } from './roomViews';
 import { formatClubTime } from '../domain/schedule';
@@ -16,12 +18,21 @@ const PREPARING: Partial<Record<RoomId, string>> = {
 
 /**
  * `/rooms/:roomId`. The club's door staff: a room is shown only when it is
- * open and built. Otherwise an honest notice and the way back.
+ * open and built. Otherwise an honest notice and the way back. Rooms that
+ * need an admission are first checked by the journey (ADR-020).
  */
 export function RoomGate() {
   const { roomId } = useParams();
+  return (
+    <AdmissionGate roomId={roomId}>
+      <RoomDoor roomId={roomId} />
+    </AdmissionGate>
+  );
+}
+
+function RoomDoor({ roomId }: { roomId: string | undefined }) {
   const [environment] = useState(() => createEntranceEnvironment());
-  const club = useClub(environment);
+  const club = useClub(environment, useJourney()?.snapshot.rooms);
   const view = club.views.find(
     (v) => v.room.id === roomId && v.room.sequence !== null,
   );
