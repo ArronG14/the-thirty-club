@@ -26,7 +26,9 @@ async function unlock(page: Page, target = '.timepiece') {
   ).toBeVisible();
 }
 async function panel(page: Page) {
-  await page.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }).click();
+  await page
+    .getByRole('button', { name: 'Dev Mode: open rehearsal controls' })
+    .click();
 }
 
 test('mobile activation, incorrect PIN, room navigation, test rewards, reset and exit', async ({
