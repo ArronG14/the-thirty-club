@@ -15,8 +15,8 @@ const assert = (condition, detail) => {
 
 try {
   assert(
-    migrations.length === 8,
-    'expected six baseline and two release migrations',
+    migrations.length === 9,
+    'expected six baseline and three release migrations',
   );
   await pg.exec(
     'create role anon; create role authenticated; create role service_role bypassrls;',
@@ -33,12 +33,44 @@ try {
     from public.ttc_messages order by id`)
   ).rows;
 
-  for (const name of migrations.slice(6))
+  for (const name of migrations.slice(6, 8))
     await pg.exec(readFileSync(resolve(migrationDir, name), 'utf8'));
 
+  // The Butler's Service migration relaxes ttc_letter_replies.letter_id: an
+  // existing letter and its reply must survive it unchanged.
+  await pg.exec(`with m as (insert into public.ttc_messages(label,body,category,timezone,state)
+      values('Letter · Existing','Invitation','correspondence-alise','Europe/London','cancelled') returning id),
+    n as (insert into public.ttc_messages(label,body,category,timezone,state)
+      values('Message from Alise · Existing','Note','correspondence-arron','Europe/London','cancelled') returning id),
+    l as (insert into public.ttc_letters(member_id,title,body,deliver_at,state,published_at,invitation_message_id)
+      select (select id from public.ttc_members where slug='alise'),'Existing','Body',now(),'published',now(),m.id from m returning id)
+    insert into public.ttc_letter_replies(letter_id,member_id,body,idempotency_key,notification_message_id)
+      select l.id,(select id from public.ttc_members where slug='alise'),'Existing reply','existing-reply-01',n.id from l, n`);
+  const repliesBefore = (
+    await pg.query(
+      `select id, letter_id, body from public.ttc_letter_replies order by id`,
+    )
+  ).rows;
+  for (const name of migrations.slice(8))
+    await pg.exec(readFileSync(resolve(migrationDir, name), 'utf8'));
+  const repliesAfter = (
+    await pg.query(
+      `select id, letter_id, body, resolved_at from public.ttc_letter_replies order by id`,
+    )
+  ).rows;
+  assert(
+    repliesAfter.length === 1 &&
+      repliesAfter[0].letter_id === repliesBefore[0].letter_id &&
+      repliesAfter[0].resolved_at === null,
+    'existing letter replies changed',
+  );
+
   const after = (
-    await pg.query(`select id, category, state, body
-    from public.ttc_messages order by id`)
+    await pg.query(
+      `select id, category, state, body
+    from public.ttc_messages where id = any($1::uuid[]) order by id`,
+      [baseline.map((r) => r.id)],
+    )
   ).rows;
   assert(
     JSON.stringify(baseline) === JSON.stringify(after),
@@ -46,8 +78,9 @@ try {
   );
   assert(
     migrations[6]?.includes('gift_vault') &&
-      migrations[7]?.includes('correspondence_desk'),
-    'Vault and Correspondence migration order changed',
+      migrations[7]?.includes('correspondence_desk') &&
+      migrations[8]?.includes('butlers_service'),
+    'Vault, Correspondence and Butler’s Service migration order changed',
   );
 
   const tables = (
@@ -56,10 +89,10 @@ try {
       has_table_privilege('authenticated',c.oid,'SELECT') as authenticated_select,
       has_table_privilege('service_role',c.oid,'SELECT') as service_select
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
-    where n.nspname='public' and c.relname in ('ttc_vaults','ttc_letters','ttc_letter_replies')
+    where n.nspname='public' and c.relname in ('ttc_vaults','ttc_letters','ttc_letter_replies','ttc_request_responses','ttc_direct_messages')
     order by c.relname`)
   ).rows;
-  assert(tables.length === 3, 'missing release table');
+  assert(tables.length === 5, 'missing release table');
   for (const table of tables)
     assert(
       table.relrowsecurity &&
@@ -72,11 +105,11 @@ try {
   const policies = (
     await pg.query(`select tablename, policyname, roles, cmd
     from pg_policies where schemaname='public'
-      and tablename in ('ttc_vaults','ttc_letters','ttc_letter_replies')
+      and tablename in ('ttc_vaults','ttc_letters','ttc_letter_replies','ttc_request_responses','ttc_direct_messages')
     order by tablename`)
   ).rows;
   assert(
-    policies.length === 3 &&
+    policies.length === 5 &&
       policies.every(
         (p) =>
           p.policyname === 'service_only' &&
@@ -93,10 +126,11 @@ try {
       has_function_privilege('service_role',p.oid,'EXECUTE') as service_execute
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and (p.proname like 'ttc_vault%'
-      or p.proname like 'ttc_letter%' or p.proname like 'ttc_correspondence%')
+      or p.proname like 'ttc_letter%' or p.proname like 'ttc_correspondence%'
+      or p.proname like 'ttc_request%' or p.proname like 'ttc_service%' or p.proname like 'ttc_direct%')
     order by p.proname`)
   ).rows;
-  assert(functions.length >= 9, 'missing release functions');
+  assert(functions.length >= 13, 'missing release functions');
   for (const fn of functions)
     assert(
       !fn.anon_execute && !fn.authenticated_execute && fn.service_execute,
@@ -129,6 +163,21 @@ try {
     await pg.exec('reset role');
   }
   assert(anonDenied, 'anonymous role could execute Correspondence RPC');
+  await pg.exec('set role anon');
+  let anonServiceDenied = false;
+  try {
+    await pg.query(
+      `select public.ttc_service_action(null,'owner','owner-requests-list','{}')`,
+    );
+  } catch {
+    anonServiceDenied = true;
+  } finally {
+    await pg.exec('reset role');
+  }
+  assert(
+    anonServiceDenied,
+    'anonymous role could execute Butler’s Service RPC',
+  );
 
   await pg.exec('set role service_role');
   const vault = (
@@ -148,6 +197,15 @@ try {
     desk?.published === 0,
     'Correspondence RPC failed after Vault migration',
   );
+  const service = (
+    await pg.query(
+      `select public.ttc_service_action(null,'owner','owner-requests-list','{}') as result`,
+    )
+  ).rows[0]?.result;
+  assert(
+    service?.requests?.length === 1 && service.requests[0].source === 'letter',
+    'Butler’s Service RPC failed or lost the existing reply',
+  );
   await pg.exec('reset role');
 
   process.stdout.write(
@@ -162,6 +220,9 @@ try {
         anonymousRpcDenied: anonDenied,
         vaultRpc: 'pass',
         correspondenceRpc: 'pass',
+        existingRepliesPreserved: repliesAfter.length,
+        anonymousServiceRpcDenied: anonServiceDenied,
+        serviceRpc: 'pass',
       },
       null,
       2,

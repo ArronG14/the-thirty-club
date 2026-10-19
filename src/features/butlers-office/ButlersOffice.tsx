@@ -341,7 +341,7 @@ export default function ButlersOffice() {
                 <>
                   <ButlerSmsDesk />
                   <hr />
-                  <h2>Scheduled announcements</h2>
+                  <h2>Scheduled correspondence</h2>
                   <section className="office-card">
                     <h3>Claim notifications to Arron</h3>
                     <p>

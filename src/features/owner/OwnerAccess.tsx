@@ -67,7 +67,7 @@ export default function OwnerAccess() {
       {ownerActive && (
         <button
           className="owner-toggle"
-          aria-label="Dev Mode: open rehearsal controls"
+          aria-label="Open Dev Mode"
           onClick={() => {
             setCounts(rehearsalCounts());
             dialog.current?.showModal();

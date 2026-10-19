@@ -140,13 +140,18 @@ test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
     await page.getByRole('button', { name: 'Members’ Directory' }).click();
     const directory = page.getByRole('dialog', { name: 'Members’ Directory' });
     await expect(directory.getByText('Opens at 2\u00a0pm')).toBeVisible();
-    // The Gift Vault opens with the membership (ADR-015), so it has a way in.
+    // The Gift Vault opens with the membership (ADR-015), so it has a way in;
+    // the pre-birthday Departure Lounge remains open to her afterwards.
     await expect(directory.getByRole('button')).toHaveText([
       'Revisit',
       'Enter',
       'Enter',
+      'Enter',
       'Close',
     ]);
+    await expect(
+      directory.getByRole('button', { name: 'Enter: The Departure Lounge' }),
+    ).toBeVisible();
     await expect(
       directory.getByRole('button', { name: 'Enter: The Gift Vault' }),
     ).toBeVisible();

@@ -42,7 +42,11 @@ const oneOf = (lines: readonly string[]) =>
 
 async function shot(page: Page, name: string, settle = 900) {
   await page.waitForTimeout(settle);
-  await page.screenshot({ path: `${SHOTS}/${name}.png` });
+  await page.screenshot({
+    path: `${SHOTS}/${name}.jpg`,
+    type: 'jpeg',
+    quality: 82,
+  });
 }
 
 /** Before the birthday, whatever day the suite runs. */
@@ -502,7 +506,7 @@ test.describe.serial('the Butler’s service', () => {
     await page.getByLabel('Private access code').fill('1414');
     await page.getByRole('button', { name: 'Unlock private office' }).click();
     const toggle = page.getByRole('button', {
-      name: 'Dev Mode: open rehearsal controls',
+      name: 'Open Dev Mode',
     });
     await expect(toggle).toBeVisible();
     await toggle.click();

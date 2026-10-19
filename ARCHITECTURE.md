@@ -59,6 +59,7 @@ Strict TS, lint, formatting, unit/integration checks and production build are lo
 - ADR-012 (2026-10-18): the Concierge — pre-birthday journey, Netlify Functions + Blobs backend, Telegram notifications, NFC credentials and the membership-card gate; amends ADR-006 (Jamaica midnight). Recorded below; full design in docs/CONCIERGE.md. (ADR-011 is the PIN owner test mode, recorded below by another agent.)
 - ADR-015 (2026-10-18): the Private Gift Vault on PostgreSQL, NFC credentials, membership bridge and owner preview; amends ADR-008 (the vault room opens with the membership). Recorded below; full design in docs/GIFT_VAULT.md.
 - ADR-016 (2026-10-19): the Correspondence Desk — owner-scheduled letters published by the existing every-minute round, Butler SMS through the existing outbox. Recorded below; full design in docs/CORRESPONDENCE_DESK.md.
+- ADR-017 (2026-10-19): the Butler's Service — one bell, menu, correspondence overlay and request composer for the locked entrance and the lounge; owner direct SMS and request responses on the existing outbox; Dev Mode rehearsal in owner session storage. Recorded below; full design in docs/BUTLERS_SERVICE.md.
 
 ## Open questions
 
@@ -336,3 +337,19 @@ Full design, API and operations: `docs/CORRESPONDENCE_DESK.md`. Branch `feature/
 ### Local consolidation decision (19 October 2026)
 
 The completed Correspondence commit `a3f8a1b` is merged only into `codex/release-candidate-correspondence-2026-10-19` from the prior candidate `9bea495`. The reviewed migration order is the six already-hosted backend migrations, then Gift Vault `20261019090000`, then Correspondence `20261020090000`, before deploying the combined code. The old Shopping path remains Blobs-backed while `CONCIERGE_LEGACY_STORAGE` is blank. The divergent local `main` desk schema is excluded. Disposable upgrade/role checks and release gates are recorded in `docs/RELEASE_CANDIDATE_2026-10-19.md`; hosted changes remain owner actions.
+
+## The Butler's Service (ADR-017, 2026-10-19)
+
+Full design, API, rehearsal and preview: `docs/BUTLERS_SERVICE.md`. Branch `feature/butlers-service-2026-10-19` from the consolidated candidate `877fbb8`; not merged, pushed or deployed.
+
+**Three interfaces.** The member experience delivers, the Owner Console (`/owner`) operates, Dev Mode rehearses. They share presentation components only; Dev Mode never reaches owner APIs.
+
+**One service, two rooms.** `src/features/butler-service/` owns the Butler's menu, the translucent correspondence overlay, the request composer and the envelope at the doors. The locked entrance and the Members' Lounge host it through their existing bells and the Butler's existing voice (the bell's speech area; the lounge's `say`). He greets once per newest unread letter per tab, and only when the host allows (locked stage and a settled render; inducted lounge with no sheet), so ceremonies are never interrupted. The overlays are a lazy chunk rendered in a portal that makes the rest of the page inert. The letter is the existing `LetterPresentation`; `/correspondence` routes are unchanged. The previous arrival notice is removed.
+
+**Authority.** A separate service-role RPC, `ttc_service_action` (migration `20261021090000_butlers_service.sql`). Requests from the bell reuse `ttc_letter_replies` with a null `letter_id` (the only change to an existing table, plus a nullable `resolved_at`), sharing the Desk's idempotency and limits. `ttc_request_responses` links SMS or Desk letters to a request; `ttc_direct_messages` lists Arron's direct Butler SMS. Every SMS is an approved message in an existing category (`correspondence-alise`/`-arron`), so the existing dispatcher, expiry, retry rules and `SMS_SENDING_ENABLED` apply without change. Resolution is only ever Arron's action.
+
+**Dev Mode.** While the PIN rehearsal is active, `activeDesk` is `rehearsalDesk`: letters and requests in session storage under `thirty-club:owner:`, no network calls. The Dev disc moved to the top-left so it never covers the lounge heading.
+
+**Navigation.** The registry gains `departure-lounge` (always open, built, path `/departure`, never recommended): the directory lists it after the birthday, and the locked doors offer it through the Butler's invitation. The Departure Lounge keeps its own schedule and credential. A panoramic, camera-swivelling lounge is recorded as a future enhancement only.
+
+**Open questions.** Owner approval of the Butler's lines and the request notification text; the 60-day scheduling window; a physical iPhone rehearsal; an authorised real SMS exchange; applying the migration after `20261020090000` on the hosted project.
