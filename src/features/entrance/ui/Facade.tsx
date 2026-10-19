@@ -83,7 +83,13 @@ export function Facade({ model }: { model: EntranceModel }) {
     [],
   );
   const locked = stage === 'locked';
-  const service = useButlerService({ place: 'entrance', say, enabled: locked });
+  // He waits for the entrance to settle: never mid-fade into the 3D scene.
+  const settled = mode === 'poster' || mode === 'scene';
+  const service = useButlerService({
+    place: 'entrance',
+    say,
+    enabled: locked && settled,
+  });
 
   // Fetch the lounge while the doors open, so the room beyond is ready.
   const unlocked = !prepared;
@@ -154,15 +160,17 @@ export function Facade({ model }: { model: EntranceModel }) {
             onOpen={service.openLetter}
           />
         )}
-        {locked && <EntranceLetter now={now} />}
         {locked && (
-          <button
-            type="button"
-            className="facade__departure"
-            onClick={service.inviteToDeparture}
-          >
-            Your Departure Lounge
-          </button>
+          <div className="facade__letters">
+            <EntranceLetter now={now} />
+            <button
+              type="button"
+              className="facade__departure"
+              onClick={service.inviteToDeparture}
+            >
+              Your Departure Lounge
+            </button>
+          </div>
         )}
         {awaitingCard && <MembershipPrompt onPresented={presentMembership} />}
         {awaiting && (

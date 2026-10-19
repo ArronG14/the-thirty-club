@@ -62,6 +62,8 @@ export type SmsStage =
   | 'uncertain'
   | 'cancelled';
 
+const SKEW_MS = 60_000;
+
 export function smsStage(
   sms: Pick<LetterSms, 'state' | 'sendAt'>,
   now: number,
@@ -69,7 +71,9 @@ export function smsStage(
   switch (sms.state) {
     case 'approved':
     case 'draft':
-      return sms.sendAt && Date.parse(sms.sendAt) > now
+      // A minute's tolerance: "send now" is stamped by the server a moment
+      // after the page's clock, which must not read as "scheduled".
+      return sms.sendAt && Date.parse(sms.sendAt) > now + SKEW_MS
         ? 'scheduled'
         : 'queued';
     case 'sending':

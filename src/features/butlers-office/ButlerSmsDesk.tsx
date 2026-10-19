@@ -243,6 +243,7 @@ function Composer({
     if (ok) {
       setBody('');
       setLocal('');
+      setMode('now');
       setKey(newIdempotencyKey());
     }
   }

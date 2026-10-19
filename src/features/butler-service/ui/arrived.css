@@ -67,3 +67,43 @@
   outline: 2px solid var(--champagne-bright);
   outline-offset: 3px;
 }
+/* The concierge's step letter and the way to the Departure Lounge share one
+   row, so the plinth stays low enough to leave the doors' timepiece clear. */
+.facade__letters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 0.15rem 0.6rem;
+  max-width: 100%;
+}
+.facade__letters .step-letter__caption {
+  max-width: 11.5rem;
+}
+.facade__letters .facade__departure {
+  padding-inline: 0.4rem;
+}
+/* Over the 3D scene the bell-push (and its caption) sits on the right-hand
+   jamb, level with this row: keep the letter to the left of it. */
+.facade[data-render='scene'] .arrived-letter,
+.facade[data-render='fading'] .arrived-letter {
+  align-self: flex-start;
+  margin-left: max(0px, calc(50% - 11rem));
+  max-width: min(15.5rem, 100%);
+}
+.facade[data-render='scene'] .arrived-letter .step-letter__caption,
+.facade[data-render='fading'] .arrived-letter .step-letter__caption {
+  font-size: 0.52rem;
+  letter-spacing: 0.2em;
+  white-space: nowrap;
+}
+.facade[data-render='scene'] .arrived-letter__title,
+.facade[data-render='fading'] .arrived-letter__title {
+  -webkit-line-clamp: 1;
+  font-size: 1.02rem;
+}
+.facade[data-render='scene'] .arrived-letter .step-letter__envelope,
+.facade[data-render='fading'] .arrived-letter .step-letter__envelope {
+  width: 3.6rem;
+  height: 2.4rem;
+}

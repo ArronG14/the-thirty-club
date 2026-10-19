@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   butlerLine,
   speechDuration,
@@ -39,6 +39,21 @@ export function ServiceBell({
     setHeard(announcement.turn);
     setSpeech({ text: announcement.text, turn: (speech?.turn ?? 0) + 1 });
   }
+  // On the scrolling poster facade his words can fall below the fold; bring
+  // an unprompted remark into view (the 3D plinth is already on screen).
+  const voice = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (heard === 0) return;
+    const box = voice.current?.getBoundingClientRect();
+    if (box && box.bottom > window.innerHeight)
+      voice.current?.scrollIntoView?.({
+        block: 'end',
+        behavior: window.matchMedia?.('(prefers-reduced-motion: reduce)')
+          .matches
+          ? 'auto'
+          : 'smooth',
+      });
+  }, [heard]);
 
   useEffect(() => {
     if (!speech) return;
@@ -64,7 +79,7 @@ export function ServiceBell({
       data-speaking={speech ? 'true' : 'false'}
       inert={!available}
     >
-      <div className="service__speech" aria-live="polite">
+      <div ref={voice} className="service__speech" aria-live="polite">
         {speech && (
           <figure key={speech.turn} className="service__words">
             <blockquote>
