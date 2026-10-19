@@ -33,7 +33,8 @@ import type { LoungeFocus } from '../scene/loungeMath';
 import { Directory } from './Directory';
 import { MembershipCard } from './MembershipCard';
 import { Sheet } from './Sheet';
-import { CorrespondenceNoticeSlot } from '../../correspondence/ui/noticeSlot';
+import { useButlerService } from '../../butler-service/useButlerService';
+import { ArrivedEnvelope } from '../../butler-service/ui/ArrivedEnvelope';
 import './lounge.css';
 
 const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
@@ -186,9 +187,20 @@ export function Lounge({
     requestAnimationFrame(() => voice.current?.focus());
   }
 
+  // The Butler's service: the same bell, menu and correspondence as at the
+  // doors. He speaks through his own voice here, and never during the
+  // induction or over a sheet.
+  const service = useButlerService({
+    place: 'lounge',
+    say: useCallback((text: string) => say([text], 'concierge'), [say]),
+    enabled: club.inducted && overlay === null,
+    delayMs: welcomed ? 9000 : 3000,
+  });
+
   function ring() {
     say([conciergeLine(rings)], 'concierge');
     setRings((n) => n + 1);
+    service.ring();
   }
 
   function enter(id: RoomId) {
@@ -365,6 +377,13 @@ export function Lounge({
                 onContinue={(id) => enter(id)}
                 onAttention={setEyeOnDoor}
               />
+              {service.view.kind === 'none' && (
+                <ArrivedEnvelope
+                  unread={service.unread}
+                  onOpen={service.openLetter}
+                  compact
+                />
+              )}
               <nav className="dock" aria-label="The club">
                 <button
                   type="button"
@@ -418,10 +437,7 @@ export function Lounge({
           />
         </Sheet>
       )}
-      {/* Never during the induction or over an open sheet. */}
-      {inducted && !overlay && (
-        <CorrespondenceNoticeSlot delayMs={welcomed ? 9000 : 3000} />
-      )}
+      {inducted && service.overlays}
     </section>
   );
 }

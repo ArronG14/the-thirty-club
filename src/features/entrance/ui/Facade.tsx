@@ -1,5 +1,12 @@
 import { fiveTapGesture } from '../../owner/session';
-import { lazy, Suspense, useEffect, useRef, useState } from 'react';
+import {
+  lazy,
+  Suspense,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react';
 import { butlerContextFor } from '../domain/butlerScript';
 import { canRender3D } from '../scene/canRender3D';
 import {
@@ -13,7 +20,8 @@ import {
   EntranceLetter,
   MembershipPrompt,
 } from '../../concierge/ui/EntranceConcierge';
-import { CorrespondenceNoticeSlot } from '../../correspondence/ui/noticeSlot';
+import { useButlerService } from '../../butler-service/useButlerService';
+import { ArrivedEnvelope } from '../../butler-service/ui/ArrivedEnvelope';
 import type { EntranceModel } from '../useEntrance';
 import { Portal } from './Portal';
 import { ServiceBell } from './ServiceBell';
@@ -62,6 +70,20 @@ export function Facade({ model }: { model: EntranceModel }) {
     return 'poster';
   });
   const scene = useRef<SceneHandle | null>(null);
+
+  // The Butler's service: only at the locked doors, never during the final
+  // minute or the midnight ceremony, which keep the bell's own script.
+  const [announcement, setAnnouncement] = useState<{
+    text: string;
+    turn: number;
+  } | null>(null);
+  const say = useCallback(
+    (text: string) =>
+      setAnnouncement((a) => ({ text, turn: (a?.turn ?? 0) + 1 })),
+    [],
+  );
+  const locked = stage === 'locked';
+  const service = useButlerService({ place: 'entrance', say, enabled: locked });
 
   // Fetch the lounge while the doors open, so the room beyond is ready.
   const unlocked = !prepared;
@@ -126,8 +148,22 @@ export function Facade({ model }: { model: EntranceModel }) {
                 : 'Alise, your table is being prepared.'
               : 'Alise, your table is ready.'}
         </p>
-        {stage === 'locked' && <EntranceLetter now={now} />}
-        {stage === 'locked' && <CorrespondenceNoticeSlot />}
+        {locked && (
+          <ArrivedEnvelope
+            unread={service.unread}
+            onOpen={service.openLetter}
+          />
+        )}
+        {locked && <EntranceLetter now={now} />}
+        {locked && (
+          <button
+            type="button"
+            className="facade__departure"
+            onClick={service.inviteToDeparture}
+          >
+            Your Departure Lounge
+          </button>
+        )}
         {awaitingCard && <MembershipPrompt onPresented={presentMembership} />}
         {awaiting && (
           <button type="button" className="facade__enter" onClick={enter}>
@@ -138,9 +174,14 @@ export function Facade({ model }: { model: EntranceModel }) {
           context={butlerContextFor(stage)}
           currentHour={currentHour}
           variant={live ? 'scene' : 'plate'}
-          onRing={(ms) => scene.current?.ring(ms)}
+          onRing={(ms) => {
+            scene.current?.ring(ms);
+            if (locked) service.ring();
+          }}
+          announcement={announcement}
         />
       </div>
+      {locked && service.overlays}
     </section>
   );
 }

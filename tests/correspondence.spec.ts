@@ -14,7 +14,13 @@ import {
   type Page,
 } from '@playwright/test';
 
-import { waitingLine } from '../src/features/correspondence/domain/butlerLines.ts';
+import { BUTLER_LINES } from '../src/features/butler-service/domain/dialogue.ts';
+
+/** Any one of the Butler's scripted lines for a moment. */
+const oneOf = (lines: readonly string[]) =>
+  new RegExp(
+    lines.map((l) => l.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|'),
+  );
 
 const OWNER_PASSWORD = 'thirty-club-local-rehearsal-only';
 const BASE = 'http://127.0.0.1:4181';
@@ -198,20 +204,22 @@ test('Arron writes, schedules and sends; Alise opens, thanks and replies; Arron 
   ).toBeVisible();
   await shot(her, 'member-letter');
 
-  await her.getByRole('button', { name: '✉️ Thank the Butler' }).click();
-  await expect(her.getByText(/how exceedingly kind of you/)).toBeVisible();
-  await her.getByRole('button', { name: '✉️ Thank the Butler' }).click();
+  await her.getByRole('button', { name: 'Thank You, Butler' }).click();
+  await expect(her.locator('.cd-butler__speech')).toHaveText(
+    oneOf(BUTLER_LINES.thanks),
+  );
+  await her.getByRole('button', { name: 'Thank You, Butler' }).click();
   await expect(her.getByText(/already been far too kind/)).toBeVisible();
 
-  await her.getByRole('button', { name: '🎩 Butler, A Word' }).click();
+  await her.getByRole('button', { name: 'A Word, Butler' }).click();
   await expect(her.getByText(/You have my undivided attention/)).toBeVisible();
   await her
     .getByLabel('Your message to the Butler')
     .fill('Please tell Arron I loved it.');
   await her.getByRole('button', { name: 'Hand it to the Butler' }).click();
-  await expect(
-    her.getByText(/safely recorded in the club’s book/),
-  ).toBeVisible();
+  await expect(her.locator('.cd-butler__speech')).toHaveText(
+    oneOf(BUTLER_LINES['request-received']),
+  );
   await expect(her.getByText('Please tell Arron I loved it.')).toBeVisible();
   await shot(her, 'member-replied');
 
@@ -253,7 +261,7 @@ test('Arron writes, schedules and sends; Alise opens, thanks and replies; Arron 
   await alise.close();
 });
 
-test('the Butler notices waiting correspondence at the locked entrance, once', async ({
+test('a waiting letter appears at the locked entrance and the Butler greets once', async ({
   page,
   browser,
 }) => {
@@ -276,30 +284,24 @@ test('the Butler notices waiting correspondence at the locked entrance, once', a
   expect(exchange.status()).toBe(200);
   const her = await alise.newPage();
   await her.goto('/');
-  // The database is shared with earlier tests: speak to the real count.
-  const summary = (await (
-    await alise.request.get('/api/v1/correspondence/summary')
-  ).json()) as { unread: number };
-  const notice = her.getByRole('status', { name: 'The Butler' });
-  await expect(notice.getByText(waitingLine(summary.unread))).toBeVisible({
-    timeout: 30_000,
+  // The newest unread letter waits on the step; the Butler greets once.
+  const envelope = her.getByRole('button', {
+    name: /Open your new letter: Before the birthday/,
   });
-  await shot(her, 'entrance-notice');
-  await notice.getByRole('button', { name: 'Later' }).click();
-  await expect(notice).toHaveCount(0);
-  await her.reload();
-  await her.waitForTimeout(4000);
-  await expect(her.getByRole('status', { name: 'The Butler' })).toHaveCount(0);
-  await her.evaluate(() =>
-    sessionStorage.removeItem('thirty-club:correspondence-later'),
+  await expect(envelope).toBeVisible({ timeout: 30_000 });
+  await expect(her.locator('.service__speech')).toHaveText(
+    oneOf(BUTLER_LINES['unread-greeting']),
+    { timeout: 10_000 },
   );
+  await shot(her, 'entrance-notice');
   await her.reload();
-  await her
-    .getByRole('status', { name: 'The Butler' })
-    .getByRole('link')
-    .click({ timeout: 30_000 });
-  await expect(her).toHaveURL(/\/correspondence$/);
-  await expect(her.getByText('Before the birthday')).toBeVisible();
+  await expect(envelope).toBeVisible({ timeout: 30_000 });
+  await her.waitForTimeout(1500);
+  await expect(her.locator('.service__words')).toHaveCount(0);
+  await envelope.click();
+  await expect(
+    her.getByRole('button', { name: /Break the seal.*Before the birthday/ }),
+  ).toBeVisible();
   await alise.close();
 });
 

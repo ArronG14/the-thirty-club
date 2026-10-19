@@ -6,7 +6,7 @@ import {
   THANKS_RESPONSE,
 } from '../../shared/correspondence/templates';
 import { deliveryText, smsText } from '../butlers-office/deskText';
-import { collectionLine, waitingLine } from './domain/butlerLines';
+import { collectionLine } from './domain/butlerLines';
 import { paragraphs } from './domain/format';
 import { LetterPresentation } from './ui/LetterPresentation';
 
@@ -25,11 +25,6 @@ const letter: MemberLetter = {
 
 describe('the Butler’s words', () => {
   it('speaks of one letter and of several naturally', () => {
-    expect(waitingLine(1)).toBe(
-      'Ah, Madam. How lovely to see you. I believe some correspondence has arrived for you. Shall we take a look?',
-    );
-    expect(waitingLine(2)).toContain('two letters have arrived');
-    expect(waitingLine(9)).toContain('9 letters have arrived');
     expect(collectionLine(1, 3)).toContain('One letter awaits');
     expect(collectionLine(3, 3)).toContain('3 letters await');
     expect(collectionLine(0, 2)).toContain('Every letter has been read');
@@ -111,7 +106,7 @@ describe('the letter', () => {
       screen.getByRole('heading', { name: 'A letter for Sunday' }),
     ).toBeTruthy();
     expect(screen.getByText('Dearest Alise,')).toBeTruthy();
-    fireEvent.click(screen.getByRole('button', { name: '🎩 Butler, A Word' }));
+    fireEvent.click(screen.getByRole('button', { name: 'A Word, Butler' }));
     expect(screen.getByText(/You have my undivided attention/)).toBeTruthy();
     expect(
       screen

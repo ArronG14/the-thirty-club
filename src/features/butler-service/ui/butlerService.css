@@ -1,0 +1,341 @@
+/*
+ * The Butler's service overlays. A dark, translucent veil over the room so
+ * the doors (or the lounge) remain visible behind; brass hairlines and the
+ * club's display type. Motion is transform and opacity only; reduced motion
+ * cross-fades. Safe areas pad every edge.
+ */
+
+.bs-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  color: var(--ivory);
+}
+.bs-overlay[data-view='collection'],
+.bs-overlay[data-view='composer'] {
+  align-items: stretch;
+}
+.bs-overlay__scrim {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(
+      120% 80% at 50% 30%,
+      rgb(20 12 10 / 0.55) 0%,
+      rgb(6 4 4 / 0.82) 70%
+    ),
+    rgb(6 4 4 / 0.35);
+  -webkit-backdrop-filter: blur(5px) saturate(0.9);
+  backdrop-filter: blur(5px) saturate(0.9);
+  animation: bs-fade 0.45s ease both;
+}
+.bs-overlay[data-closing='true'] .bs-overlay__scrim,
+.bs-overlay[data-closing='true'] .bs-menu,
+.bs-overlay[data-closing='true'] .bs-panel {
+  opacity: 0;
+  transition:
+    opacity 0.36s ease,
+    transform 0.36s ease;
+}
+.bs-overlay[data-closing='true'] .bs-menu,
+.bs-overlay[data-closing='true'] .bs-panel {
+  transform: translateY(14px);
+}
+
+.bs-eyebrow {
+  margin: 0;
+  font-family: var(--font-caps);
+  font-size: 0.6rem;
+  letter-spacing: 0.32em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+
+/* ---------- The bell's answer ---------- */
+
+.bs-menu {
+  position: relative;
+  box-sizing: border-box;
+  width: min(100% - var(--gutter-left) - var(--gutter-right), 26rem);
+  margin: 0 var(--gutter-right) calc(var(--gutter-bottom) + 0.75rem)
+    var(--gutter-left);
+  padding: 1.4rem 1.25rem 1.1rem;
+  display: grid;
+  gap: 0.9rem;
+  text-align: center;
+  border: 1px solid rgb(196 164 106 / 0.45);
+  border-radius: 4px;
+  background: linear-gradient(
+    180deg,
+    rgb(36 26 24 / 0.94) 0%,
+    rgb(18 12 11 / 0.96) 100%
+  );
+  box-shadow:
+    0 30px 60px -20px rgb(0 0 0 / 0.9),
+    inset 0 1px 0 rgb(233 211 155 / 0.12);
+  animation: bs-rise 0.5s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.bs-menu::before {
+  content: '';
+  position: absolute;
+  inset: 5px;
+  border: 1px solid rgb(196 164 106 / 0.18);
+  border-radius: 2px;
+  pointer-events: none;
+}
+.bs-menu__line {
+  margin: 0;
+  font-family: var(--font-text);
+  font-style: italic;
+  font-weight: 500;
+  font-size: 1.32rem;
+  line-height: 1.35;
+  color: var(--ivory);
+}
+.bs-menu__options {
+  display: grid;
+  gap: 0.6rem;
+}
+.bs-option {
+  position: relative;
+  display: grid;
+  gap: 0.2rem;
+  min-height: 60px;
+  padding: 0.75rem 1rem;
+  text-align: left;
+  color: var(--ivory);
+  border: 1px solid rgb(196 164 106 / 0.5);
+  border-radius: 3px;
+  background: linear-gradient(
+    180deg,
+    rgb(74 20 36 / 0.55) 0%,
+    rgb(40 14 20 / 0.7) 100%
+  );
+  cursor: pointer;
+}
+.bs-option::after {
+  content: '›';
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  font-size: 1.5rem;
+  color: var(--champagne);
+}
+.bs-option--quiet {
+  background: rgb(20 14 11 / 0.55);
+}
+.bs-option__title {
+  font-family: var(--font-display);
+  font-size: 1.12rem;
+  letter-spacing: 0.01em;
+}
+.bs-option__note {
+  font-family: var(--font-caps);
+  font-size: 0.6rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: var(--champagne-bright);
+  opacity: 0.85;
+}
+.bs-dismiss,
+.bs-back,
+.bs-return {
+  justify-self: center;
+  min-height: 44px;
+  padding: 0.4rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--ink-soft);
+  font-family: var(--font-caps);
+  font-size: 0.62rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  text-decoration: underline;
+  text-decoration-color: rgb(196 164 106 / 0.5);
+  text-underline-offset: 0.35em;
+  cursor: pointer;
+}
+
+/* ---------- The panel: collection, letter, composer ---------- */
+
+.bs-panel {
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 34rem;
+  margin: 0 auto;
+  height: 100%;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 1rem;
+  padding: calc(var(--gutter-top) + 0.25rem) var(--gutter-right)
+    calc(var(--gutter-bottom) + 1.5rem) var(--gutter-left);
+  outline: none;
+  animation: bs-rise 0.55s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+.bs-panel__head {
+  position: sticky;
+  top: calc(-1 * (var(--gutter-top) + 0.25rem));
+  z-index: 2;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+  margin: calc(-1 * (var(--gutter-top) + 0.25rem))
+    calc(-1 * var(--gutter-right)) 0 calc(-1 * var(--gutter-left));
+  padding: calc(var(--gutter-top) + 0.4rem) 3.5rem 0.75rem;
+  background: linear-gradient(
+    180deg,
+    rgb(10 7 6 / 0.92) 0%,
+    rgb(10 7 6 / 0.75) 75%,
+    rgb(10 7 6 / 0) 100%
+  );
+  text-align: center;
+}
+.bs-panel__title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 400;
+  font-size: clamp(1.6rem, 7vw, 2.1rem);
+  line-height: 1.1;
+  color: var(--ivory);
+}
+.bs-close {
+  position: absolute;
+  top: calc(var(--gutter-top) + 0.1rem);
+  right: var(--gutter-right);
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgb(196 164 106 / 0.45);
+  border-radius: 50%;
+  background: rgb(20 14 11 / 0.6);
+  color: var(--champagne-bright);
+  font-size: 1.5rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.bs-butler-line {
+  margin: 0;
+  padding: 0 0.5rem;
+  text-align: center;
+  font-style: italic;
+  font-size: 1.15rem;
+  line-height: 1.45;
+  color: var(--ivory);
+}
+.bs-butler-line p {
+  margin: 0;
+}
+.bs-butler-line footer {
+  margin-top: 0.4rem;
+  font-family: var(--font-caps);
+  font-style: normal;
+  font-size: 0.56rem;
+  letter-spacing: 0.3em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.bs-count,
+.bs-status {
+  margin: 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 1.05rem;
+  line-height: 1.45;
+}
+.bs-status p {
+  margin: 0 0 0.6rem;
+}
+.bs-list {
+  width: 100%;
+}
+.bs-row {
+  width: 100%;
+  border: 0;
+  text-align: left;
+  font: inherit;
+  cursor: pointer;
+}
+.bs-row[data-unread='true'] {
+  box-shadow:
+    0 0 0 1px rgb(124 22 38 / 0.35),
+    0 14px 26px -18px rgb(0 0 0 / 0.9),
+    inset 0 1px 0 rgb(255 255 255 / 0.8);
+}
+.bs-panel .cd-letter {
+  width: 100%;
+}
+.bs-panel .cd-word {
+  width: 100%;
+}
+.bs-sent {
+  display: grid;
+  gap: 1rem;
+}
+.bs-sent__record {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  border-left: 2px solid var(--champagne);
+  background: rgb(20 14 11 / 0.55);
+}
+.bs-sent__record figcaption {
+  font-family: var(--font-caps);
+  font-size: 0.56rem;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+  color: var(--champagne);
+}
+.bs-sent__record p {
+  margin: 0.4rem 0 0;
+  white-space: pre-wrap;
+  font-size: 1.1rem;
+}
+.bs-sent__truth {
+  margin: 0;
+  text-align: center;
+  color: var(--ink-soft);
+  font-size: 0.98rem;
+}
+.bs-return {
+  margin-top: auto;
+}
+
+.bs-option:focus-visible,
+.bs-dismiss:focus-visible,
+.bs-back:focus-visible,
+.bs-return:focus-visible,
+.bs-close:focus-visible {
+  outline: 2px solid var(--champagne-bright);
+  outline-offset: 3px;
+}
+
+@keyframes bs-fade {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes bs-rise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+}
+.bs-overlay[data-motion='reduced'] .bs-menu,
+.bs-overlay[data-motion='reduced'] .bs-panel {
+  animation-name: bs-fade;
+}
+.bs-overlay[data-motion='reduced'][data-closing='true'] .bs-menu,
+.bs-overlay[data-motion='reduced'][data-closing='true'] .bs-panel {
+  transform: none;
+}
+
+/* ---------- The envelope at the doors (main bundle: arrived.css) ---------- */

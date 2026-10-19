@@ -20,17 +20,25 @@ export function ServiceBell({
   currentHour,
   variant = 'plate',
   onRing,
+  announcement = null,
 }: {
   context: ButlerContext | null;
   currentHour: () => number;
   variant?: 'plate' | 'scene';
   onRing?: (speakingForMs: number) => void;
+  /** Something the Butler says unprompted (his service): spoken once per turn. */
+  announcement?: { text: string; turn: number } | null;
 }) {
   const [rings, setRings] = useState<Partial<Record<ButlerContext, number>>>(
     {},
   );
   const [speech, setSpeech] = useState<Speech | null>(null);
   const available = context !== null;
+  const [heard, setHeard] = useState(0);
+  if (announcement && announcement.turn !== heard) {
+    setHeard(announcement.turn);
+    setSpeech({ text: announcement.text, turn: (speech?.turn ?? 0) + 1 });
+  }
 
   useEffect(() => {
     if (!speech) return;

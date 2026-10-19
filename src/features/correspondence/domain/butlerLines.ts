@@ -4,15 +4,6 @@
  */
 import { THANKS_RESPONSE } from '../../../shared/correspondence/templates';
 
-/** The arrival notice when letters are waiting; singular and plural. */
-export function waitingLine(unread: number): string {
-  if (unread <= 1)
-    return 'Ah, Madam. How lovely to see you. I believe some correspondence has arrived for you. Shall we take a look?';
-  const count =
-    ['two', 'three', 'four', 'five', 'six'][unread - 2] ?? String(unread);
-  return `Ah, Madam. How lovely to see you. I believe ${count} letters have arrived for you. Shall we take a look?`;
-}
-
 /** The collection's heading line. */
 export function collectionLine(unread: number, total: number): string {
   if (total === 0)

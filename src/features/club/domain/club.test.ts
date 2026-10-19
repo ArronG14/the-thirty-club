@@ -68,7 +68,7 @@ describe('Jamaica schedule', () => {
 });
 
 describe('room registry', () => {
-  it('lists the six confirmed spaces with stable ids and no secret chamber', () => {
+  it('lists the confirmed spaces with stable ids and no secret chamber', () => {
     expect(ROOMS.map((room) => room.id)).toEqual([
       'entrance',
       'lounge',
@@ -76,6 +76,7 @@ describe('room registry', () => {
       'casino',
       'gift-vault',
       'privileges',
+      'departure-lounge',
     ]);
     expect(new Set(ROOMS.map((room) => room.path)).size).toBe(ROOMS.length - 1);
     expect(findRoom('secret-chamber')).toBeUndefined();
@@ -88,6 +89,7 @@ describe('room registry', () => {
       'screening-room',
       'casino',
       'gift-vault',
+      'departure-lounge',
     ]);
   });
 

@@ -12,6 +12,22 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--", "--port", "5174", "--strictPort"],
       "port": 5174
+    },
+    {
+      "name": "butler-service",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "BUTLERS_OFFICE_LOCAL_API=1",
+        "CONCIERGE_LOCAL_API=1",
+        "npm",
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5190",
+        "--strictPort"
+      ],
+      "port": 5190
     }
   ]
 }

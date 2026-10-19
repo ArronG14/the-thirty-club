@@ -2,6 +2,15 @@ import { useEffect, useRef, useState } from 'react';
 import { ROOMS } from '../club/domain/rooms';
 import { endRehearsal } from '../concierge/client/sessionStore';
 import {
+  clearRehearsal,
+  rehearsalCounts,
+  rehearseLetters,
+} from '../butler-service/client/desk';
+import {
+  BUTLER_LINES,
+  type ButlerMoment,
+} from '../butler-service/domain/dialogue';
+import {
   authenticateOwner,
   clearOwnerProgress,
   exitOwner,
@@ -12,11 +21,27 @@ import {
 } from './session';
 import './owner.css';
 
+const MOMENT_NAMES: Record<ButlerMoment, string> = {
+  'unread-greeting': 'Greeting, when a letter is waiting',
+  ring: 'Answering the bell',
+  correspondence: 'Introducing her correspondence',
+  'request-received': 'Acknowledging a request',
+  thanks: 'Thanking her',
+  departure: 'Inviting her to the Departure Lounge',
+};
+
 export default function OwnerAccess() {
   const dialog = useRef<HTMLDialogElement>(null);
   const [pin, setPin] = useState('');
   const [error, setError] = useState('');
   const opener = useRef<HTMLElement | null>(null);
+  const [counts, setCounts] = useState(() =>
+    ownerActive ? rehearsalCounts() : null,
+  );
+  const rehearse = (change: () => void) => {
+    change();
+    setCounts(rehearsalCounts());
+  };
   useEffect(() => {
     const show = () => {
       opener.current = document.activeElement as HTMLElement;
@@ -42,9 +67,13 @@ export default function OwnerAccess() {
       {ownerActive && (
         <button
           className="owner-toggle"
-          onClick={() => dialog.current?.showModal()}
+          aria-label="Dev Mode: open rehearsal controls"
+          onClick={() => {
+            setCounts(rehearsalCounts());
+            dialog.current?.showModal();
+          }}
         >
-          Owner · test mode
+          Dev
         </button>
       )}
       <dialog
@@ -55,7 +84,7 @@ export default function OwnerAccess() {
       >
         <p className="owner-eyebrow">The Thirty Club · Private office</p>
         <h2 id="owner-title">
-          {ownerActive ? 'Owner access' : 'A private appointment'}
+          {ownerActive ? 'Dev Mode' : 'A private appointment'}
         </h2>
         {ownerActive ? (
           <>
@@ -78,13 +107,14 @@ export default function OwnerAccess() {
             </div>
             <h3>Visit a room</h3>
             <div className="owner-actions">
-              {ROOMS.filter((r) => r.built && r.id !== 'entrance').map(
-                (room) => (
-                  <button key={room.id} onClick={() => go('open', room.path)}>
-                    {room.name}
-                  </button>
-                ),
-              )}
+              {ROOMS.filter(
+                (r) =>
+                  r.built && r.id !== 'entrance' && r.id !== 'departure-lounge',
+              ).map((room) => (
+                <button key={room.id} onClick={() => go('open', room.path)}>
+                  {room.name}
+                </button>
+              ))}
               <button
                 onClick={() => go('open', '/concierge/owner?start=departure')}
               >
@@ -96,6 +126,47 @@ export default function OwnerAccess() {
                 Concierge Owner Console
               </button>
             </div>
+            <h3>The Butler’s service</h3>
+            <p>
+              Rehearse letters, the service bell and requests exactly as Alise
+              sees them. Everything stays in this tab: no SMS is sent and no
+              real correspondence is read or changed.
+            </p>
+            <p role="status">
+              {counts
+                ? `${counts.unread} unread of ${counts.letters} simulated letters · ${counts.requests} simulated requests`
+                : ''}
+            </p>
+            <div className="owner-actions">
+              <button onClick={() => rehearse(() => rehearseLetters(1))}>
+                Simulate one unread letter
+              </button>
+              <button onClick={() => rehearse(() => rehearseLetters(3))}>
+                Simulate three unread letters
+              </button>
+              <button onClick={() => rehearse(clearRehearsal)}>
+                Clear simulated correspondence
+              </button>
+              <button onClick={() => go('locked')}>
+                See the letter at the locked doors
+              </button>
+              <button onClick={() => window.location.assign('/correspondence')}>
+                Open the correspondence page
+              </button>
+            </div>
+            <details className="owner-lines">
+              <summary>Every line the Butler can say</summary>
+              {(Object.keys(BUTLER_LINES) as ButlerMoment[]).map((moment) => (
+                <section key={moment}>
+                  <h4>{MOMENT_NAMES[moment]}</h4>
+                  <ol>
+                    {BUTLER_LINES[moment].map((line) => (
+                      <li key={line}>{line}</li>
+                    ))}
+                  </ol>
+                </section>
+              ))}
+            </details>
             <p>
               Casino test controls are available inside the Grand Casino. Test
               rewards never affect Alise’s collection.

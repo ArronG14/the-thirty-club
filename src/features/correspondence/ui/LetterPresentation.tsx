@@ -4,27 +4,18 @@
  * transform and opacity only; reduced motion cross-fades. The same view is
  * the Owner Console's preview, where every action is inert and says so.
  */
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react';
+import { useEffect, useId, useRef, useState } from 'react';
 import type {
   MemberLetter,
   MemberLetterReply,
 } from '../../../shared/concierge/types';
-import { REPLY_MAX_LENGTH } from '../../../shared/correspondence/templates';
 import { useReducedMotion } from '../../../shared/ui/useReducedMotion';
-import { newIdempotencyKey } from '../../concierge/client/api';
 import { Emblem, WaxSeal } from '../../concierge/ui/Artwork';
-import {
-  failureText,
-  sendWord,
-  thankButler,
-  type DeskResult,
-} from '../client/correspondenceApi';
-import {
-  ALREADY_THANKED,
-  THANKS_ON_SCREEN,
-  WORD_PROMPT,
-  WORD_RECEIVED,
-} from '../domain/butlerLines';
+import { activeDesk, type ButlerDesk } from '../../butler-service/client/desk';
+import { nextLine } from '../../butler-service/domain/dialogue';
+import { RequestComposer } from '../../butler-service/ui/RequestComposer';
+import { failureText, type DeskResult } from '../client/correspondenceApi';
+import { ALREADY_THANKED } from '../domain/butlerLines';
 import { letterDate, paragraphs } from '../domain/format';
 import './correspondence.css';
 
@@ -39,9 +30,14 @@ export interface LetterPresentationProps {
   preview?: boolean;
   /** Called once when the seal is broken (the server records it). */
   onOpen?(): void;
-  /** Called with the server's updated letter after thanks. */
-  onThanked?(letter: MemberLetter): void;
+  /**
+   * Called after thanks: with the server's updated letter, and whether she
+   * had already thanked the Butler for it (nothing new was recorded).
+   */
+  onThanked?(letter: MemberLetter, duplicate: boolean): void;
   onReplied?(reply: MemberLetterReply): void;
+  /** Where thanks and words go. Dev Mode rehearses; see butler-service. */
+  desk?: Pick<ButlerDesk, 'thank' | 'reply' | 'mode'>;
 }
 
 export function LetterPresentation({
@@ -50,6 +46,7 @@ export function LetterPresentation({
   onOpen,
   onThanked,
   onReplied,
+  desk = activeDesk,
 }: LetterPresentationProps) {
   const reducedMotion = useReducedMotion();
   const [phase, setPhase] = useState<Phase>(
@@ -161,6 +158,7 @@ export function LetterPresentation({
             preview={preview}
             onThanked={onThanked}
             onReplied={onReplied}
+            desk={desk}
           />
         </>
       )}
@@ -175,44 +173,34 @@ export function LetterPresentation({
   );
 }
 
-type Busy = 'none' | 'thanking' | 'sending';
-
 function ButlerAtTheFoot({
   letter,
   preview,
   onThanked,
   onReplied,
+  desk,
 }: {
   letter: MemberLetter;
   preview: boolean;
-  onThanked?: ((letter: MemberLetter) => void) | undefined;
+  onThanked?: ((letter: MemberLetter, duplicate: boolean) => void) | undefined;
   onReplied?: ((reply: MemberLetterReply) => void) | undefined;
+  desk: Pick<ButlerDesk, 'thank' | 'reply' | 'mode'>;
 }) {
-  const [busy, setBusy] = useState<Busy>('none');
+  const [thanking, setThanking] = useState(false);
   const [speech, setSpeech] = useState<string | null>(null);
   const [problem, setProblem] = useState<string | null>(null);
   const [composing, setComposing] = useState(false);
-  const [draft, setDraft] = useState('');
-  // One key per composed message, so a resend after a timeout is the same message.
-  const [key, setKey] = useState(newIdempotencyKey);
   const [replies, setReplies] = useState(letter.replies);
   const [thanked, setThanked] = useState(Boolean(letter.thankedAt));
-  const fieldId = useId();
-  const countId = useId();
-  const field = useRef<HTMLTextAreaElement>(null);
-
-  useEffect(() => {
-    if (composing) field.current?.focus();
-  }, [composing]);
+  const noteId = useId();
 
   async function settle<T>(
-    kind: Busy,
     request: () => Promise<DeskResult<T>>,
   ): Promise<T | null> {
-    setBusy(kind);
+    setThanking(true);
     setProblem(null);
     const result = await request();
-    setBusy('none');
+    setThanking(false);
     if (result.ok) return result.data;
     setProblem(failureText(result));
     return null;
@@ -220,41 +208,21 @@ function ButlerAtTheFoot({
 
   async function thank() {
     if (preview) {
-      setSpeech(THANKS_ON_SCREEN);
+      setSpeech(nextLine('thanks'));
       return;
     }
-    if (busy !== 'none') return;
+    if (thanking) return;
     if (thanked) {
       setSpeech(ALREADY_THANKED);
+      onThanked?.(letter, true);
       return;
     }
-    const data = await settle('thanking', () => thankButler(letter.id));
+    const data = await settle(() => desk.thank(letter.id));
     if (!data) return;
     setThanked(true);
     setComposing(false);
-    setSpeech(data.duplicate ? ALREADY_THANKED : THANKS_ON_SCREEN);
-    onThanked?.(data.letter);
-  }
-
-  async function submit(event: FormEvent) {
-    event.preventDefault();
-    const words = draft.trim();
-    if (!words || busy !== 'none') return;
-    if (preview) {
-      setSpeech(WORD_RECEIVED);
-      setComposing(false);
-      return;
-    }
-    const data = await settle('sending', () => sendWord(letter.id, words, key));
-    if (!data) return;
-    setReplies((all) =>
-      all.some((r) => r.id === data.reply.id) ? all : [...all, data.reply],
-    );
-    setDraft('');
-    setKey(newIdempotencyKey());
-    setComposing(false);
-    setSpeech(WORD_RECEIVED);
-    onReplied?.(data.reply);
+    setSpeech(data.duplicate ? ALREADY_THANKED : nextLine('thanks'));
+    onThanked?.(data.letter, data.duplicate);
   }
 
   return (
@@ -264,15 +232,20 @@ function ButlerAtTheFoot({
           Preview · these buttons record nothing and send nothing.
         </p>
       )}
+      {!preview && desk.mode === 'rehearsal' && (
+        <p className="cd-butler__preview">
+          Dev Mode rehearsal · nothing is recorded for Alise and no SMS is sent.
+        </p>
+      )}
       <div className="cd-butler__actions">
         <button
           type="button"
           className="cd-button"
           onClick={() => void thank()}
-          disabled={busy !== 'none'}
-          aria-describedby={thanked ? `${fieldId}-thanked` : undefined}
+          disabled={thanking || composing}
+          aria-describedby={thanked ? noteId : undefined}
         >
-          {busy === 'thanking' ? 'One moment…' : '✉️ Thank the Butler'}
+          {thanking ? 'One moment…' : 'Thank You, Butler'}
         </button>
         <button
           type="button"
@@ -283,13 +256,13 @@ function ButlerAtTheFoot({
             setProblem(null);
             setComposing((c) => !c);
           }}
-          disabled={busy !== 'none'}
+          disabled={thanking}
         >
-          🎩 Butler, A Word
+          A Word, Butler
         </button>
       </div>
       {thanked && !speech && (
-        <p id={`${fieldId}-thanked`} className="cd-butler__note">
+        <p id={noteId} className="cd-butler__note">
           You thanked the Butler for this letter.
         </p>
       )}
@@ -309,45 +282,35 @@ function ButlerAtTheFoot({
       </div>
 
       {composing && (
-        <form className="cd-word" onSubmit={(e) => void submit(e)}>
-          <p className="cd-word__prompt">{WORD_PROMPT}</p>
-          <label htmlFor={fieldId} className="sr-only">
-            Your message to the Butler
-          </label>
-          <textarea
-            id={fieldId}
-            ref={field}
-            className="cd-word__field"
-            value={draft}
-            maxLength={REPLY_MAX_LENGTH}
-            rows={5}
-            aria-describedby={countId}
-            onChange={(e) => setDraft(e.target.value)}
-            placeholder="Write to the Butler…"
-          />
-          <p id={countId} className="cd-word__count">
-            {REPLY_MAX_LENGTH - draft.length} characters remaining
-          </p>
-          <div className="cd-word__actions">
-            <button
-              type="submit"
-              className="cd-button"
-              disabled={busy !== 'none' || draft.trim().length === 0}
-            >
-              {busy === 'sending'
-                ? 'Handing it over…'
-                : 'Hand it to the Butler'}
-            </button>
-            <button
-              type="button"
-              className="cd-button cd-button--quiet"
-              onClick={() => setComposing(false)}
-              disabled={busy !== 'none'}
-            >
-              Never mind
-            </button>
-          </div>
-        </form>
+        <RequestComposer
+          send={(body, key) =>
+            preview
+              ? Promise.resolve({
+                  ok: true as const,
+                  data: {
+                    reply: { id: key, body, createdAt: '' },
+                    duplicate: false,
+                  },
+                })
+              : desk.reply(letter.id, body, key).then((result) => {
+                  if (result.ok) {
+                    const reply = result.data.reply;
+                    setReplies((all) =>
+                      all.some((r) => r.id === reply.id)
+                        ? all
+                        : [...all, reply],
+                    );
+                    onReplied?.(reply);
+                  }
+                  return result;
+                })
+          }
+          onSent={() => {
+            setComposing(false);
+            setSpeech(nextLine('request-received'));
+          }}
+          onCancel={() => setComposing(false)}
+        />
       )}
 
       {replies.length > 0 && (

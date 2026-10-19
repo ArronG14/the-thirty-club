@@ -3,7 +3,9 @@
  * butler's guidance, the Members' Directory, the room gate). Adding a room
  * means adding an entry here, then flipping `built` once it really exists.
  *
- * The Secret Chamber is a stretch goal and deliberately absent.
+ * The Secret Chamber is a stretch goal and deliberately absent. A panoramic
+ * lounge whose camera swivels between these entrances is a recorded future
+ * enhancement (TASKS.md), not part of this build.
  */
 import { instantInZone, ROOM_SCHEDULE } from './schedule';
 
@@ -13,7 +15,8 @@ export type RoomId =
   | 'screening-room'
   | 'casino'
   | 'gift-vault'
-  | 'privileges';
+  | 'privileges'
+  | 'departure-lounge';
 
 export type UnlockRule =
   /** Open to anyone who has reached the lounge. */
@@ -134,6 +137,18 @@ export const ROOMS: readonly RoomDefinition[] = [
       announcement:
         'If I may, Alise: the Privileges Collection is now at your disposal.',
     },
+  },
+  {
+    // The pre-birthday Departure Lounge (ADR-012) stays open afterwards. It
+    // keeps its own server-side schedule and credential; the directory only
+    // shows the way. Never recommended, so the evening's order is unchanged.
+    id: 'departure-lounge',
+    name: 'The Departure Lounge',
+    unlock: { kind: 'always' },
+    sequence: null,
+    built: true,
+    path: '/departure',
+    butler: null,
   },
 ];
 

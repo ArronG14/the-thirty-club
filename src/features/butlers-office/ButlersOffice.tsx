@@ -11,6 +11,8 @@ import { instantToWall, wallTimeToInstant } from '../../shared/concierge/time';
 import { OfficeError, officeRequest } from './client';
 import { VaultOffice } from './VaultOffice';
 import { CorrespondenceDesk } from './CorrespondenceDesk';
+import { ButlerSmsDesk } from './ButlerSmsDesk';
+import { RequestsDesk } from './RequestsDesk';
 import './office.css';
 const fmtMoney = (pence: number) =>
   new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }).format(
@@ -172,6 +174,7 @@ export default function ButlersOffice() {
             {[
               'overview',
               'correspondence',
+              'requests',
               'privileges',
               'redemptions',
               'messages',
@@ -336,7 +339,9 @@ export default function ButlersOffice() {
               )}
               {tab === 'messages' && (
                 <>
-                  <h2>Scheduled correspondence</h2>
+                  <ButlerSmsDesk />
+                  <hr />
+                  <h2>Scheduled announcements</h2>
                   <section className="office-card">
                     <h3>Claim notifications to Arron</h3>
                     <p>
@@ -499,6 +504,7 @@ export default function ButlersOffice() {
               )}
               {tab === 'vault' && <VaultOffice />}
               {tab === 'correspondence' && <CorrespondenceDesk />}
+              {tab === 'requests' && <RequestsDesk />}
               {tab === 'membership' && (
                 <section className="office-card">
                   <h2>Alise’s membership</h2>

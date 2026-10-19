@@ -10,11 +10,9 @@ import { WaxSeal } from '../../concierge/ui/Artwork';
 import {
   consumeInvitationFragment,
   failureText,
-  listLetters,
-  memberStanding,
-  openLetter,
   type DeskFailure,
 } from '../client/correspondenceApi';
+import { activeDesk } from '../../butler-service/client/desk';
 import { collectionLine, NEEDS_MEMBERSHIP } from '../domain/butlerLines';
 import { letterDate } from '../domain/format';
 import { LetterPresentation } from './LetterPresentation';
@@ -31,8 +29,10 @@ function useLetters() {
   const [load, setLoad] = useState<Load>({ kind: 'loading' });
   const refresh = useCallback(async () => {
     setLoad({ kind: 'loading' });
-    const invitation = await consumeInvitationFragment();
-    const standing = await memberStanding();
+    // Dev Mode rehearses with its own letters and never presents an invitation.
+    const invitation =
+      activeDesk.mode === 'live' ? await consumeInvitationFragment() : 'none';
+    const standing = await activeDesk.standing();
     if (standing.kind === 'owner') return setLoad({ kind: 'owner' });
     if (standing.kind === 'needs-membership')
       return setLoad({
@@ -41,7 +41,7 @@ function useLetters() {
       });
     if (standing.kind === 'unavailable')
       return setLoad({ kind: 'trouble', failure: standing.failure });
-    const result = await listLetters();
+    const result = await activeDesk.letters();
     if (result.ok) setLoad({ kind: 'ready', letters: result.data.letters });
     else setLoad({ kind: 'trouble', failure: result });
   }, []);
@@ -236,7 +236,7 @@ export function CorrespondenceLetter() {
         letter={letter}
         onOpen={() => {
           // The server records the opening; the letter is already in hand.
-          void openLetter(letter.id).then((r) => {
+          void activeDesk.open(letter.id).then((r) => {
             if (r.ok) replace(r.data.letter);
           });
         }}

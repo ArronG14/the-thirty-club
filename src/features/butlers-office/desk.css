@@ -205,3 +205,64 @@
   font-size: 0.85rem;
   color: #c7af7e;
 }
+
+/* ---------- The Butler's Service: Write to Alise, Member Requests ---------- */
+.desk__when {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.2rem;
+  margin: 0.4rem 0;
+  padding: 0;
+  border: 0;
+}
+.desk__when legend {
+  margin-bottom: 0.3rem;
+}
+.desk__sms-preview {
+  margin: 0.6rem 0;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed #a88d5580;
+  border-radius: 0.4rem;
+  background: #120f0c;
+}
+.desk__bubble {
+  margin: 0.4rem 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 1rem 1rem 1rem 0.25rem;
+  background: #2b2620;
+  color: #f4ebdd;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
+}
+.desk__confirm {
+  margin: 0.4rem 0;
+  padding: 0.6rem 0.8rem;
+  border-left: 3px solid #c46a4f;
+  background: #2a1814;
+}
+.desk-card[data-stage='failed'],
+.desk-card[data-stage='uncertain'] {
+  border-left: 3px solid #c46a4f;
+}
+.desk-card[data-stage='scheduled'] {
+  border-color: #c9ad76;
+}
+.desk-request blockquote {
+  margin: 0.4rem 0;
+  font-size: 1.15rem;
+}
+.desk-request[data-resolved='true'] {
+  opacity: 0.85;
+}
+.desk-request__title {
+  margin: 0.8rem 0 0.3rem;
+  font-size: 1rem;
+}
+.desk-request__responses {
+  margin: 0;
+  padding-left: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.5rem;
+}

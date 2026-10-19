@@ -1,17 +1,48 @@
 .owner-toggle {
+  /* A small brass disc in the top-left corner, clear of every room's
+     centred heading on an iPhone (and of the lounge title in particular). */
   position: fixed;
   z-index: 90;
-  right: max(12px, env(safe-area-inset-right));
-  top: max(12px, env(safe-area-inset-top));
-  min-height: 44px;
-  padding: 8px 16px;
-  background: #17120f;
+  left: max(8px, env(safe-area-inset-left));
+  top: max(8px, env(safe-area-inset-top));
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border-radius: 50%;
+  background: rgb(23 18 15 / 0.82);
   color: #dfc38a;
   border: 1px solid #997c47;
   font:
-    12px Jost,
+    11px Jost,
     sans-serif;
   letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.owner-lines {
+  margin: 16px 0;
+}
+.owner-lines summary {
+  min-height: 44px;
+  display: flex;
+  align-items: center;
+  cursor: pointer;
+  color: #f0dfb9;
+}
+.owner-lines h4 {
+  margin: 14px 0 6px;
+  font:
+    11px Jost,
+    sans-serif;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #c5a66d;
+}
+.owner-lines ol {
+  margin: 0;
+  padding-left: 1.2em;
+  font-size: 15px;
+  line-height: 1.45;
 }
 .owner-dialog {
   width: min(430px, calc(100vw - 32px));

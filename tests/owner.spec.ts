@@ -22,11 +22,11 @@ async function unlock(page: Page, target = '.timepiece') {
   await page.getByLabel('Private access code').fill('1414');
   await page.getByRole('button', { name: 'Unlock private office' }).click();
   await expect(
-    page.getByRole('button', { name: 'Owner · test mode' }),
+    page.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }),
   ).toBeVisible();
 }
 async function panel(page: Page) {
-  await page.getByRole('button', { name: 'Owner · test mode' }).click();
+  await page.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }).click();
 }
 
 test('mobile activation, incorrect PIN, room navigation, test rewards, reset and exit', async ({
@@ -38,7 +38,7 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
   await page.goto('/?preview=evening');
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
   await expect(
-    page.getByRole('button', { name: 'Owner · test mode' }),
+    page.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }),
   ).toHaveCount(0);
   for (let i = 0; i < 4; i++) await page.locator('.timepiece').tap();
   await expect(page.getByRole('dialog')).toHaveCount(0);
@@ -108,7 +108,7 @@ test('mobile activation, incorrect PIN, room navigation, test rewards, reset and
   await panel(page);
   await page.getByRole('button', { name: 'Exit owner mode' }).click();
   await expect(
-    page.getByRole('button', { name: 'Owner · test mode' }),
+    page.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }),
   ).toHaveCount(0);
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
   expect(
@@ -220,6 +220,6 @@ test('closing the owner tab ends authentication', async ({ context }) => {
   await fresh.goto('/');
   await expect(fresh.locator('.club')).toHaveAttribute('data-stage', 'locked');
   await expect(
-    fresh.getByRole('button', { name: 'Owner · test mode' }),
+    fresh.getByRole('button', { name: 'Dev Mode: open rehearsal controls' }),
   ).toHaveCount(0);
 });

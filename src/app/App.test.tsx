@@ -55,9 +55,12 @@ describe('routes and connectivity', () => {
       copy.querySelectorAll('[aria-hidden="true"]').forEach((n) => n.remove());
       return copy.textContent;
     };
-    // The concierge's letter on the step (ADR-012) and the butler's bell.
+    // The concierge's letter on the step (ADR-012), the Butler's way to the
+    // Departure Lounge, and his bell. Correspondence appears only for a
+    // recognised member with a letter waiting.
     expect(screen.getAllByRole('button').map(spoken)).toEqual([
       'A letter has been left for you',
+      'Your Departure Lounge',
       'Ring for service',
     ]);
   });

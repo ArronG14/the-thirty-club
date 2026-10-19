@@ -182,6 +182,7 @@ describe('the lounge as the club’s hub', () => {
       'The Grand Casino',
       'The Gift Vault',
       'The Privileges Collection',
+      'The Departure Lounge',
     ]);
     const status = (i: number) =>
       rows[i]!.querySelector('.directory__status')!.textContent;
