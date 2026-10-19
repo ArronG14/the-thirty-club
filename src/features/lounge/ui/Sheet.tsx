@@ -15,7 +15,7 @@ export function Sheet({
   title: string;
   /** Visible eyebrow above the title. */
   label?: string;
-  variant: 'card' | 'directory';
+  variant: 'card' | 'directory' | 'vouchers';
   /** Where focus goes on close. Safari does not focus buttons on click. */
   returnFocusTo?: HTMLElement | null;
   onClose(): void;

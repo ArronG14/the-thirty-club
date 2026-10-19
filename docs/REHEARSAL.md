@@ -68,3 +68,7 @@ Launches never bypass a gate. They move the rehearsal clock forward to when the 
 - The simulated office is per browser. Two devices never share a rehearsal.
 - Owner sign-in inside TEST is simulated (no password). The LIVE password is the real one.
 - The Casino still plays slots locally; in rehearsal, "Simulate a Casino jackpot" records the jackpot in the rehearsal prize ledger and releases the casino-bound compartment in the simulated vault, as the server would after a recorded jackpot.
+
+## Casino/rewards branch update (2026-10-19)
+
+The new production Casino now uses the persisted `/api/v1/casino` spin API. The older local roulette/slots and jackpot controls above describe the previous build and remain development previews only. The TEST Control Centre gains a Casino & rewards section for prize catalogue, immediate and scheduled batches, vouchers and gift fulfilment. The same API handlers and Casino migration run in TEST PGlite, but the isolated Casino branch does not contain Opus's Journey migration. Issue/spin correctly returns `not-configured` until the two branches are integrated. Follow `docs/CASINO_REWARDS_INTEGRATION.md` for the combined TEST and iPhone rehearsal; do not use a local jackpot as proof of an authoritative prize.

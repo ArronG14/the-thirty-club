@@ -98,3 +98,7 @@ Phase 2 builds only the entrance and foyer holding room. Phase 1 does not implem
 ## Backend foundation and Butler’s Office (2026-10-18)
 
 The owner selected a dedicated Supabase PostgreSQL project, Netlify Functions and the existing Twilio Messaging Service. The v1 API implements secure owner/member sessions, independent nail/brow claims, drink-voucher accounting, approval-based scheduled/transactional SMS and the mobile `/owner` office. The shared frontend contract is `docs/CONCIERGE_API_CONTRACT.md`; deployment and safe legacy-data cutover are in `docs/BACKEND_OPERATIONS.md`. Local checks and hosted database rehearsal are recorded in BUILD_LOG.md. Netlify production verification, real message delivery, frontend Casino integration and physical iPhone rehearsal remain pending. No SMS has been sent during this work.
+
+## Casino rewards integration (2026-10-19)
+
+An isolated feature branch implements owner-issued spin batches, an editable prize catalogue, server-authoritative results, voucher requests and fulfilment, and Casino-linked Gift Vault entitlements. The member Casino now reveals only server results. This branch depends on the Birthday Journey migration for room admission and Butler event delivery, so it is not an independently deployable release. See `docs/CASINO_REWARDS_INTEGRATION.md` for the handover and remaining integrated rehearsal.

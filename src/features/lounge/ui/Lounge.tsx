@@ -37,12 +37,13 @@ import { MembershipCard } from './MembershipCard';
 import { Sheet } from './Sheet';
 import { useButlerService } from '../../butler-service/useButlerService';
 import { ArrivedEnvelope } from '../../butler-service/ui/ArrivedEnvelope';
+import { VoucherWallet } from './VoucherWallet';
 import './lounge.css';
 
 const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
 
 type RenderMode = 'poster' | 'loading' | 'fading' | 'scene';
-type Overlay = 'card' | 'directory' | null;
+type Overlay = 'card' | 'directory' | 'vouchers' | null;
 const FADE_MS = 1400;
 /**
  * The Butler's escort to the Screening Room: the camera walks towards the
@@ -440,6 +441,13 @@ export function Lounge({
                   <Glyph kind="bell" />
                   Ring for service
                 </button>
+                <button
+                  type="button"
+                  className="dock__item"
+                  onClick={(e) => openSheet('vouchers', e.currentTarget)}
+                >
+                  Your Casino vouchers
+                </button>
               </nav>
             </>
           )}
@@ -470,6 +478,17 @@ export function Lounge({
             recommended={destination?.room.id ?? null}
             onEnter={enter}
           />
+        </Sheet>
+      )}
+      {overlay === 'vouchers' && (
+        <Sheet
+          variant="vouchers"
+          label="The Butler's collection"
+          title="Your vouchers"
+          returnFocusTo={opener}
+          onClose={closeSheet}
+        >
+          <VoucherWallet />
         </Sheet>
       )}
       {inducted && service.overlays}

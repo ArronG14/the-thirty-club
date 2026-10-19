@@ -1,5 +1,7 @@
 # THE GRAND CASINO — OVERNIGHT BUILD REPORT
 
+> Historical report for the browser-ledger Casino. The production Casino on `feature/casino-rewards-vault` now uses authoritative PostgreSQL spins and a single reel presentation. See `docs/CASINO_REWARDS_INTEGRATION.md` for the current implementation and its Journey integration dependency.
+
 Built unattended on the night of 17–18 October 2026 (BST). Everything below
 was implemented in this run; anything not verified is said so.
 

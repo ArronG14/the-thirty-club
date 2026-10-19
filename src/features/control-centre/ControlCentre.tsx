@@ -31,8 +31,9 @@ import './controlCentre.css';
 const ButlersOffice = lazy(() => import('../butlers-office/ButlersOffice'));
 const OwnerConsole = lazy(() => import('../concierge/owner/OwnerConsole'));
 const RehearsalDesk = lazy(() => import('./RehearsalDesk'));
+const CasinoRewardsDesk = lazy(() => import('./CasinoRewardsDesk'));
 
-type Section = 'rehearsal' | 'office' | 'concierge';
+type Section = 'rehearsal' | 'office' | 'concierge' | 'casino';
 
 const isOfficeTab = (value: string | null): value is OfficeTab =>
   OFFICE_TABS.includes(value as OfficeTab);
@@ -67,6 +68,7 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
   const [section, setSection] = useState<Section>(
     requested === 'office' ||
       requested === 'concierge' ||
+      requested === 'casino' ||
       (requested === 'rehearsal' && world === 'test')
       ? requested
       : fallback,
@@ -103,6 +105,7 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
       : []),
     { id: 'office', label: 'Butler’s Office' },
     { id: 'concierge', label: 'Concierge & privileges' },
+    { id: 'casino', label: 'Casino & rewards' },
   ];
 
   return (
@@ -190,6 +193,7 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
               />
             )}
             {section === 'concierge' && <OwnerConsole embedded />}
+            {section === 'casino' && <CasinoRewardsDesk />}
           </Suspense>
         </>
       )}
