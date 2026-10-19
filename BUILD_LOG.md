@@ -697,3 +697,11 @@
 - **Known issues:** No physical iPhone run; PGlite (~5 MB compressed) first load and memory on a real phone unmeasured. Owner password not changed (needs Arron's choice). Travel-credential variables not visible in Netlify. Privileges room not built. Casino slots remain local; the jackpot → vault link is rehearsed only.
 - **Remaining work:** OC08 run by Arron, OC09 iPhone rehearsal, OC10 default-section decision; existing CD/BS/GV items unchanged.
 - **Commit:** recorded in the sprint report (this entry is committed with the work).
+
+## 2026-10-19 09:25 BST (Europe/London) — Claude (Opus 5.5) — ADR-018 release and production smoke
+
+- **Task:** Release `feature/owner-control-centre` and verify production read-only.
+- **Summary:** GitHub `main` fast-forwarded `1a3be93 → f041b23` (no force). Netlify deploy `6ad5cffd88e13a25c89f5fc3` built and published `f041b230c89b28adf0793a91201a47d88b2434c2` at 08:09 UTC.
+- **Checks/results (production, read-only):** `GET /api/v1/auth/session` unsigned → 401 JSON. PGlite WebAssembly served `200 application/wasm`, immutable. Concierge owner overview (owner key, GET only): `shopping` = awaiting settlement, £100.00, i.e. the redeemed Shopping Privilege is intact; live legacy redemptions 0. Netlify environment (names only): `SMS_SENDING_ENABLED=false`, `CONCIERGE_LEGACY_STORAGE` absent. WebKit iPhone 13 smoke against https://30.ag14.co PASS: guest entrance locked with no Dev disc; PIN → TEST boots the simulated office from production; rehearsal letter delivered; Gift Vault launch shows 3 rehearsal compartments; letter at the doors; **zero `/api/` requests** from rehearsal pages; `/owner` → LIVE sign-in which calls the real `GET /api/v1/auth/session`; Exit Dev Mode. Screenshots: `docs/rehearsal/screenshots/production/`.
+- **Known issues:** Alise's device will show the concierge's step letter once more as unread (opened state is newly tracked) until she opens it. Google Drive upload of the handover documents failed: the Drive connector requires re-authentication.
+- **Commit:** this documentation commit follows `f041b23`.
