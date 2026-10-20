@@ -161,7 +161,8 @@ beforeEach(async () => {
   await pg.query('update public.ttc_sim_clock set offset_ms = 0');
   await pg.exec(
     `truncate public.ttc_journey_events, public.ttc_room_admissions, public.ttc_letter_replies, public.ttc_letters,
-     public.ttc_sessions, public.ttc_messages, public.ttc_message_delivery_logs, public.ttc_activity_events cascade;
+     public.ttc_sessions, public.ttc_messages, public.ttc_message_delivery_logs, public.ttc_activity_events,
+     public.ttc_casino_batches cascade;
      delete from public.ttc_journey_milestones;
      insert into public.ttc_journey_milestones select * from public.seeded_milestones;`,
   );
@@ -511,40 +512,55 @@ describe('milestones', () => {
     expect(refused.status).toBe(409);
   });
 
-  it('a missing Casino hook fails only its own milestone, and retries safely', async () => {
-    const r = await call<{ milestone: OwnerMilestone }>(
+  it('the Casino hook issues the milestone’s spins once, however often it runs', async () => {
+    const batches = async () =>
+      (
+        await pg.query<{ quantity: number; key: string }>(
+          'select quantity, idempotency_key as key from public.ttc_casino_batches',
+        )
+      ).rows;
+    // A bad configuration fails only this milestone and issues nothing.
+    await pg.query(
+      `update public.ttc_journey_milestones set effects = '[{"type":"hook","name":"casino.spins.issue","params":{"quantity":0}}]'
+       where key = 'casino-opening-spins'`,
+    );
+    const failed = await call<{ milestone: OwnerMilestone }>(
       '/owner/journey/milestones/casino-opening-spins/fire',
       {},
     );
-    expect(r.data.milestone.state).toBe('failed');
-    expect(r.data.milestone.lastError).toMatch(/hook-unavailable/);
-    // Codex installs the hook; the retry passes the same idempotency key.
-    await pg.exec(`create table public.hook_calls(key text primary key, params jsonb);
-      create function public.ttc_journey_hook(p_name text, p_params jsonb, p_key text) returns jsonb
-      language plpgsql as $$ begin
-        insert into public.hook_calls values (p_key, p_params) on conflict do nothing;
-        perform public.ttc_journey_publish('casino.spins.issued','casino','spins-'||p_key,
-          jsonb_build_object('batchId',p_key,'quantity',(p_params->>'quantity')::int,'announce',p_params->'announce'));
-        return '{}'; end $$;`);
-    try {
-      const retried = await call<{ milestone: OwnerMilestone }>(
-        '/owner/journey/milestones/casino-opening-spins/retry',
-        {},
-      );
-      expect(retried.data.milestone.state).toBe('fired');
-      const calls = await pg.query<{ key: string }>(
-        'select key from public.hook_calls',
-      );
-      expect(calls.rows).toEqual([{ key: 'milestone:casino-opening-spins:0' }]);
-      const issued = (await owner()).events.find(
-        (e) => e.type === 'casino.spins.issued',
-      )!;
-      expect(issued.state).toBe('recorded'); // announce:false at the opening
-    } finally {
-      await pg.exec(
-        'drop function public.ttc_journey_hook(text,jsonb,text); drop table public.hook_calls;',
-      );
-    }
+    expect(failed.data.milestone.state).toBe('failed');
+    expect(await batches()).toEqual([]);
+    // The owner corrects it; the retry issues exactly one batch.
+    await call(
+      '/owner/journey/milestones/casino-opening-spins',
+      {
+        effects: [
+          {
+            type: 'hook',
+            name: 'casino.spins.issue',
+            params: { quantity: 5, announce: false },
+          },
+        ],
+      },
+      'owner',
+      'PATCH',
+    );
+    const retried = await call<{ milestone: OwnerMilestone }>(
+      '/owner/journey/milestones/casino-opening-spins/retry',
+      {},
+    );
+    expect(retried.data.milestone.state).toBe('fired');
+    await call('/owner/journey/milestones/casino-opening-spins/fire', {});
+    await at('2026-10-23T15:00:00Z');
+    await runJourneyRound(db);
+    expect(await batches()).toEqual([
+      { quantity: 5, key: 'milestone:casino-opening-spins:0' },
+    ]);
+    const issued = (await owner()).events.filter(
+      (e) => e.type === 'casino.spins.issued',
+    );
+    expect(issued).toHaveLength(1);
+    expect(issued[0]!.state).toBe('recorded'); // announce:false at the opening
   });
 
   it('the owner can create a custom milestone, held until released', async () => {

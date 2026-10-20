@@ -259,3 +259,17 @@ Branch `feature/birthday-journey` (worktree `../the-thirty-club-journey`) from p
 | BJ17 | P1       | NOT STARTED | Authorised SMS test of a journey letter's invitation with `SMS_SENDING_ENABLED=true` (no SMS has been sent)                                                                                                                |
 
 The Screening Room (ADR-019) passed the owner's real-iPhone Safari check on 19 October: escort, native fullscreen playback, automatic return to the cinema and the Butler's closing message (owner-reported). The birthday film is deliberately deferred (SR08).
+
+## Casino and rewards integration (ADR-020)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                                                                                                                 |
+| ---- | -------- | ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| CR01 | P0       | VERIFIED    | Owner-issued independent batches, 0–N distinct random prize positions, server-only future allocations, idempotent keys (PGlite Casino suite)                                                      |
+| CR02 | P0       | VERIFIED    | Member-row-locked spin, one committed result/entitlement per position, retry and refresh recovery, admission guard fixture (PGlite Casino suite)                                                  |
+| CR03 | P0       | VERIFIED    | Editable prize catalogue with immutable award snapshots; voucher request, cancellation and owner fulfilment (PGlite Casino suite)                                                                 |
+| CR04 | P0       | IMPLEMENTED | Exact Journey events and milestone hook; deploy requires Opus's `20261022090000` migration before Casino's `20261022100000` and an integrated PGlite/browser run                                  |
+| CR05 | P0       | IMPLEMENTED | LIVE/TEST isolation uses ADR-018; integrated TEST Casino rehearsal awaits the Journey migration in the combined branch                                                                            |
+| CR06 | P1       | IMPLEMENTED | Owner Control Centre Casino section, immediate issue, scheduled Journey milestone command, batch/history/request/fulfilment controls; mobile browser rehearsal pending                            |
+| CR07 | P1       | VERIFIED    | Casino-linked Vault gift unlock, opened/revealed distinction and owner physical fulfilment; existing NFC/code regression suite passed                                                             |
+| CR08 | P1       | IMPLEMENTED | Member premium single-reel presentation and Lounge Voucher Wallet; Butler conversational integration and iPhone device rehearsal pending                                                          |
+| CR09 | P0       | NOT STARTED | Merge completed Journey and Casino branches in a separate integration worktree, reconcile the milestone `key` contract, run all checks, apply migrations and rehearse on iPhone before deployment |

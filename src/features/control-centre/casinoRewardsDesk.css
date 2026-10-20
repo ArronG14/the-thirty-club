@@ -1,0 +1,86 @@
+.cr-desk {
+  padding: 1rem 0 3rem;
+  color: inherit;
+}
+.cr-desk h2,
+.cr-desk h3 {
+  font-family: var(--font-display, serif);
+  font-weight: 400;
+}
+.cr-desk h2 {
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+.cr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1rem;
+}
+.cr-card {
+  border: 1px solid #b89b6870;
+  background: #25191a80;
+  border-radius: 0.8rem;
+  padding: 1.25rem;
+  margin: 1rem 0;
+}
+.cr-card form,
+.cr-card label {
+  display: grid;
+  gap: 0.4rem;
+}
+.cr-card form {
+  gap: 0.9rem;
+}
+.cr-card input:not([type='checkbox']),
+.cr-card select,
+.cr-card textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.6rem;
+  border: 1px solid #b89b68;
+  background: #130e10;
+  color: #f6e7cc;
+  border-radius: 0.3rem;
+  font: inherit;
+}
+.cr-card textarea {
+  min-height: 5rem;
+}
+.cr-card fieldset {
+  border: 1px solid #b89b6870;
+}
+.cr-card .cr-choice {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.5rem 0;
+}
+.cr-card button {
+  min-height: 2.8rem;
+  border: 1px solid #d8b978;
+  border-radius: 0.3rem;
+  background: #6b4333;
+  color: #fff2d8;
+  padding: 0.5rem 0.8rem;
+  font: inherit;
+  cursor: pointer;
+}
+.cr-card button:disabled {
+  opacity: 0.5;
+}
+.cr-card li {
+  margin: 0.7rem 0;
+  line-height: 1.5;
+}
+.cr-card ul {
+  padding-left: 1.2rem;
+}
+.cr-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+.cr-message {
+  padding: 0.7rem;
+  border: 1px solid #d8b978;
+}

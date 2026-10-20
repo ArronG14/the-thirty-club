@@ -1,0 +1,154 @@
+.casino-live {
+  min-height: 100svh;
+  position: relative;
+  overflow: hidden;
+  background: radial-gradient(
+    circle at 50% 15%,
+    #5a2630 0,
+    #260e17 45%,
+    #0d080a 85%
+  );
+  color: #f8ead0;
+  padding: calc(1.2rem + env(safe-area-inset-top)) 1.2rem
+    calc(2rem + env(safe-area-inset-bottom));
+  font-family: var(--font-body, 'Jost', sans-serif);
+}
+.casino-live__glow {
+  position: absolute;
+  inset: 8% -20% auto;
+  height: 35svh;
+  background: radial-gradient(ellipse, #b47c3b44, transparent 68%);
+  pointer-events: none;
+}
+.casino-live__header {
+  position: relative;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  font-size: 0.7rem;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  color: #d9b980;
+}
+.casino-live a {
+  color: #f0c879;
+}
+.casino-live__table {
+  position: relative;
+  max-width: 44rem;
+  margin: 8svh auto 0;
+  text-align: center;
+  border: 1px solid #b99a5c88;
+  border-radius: 1.2rem;
+  padding: clamp(1.5rem, 6vw, 3.5rem);
+  box-shadow:
+    0 20px 90px #0008,
+    inset 0 0 0 5px #ffffff08;
+  background: linear-gradient(140deg, #4b1825cc, #170b11ee);
+}
+.casino-live__eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.25em;
+  font-size: 0.72rem;
+  color: #dfba76;
+}
+.casino-live h1,
+.casino-live h2 {
+  font-family: var(--font-display, 'Bodoni Moda', serif);
+  font-weight: 400;
+}
+.casino-live h1 {
+  font-size: clamp(2.5rem, 10vw, 5rem);
+  line-height: 1;
+  margin: 1rem 0 2rem;
+}
+.casino-live__reels {
+  display: flex;
+  justify-content: center;
+  gap: 0.7rem;
+  margin: 0 auto 1.5rem;
+}
+.casino-live__reels span {
+  display: grid;
+  place-items: center;
+  width: clamp(4rem, 19vw, 6.5rem);
+  aspect-ratio: 1;
+  background: linear-gradient(145deg, #170d10, #502229);
+  border: 2px solid #d2ab68;
+  border-radius: 0.65rem;
+  font-family: var(--font-display, serif);
+  font-size: 2.2rem;
+  box-shadow:
+    inset 0 0 25px #0008,
+    0 8px 30px #0005;
+}
+.casino-live__reels[data-spinning='true'] span {
+  animation: casino-turn 0.25s linear infinite alternate;
+}
+@keyframes casino-turn {
+  to {
+    transform: translateY(-0.45rem);
+    filter: brightness(1.5);
+  }
+}
+.casino-live__count {
+  font-size: 1rem;
+  letter-spacing: 0.08em;
+}
+.casino-live__spin {
+  width: min(100%, 21rem);
+  min-height: 3.5rem;
+  margin: 1rem auto;
+  border: 1px solid #f4d69c;
+  border-radius: 999px;
+  background: linear-gradient(#e2c787, #a97837);
+  color: #1b0b10;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+.casino-live__spin:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+.casino-live__result {
+  border-top: 1px solid #b99a5c88;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+.casino-live__result h2 {
+  font-size: 2rem;
+  margin: 0.5rem 0;
+}
+.casino-live__prize-art {
+  display: block;
+  max-width: min(100%, 18rem);
+  max-height: 14rem;
+  object-fit: contain;
+  margin: 1rem auto;
+  border-radius: 0.5rem;
+}
+.casino-live__result p {
+  line-height: 1.5;
+}
+.casino-live__error {
+  color: #ffd3bd;
+}
+.casino-live__history {
+  text-align: left;
+  margin-top: 2rem;
+  font-size: 0.9rem;
+}
+.casino-live__history summary {
+  cursor: pointer;
+  color: #e8ca95;
+}
+.casino-live__history li {
+  margin: 0.65rem 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .casino-live__reels[data-spinning='true'] span {
+    animation: none;
+  }
+}

@@ -16,6 +16,7 @@ import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
 import { journeyRoute } from './journey.ts';
 import { serviceRoute } from './service.ts';
+import { casinoRoute } from './casino.ts';
 import {
   bridgeMemberSession,
   releaseCasinoVaults,
@@ -172,6 +173,16 @@ export function createBackendApi({ db, env }: ApiDeps) {
       if (path.startsWith('/owner/') && session.role !== 'owner')
         throw new BackendError('forbidden');
       const route = `${request.method} ${path}`;
+      if (
+        path === '/casino' ||
+        path.startsWith('/casino/spins') ||
+        path.startsWith('/vouchers') ||
+        path.startsWith('/owner/casino/') ||
+        path.startsWith('/owner/vouchers')
+      ) {
+        const result = await casinoRoute({ route, path, body, session, db });
+        if (result) return respond(result.data, result.status);
+      }
       if (route === 'GET /privileges') return respond(await call('privileges'));
       if (route === 'GET /redemptions')
         return respond(await call('redemptions'));

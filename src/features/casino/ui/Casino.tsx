@@ -36,6 +36,7 @@ import { SlotsPanel, type SlotsPhase } from './SlotsPanel';
 import { useButler } from './useButler';
 import { nextLine } from '../domain/butler';
 import './casino.css';
+import AuthoritativeCasino from './AuthoritativeCasino';
 
 const CasinoCanvas = lazy(() => import('../scene/CasinoCanvas'));
 const DevTools = lazy(() => import('../dev/DevTools'));
@@ -61,7 +62,7 @@ const pause = (ms: number) =>
  * This component only orchestrates: games decide in the domain, the scene
  * animates, the panels collect input.
  */
-export default function Casino({ onComplete }: { onComplete(): void }) {
+function LegacyCasino({ onComplete }: { onComplete(): void }) {
   const [environment] = useState(() => createEntranceEnvironment());
   const [stores] = useState(() => createCasinoStores(environment));
   const model = useCasino(stores);
@@ -603,4 +604,15 @@ export default function Casino({ onComplete }: { onComplete(): void }) {
       )}
     </section>
   );
+}
+
+/** Production plays exclusively through the persisted Casino RPC. */
+export default function Casino(props: { onComplete(): void }) {
+  if (
+    import.meta.env.MODE === 'test' ||
+    (import.meta.env.DEV &&
+      new URLSearchParams(window.location.search).has('preview'))
+  )
+    return <LegacyCasino {...props} />;
+  return <AuthoritativeCasino {...props} />;
 }

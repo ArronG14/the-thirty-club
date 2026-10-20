@@ -521,6 +521,7 @@ describe('after the birthday has passed', () => {
       'Members’ Directory',
       'Membership card',
       'Ring for service',
+      'Your Casino vouchers',
     ]);
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
