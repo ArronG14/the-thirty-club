@@ -33,6 +33,7 @@ import { ConciergeLetter, PaperSheet } from './Paper';
 import './departure.css';
 import './entranceConcierge.css';
 import { appClock } from '../../rehearsal/clock';
+import { presentCardToClub } from '../../journey/client/membershipCard';
 
 /**
  * The newest unread concierge letter on the step. Opening it (the existing
@@ -177,9 +178,12 @@ const POLL_MS = 15_000;
 export function MembershipPrompt({
   onPresented,
   api = httpConciergeApi,
+  riddle = ACTIVE_RIDDLES.membership,
 }: {
   onPresented(): void;
   api?: ConciergeApi;
+  /** The birthday riddle; null when a letter already gave the clue. */
+  riddle?: readonly string[] | null;
 }) {
   const [byHand, setByHand] = useState(false);
   const [code, setCode] = useState('');
@@ -226,6 +230,8 @@ export function MembershipPrompt({
       setBusy(false);
       if (result.data.credential === 'membership') {
         saveSession(result.data.session);
+        // The club's record and this device's member session (ADR-023).
+        void presentCardToClub();
         presented.current();
       } else {
         saveSession(result.data.session);
@@ -254,11 +260,13 @@ export function MembershipPrompt({
 
   return (
     <div className="card-prompt">
-      <blockquote className="card-prompt__riddle">
-        {ACTIVE_RIDDLES.membership.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </blockquote>
+      {riddle && (
+        <blockquote className="card-prompt__riddle">
+          {riddle.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </blockquote>
+      )}
       {byHand ? (
         <form
           className="by-hand card-prompt__form"

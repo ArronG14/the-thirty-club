@@ -171,3 +171,6 @@
   display: grid;
   gap: 0.5rem;
 }
+.owner-warning {
+  color: #f2a48f;
+}

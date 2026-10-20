@@ -81,6 +81,8 @@ describe('the rehearsal timeline', () => {
     expect(times).toEqual([...times].sort((a, b) => a - b));
     expect(SCENARIOS.map((s) => s.id)).toEqual([
       'early-admission-teaser',
+      'early-admission-awaiting-card',
+      'early-admission-card-scan',
       'early-admission-doors',
       'early-admission-late',
       'before-departure',

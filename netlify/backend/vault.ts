@@ -130,6 +130,27 @@ export async function bridgeMemberSession(
   });
 }
 
+/**
+ * The physical membership card (ADR-023): a live-realm concierge session
+ * that carries the `membership` credential, which only presenting the card
+ * (its /c/<token> link or its printed code) grants. The travel credential
+ * does not count. Verified with the concierge's own secret, server-side.
+ */
+export async function requireMembershipCard(
+  request: Request,
+  env: NodeJS.ProcessEnv,
+): Promise<void> {
+  const secret = env.CONCIERGE_SESSION_SECRET?.trim();
+  if (!secret || secret.length < 24) throw new BackendError('not-configured');
+  const header = request.headers.get('authorization') ?? '';
+  const legacy = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const claims = legacy ? await verifySession(legacy, secret) : null;
+  if (!claims) throw new BackendError('unauthorised');
+  if (claims.realm !== 'live') throw new BackendError('forbidden');
+  if (!claims.scopes.includes('membership'))
+    throw new BackendError('unauthorised');
+}
+
 /** Releases compartments a server-verified casino outcome has earned. */
 export async function releaseCasinoVaults(
   db: Database,

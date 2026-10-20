@@ -25,6 +25,7 @@ import {
 } from '../../../../netlify/backend/database';
 import { processMessages } from '../../../../netlify/backend/sms';
 import { bridgeMemberSession } from '../../../../netlify/backend/vault';
+import { verifySession } from '../../../../netlify/concierge/auth';
 import { rehearsalNow } from '../clock';
 import { SIM_ENV } from './env';
 import { jar, type Actor } from './jar';
@@ -267,6 +268,45 @@ async function boot(): Promise<SimOffice> {
         const session = await bridgeMemberSession(request, db, SIM_ENV, token);
         jar.set('member', token);
         return json({ session });
+      } catch (error) {
+        const code = error instanceof BackendError ? error.code : 'server';
+        return json(
+          { error: code, message: 'The simulated club did not recognise you.' },
+          code === 'unauthorised' ? 401 : 403,
+        );
+      }
+    }
+    // The membership card (ADR-023): the simulated concierge's credential
+    // records the presentation in the TEST office only.
+    if (request.method === 'POST' && path === '/api/v1/auth/member/card') {
+      try {
+        // Every concierge session here is simulated (either realm counts);
+        // it must still carry the TEST card's membership credential.
+        const header = request.headers.get('authorization') ?? '';
+        const claims = header.startsWith('Bearer ')
+          ? await verifySession(
+              header.slice(7).trim(),
+              SIM_ENV.CONCIERGE_SESSION_SECRET ?? '',
+            )
+          : null;
+        if (!claims?.scopes.includes('membership'))
+          throw new BackendError('unauthorised');
+        const existing = await sessionFor('member');
+        const token = newToken();
+        const presented = await db.action<{
+          card: unknown;
+          session?: unknown;
+        }>(
+          null,
+          'system',
+          'system-journey-card',
+          existing ? {} : { hash: hashToken(token) },
+        );
+        if (!existing) jar.set('member', token);
+        return json({
+          session: existing ?? presented.session,
+          card: presented.card,
+        });
       } catch (error) {
         const code = error instanceof BackendError ? error.code : 'server';
         return json(

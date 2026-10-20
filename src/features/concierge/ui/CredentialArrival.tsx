@@ -6,6 +6,10 @@ import { matchesOfflineMembership } from '../client/offlineMembership';
 import { markMembershipOffline } from '../client/membership';
 import { destinationFor, isPlausibleToken } from '../domain/credentials';
 import { heldKey } from '../../vault/client/pendingKey';
+import { presentCardToClub } from '../../journey/client/membershipCard';
+
+/** The doors never wait longer than this for the club to record the card. */
+const CARD_RECORD_WAIT_MS = 4000;
 import { WaxSeal } from './Artwork';
 import './departure.css';
 
@@ -48,6 +52,15 @@ export default function CredentialArrival({
       if (result.ok) {
         saveSession(result.data.session);
         const credential = result.data.credential;
+        // The club records the card and gives this device a member session
+        // before the doors (ADR-023), so her membership is the server's on
+        // every tab and device. Bounded: a slow network never stalls the
+        // ceremony; the journey provider retries before recording her.
+        if (credential === 'membership')
+          await Promise.race([
+            presentCardToClub(),
+            new Promise((done) => setTimeout(done, CARD_RECORD_WAIT_MS)),
+          ]);
         // A vault key found before the card was presented: resume at the vault.
         if (heldKey()) {
           navigate('/vault', { replace: true });

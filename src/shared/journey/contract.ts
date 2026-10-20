@@ -98,7 +98,12 @@ export type MilestoneEffect =
    * params, idempotency_key)` — e.g. the Casino issuing complimentary spins.
    * If the hook is not installed the milestone fails and can be retried.
    */
-  | { type: 'hook'; name: string; params: Record<string, unknown> };
+  | { type: 'hook'; name: string; params: Record<string, unknown> }
+  /**
+   * Early admission (ADR-022/023): firing is the server's record that the
+   * doors may open once the membership card is presented. No letter itself.
+   */
+  | { type: 'open-entrance' };
 
 /** Derived for the owner from the milestone and what it produced. */
 export type MilestoneProgress =

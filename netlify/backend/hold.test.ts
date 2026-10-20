@@ -351,36 +351,81 @@ describe('release on 21 October', () => {
   });
 
   it('early admission opens only when the owner arms it; scheduling works again', async () => {
-    // The owner arms the 19:00 UK early admission.
+    // Unedited, the 19:00 letter still holds the clue placeholder: firing it
+    // fails the milestone and nothing reaches her (ADR-023).
+    const seeded = await call<{
+      milestones: { key: string; effects: { type: string; body?: string }[] }[];
+    }>('/owner/journey');
+    const early = seeded.data.milestones.find(
+      (m) => m.key === 'early-membership',
+    )!;
+    expect(early.effects.find((e) => e.type === 'letter')?.body).toContain(
+      '[[CLUE',
+    );
+    // The owner writes the clue and arms the 19:00 UK early admission.
     await call(
       '/owner/journey/milestones/early-membership',
-      { fireAt: '2026-10-21T18:00:00Z' },
+      {
+        fireAt: '2026-10-21T18:00:00Z',
+        effects: [
+          { type: 'open-entrance' },
+          {
+            type: 'letter',
+            title: 'Your early admission',
+            body: 'Your card is beneath the second cushion.',
+            action: { kind: 'admission', room: 'lounge' },
+          },
+        ],
+      },
       'owner',
       'PATCH',
     );
     await call('/owner/journey/milestones/early-membership/resume', {});
     await runJourneyRound(db);
-    const before = await call<{ opensAt: string; eligible: boolean }>(
-      '/entrance',
-    );
+    const before = await call<{
+      opensAt: string;
+      eligible: boolean;
+      letter?: unknown;
+    }>('/entrance');
     expect(before.data).toMatchObject({
       opensAt: '2026-10-21T18:00:00+00:00',
       eligible: false,
     });
+    // The clue is not at the doors before 19:00.
+    expect(before.data.letter).toBeUndefined();
     // Her membership cannot be recorded before the doors open.
     expect((await call('/journey/enter', {}, 'member')).status).toBe(403);
     await at('2026-10-21T18:00:01Z');
-    const after = await call<{ eligible: boolean }>('/entrance');
+    const after = await call<{
+      eligible: boolean;
+      letter: { title: string; body: string };
+    }>('/entrance');
     expect(after.data.eligible).toBe(true);
+    expect(after.data.letter.body).toBe(
+      'Your card is beneath the second cushion.',
+    );
+    // The Butler's letter is published once, its SMS approved by arming.
+    expect(await published()).toBe(1);
+    expect(await aliseSmsApproved()).toBe(1);
+    // 19:00 alone never admits her: the card is required.
+    const early2 = await call<{ error: string }>(
+      '/journey/enter',
+      {},
+      'member',
+    );
+    expect(early2.status).toBe(403);
+    expect(early2.data.error).toBe('card-required');
+    await pg.query(
+      'insert into public.ttc_membership_card(member_id) values ($1)',
+      [member],
+    );
     // Accepted in the Lounge: recorded once, for every device.
     expect((await call('/journey/enter', {}, 'member')).status).toBe(201);
     expect((await call('/journey/enter', {}, 'member')).status).toBe(200);
-    // No letter is published by the early admission itself.
-    expect(await published()).toBe(0);
     // A letter milestone resumed now is delivered, with its SMS queued.
     await call('/owner/journey/milestones/departure-ugg/fire', {});
-    expect(await published()).toBe(1);
-    expect(await aliseSmsApproved()).toBe(1);
+    expect(await published()).toBe(2);
+    expect(await aliseSmsApproved()).toBe(2);
     // The invitation link that establishes her member session works again.
     expect((await call('/owner/invitations', {})).status).toBe(201);
   });

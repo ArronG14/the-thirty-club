@@ -5,6 +5,7 @@
  * the same `/api/v1` handlers, as the simulated owner.
  */
 import type { OwnerVault } from '../../shared/concierge/types';
+import type { OwnerJourney } from '../../shared/journey/contract';
 import {
   isAdmissionRoom,
   type AdmissionRoomId,
@@ -108,6 +109,7 @@ export async function applyPendingAdmissions() {
     fire?: unknown;
     resume?: unknown;
     spins?: unknown;
+    card?: unknown;
   } | null;
   try {
     pending = JSON.parse(
@@ -127,19 +129,115 @@ export async function applyPendingAdmissions() {
   );
   if (Array.isArray(pending.resume))
     for (const key of pending.resume)
-      if (typeof key === 'string')
+      if (typeof key === 'string') {
+        await fillRehearsalWording(key);
         // Already armed or fired in an earlier rehearsal: nothing to do.
         await simOwner(`/owner/journey/milestones/${key}/resume`, {}).catch(
           () => undefined,
         );
+      }
   if (Array.isArray(pending.fire))
     for (const key of pending.fire)
       if (typeof key === 'string') await fireRehearsalMilestone(key);
   if (typeof pending.spins === 'number' && pending.spins > 0)
     await issueRehearsalSpins(pending.spins);
+  // The card last: a failure here never leaves the moment half-prepared.
+  try {
+    if (pending.card === true) await rehearseCardPresented();
+    if (pending.card === false) await rehearseCardHidden();
+  } catch (error) {
+    console.error('[rehearsal] the TEST card could not be prepared', error);
+  }
 }
 
 const REHEARSAL_VOUCHER = 'Rehearsal voucher · two cocktails';
+
+/** Rehearsal wording for a letter whose LIVE wording is still to be written. */
+const REHEARSAL_CLUE =
+  'beneath the second cushion (a rehearsal clue: write the real one in the LIVE Control Centre)';
+
+/**
+ * A milestone launched in TEST whose letter still holds a [[placeholder]]
+ * would fail by design (ADR-023). The TEST office gets rehearsal wording;
+ * LIVE is never touched.
+ */
+async function fillRehearsalWording(key: string) {
+  try {
+    const journey = await simOwner<OwnerJourney>('/owner/journey');
+    const milestone = journey.milestones.find((m) => m.key === key);
+    if (!milestone || milestone.state === 'fired') return;
+    const effects = milestone.effects.map((e) =>
+      e.type === 'letter'
+        ? {
+            ...e,
+            title: e.title.replace(/\[\[[^\]]*\]\]/g, 'A letter'),
+            body: e.body.replace(/\[\[[^\]]*\]\]/g, REHEARSAL_CLUE),
+          }
+        : e,
+    );
+    if (JSON.stringify(effects) !== JSON.stringify(milestone.effects))
+      await simOwner(`/owner/journey/milestones/${key}`, { effects }, 'PATCH');
+  } catch {
+    // The launch continues; the TEST timeline shows the milestone's state.
+  }
+}
+
+/**
+ * The TEST membership card presented through the real handlers: the
+ * simulated concierge examines its link token, then the TEST office records
+ * it. Called while the launch is being applied, so it speaks to both
+ * directly (a page fetch would wait for this very launch).
+ */
+async function rehearseCardPresented() {
+  const [{ simConcierge }, { simOffice }, sessions, engine] = await Promise.all(
+    [
+      import('./sim/legacy'),
+      import('./sim/v1'),
+      import('../concierge/client/sessionStore'),
+      import('./engine'),
+    ],
+  );
+  const bearer = (token: string | undefined): Record<string, string> =>
+    token ? { authorization: `Bearer ${token}` } : {};
+  const activated = await simConcierge()(
+    new Request(`${window.location.origin}/api/concierge/activate`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        ...bearer(sessions.activeSession()?.token),
+      },
+      body: JSON.stringify({ token: engine.REHEARSAL_CARD_TOKEN }),
+    }),
+    'rehearsal',
+  );
+  if (!activated.ok) throw new Error('The simulated concierge refused.');
+  const { session } = (await activated.json()) as { session: string };
+  const saved = sessions.saveSession(session);
+  const office = await simOffice();
+  const recorded = await office.handle(
+    new Request(`${window.location.origin}/api/v1/auth/member/card`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'x-concierge-request': '1',
+        ...bearer(saved?.token),
+      },
+      body: '{}',
+    }),
+    'member',
+  );
+  if (!recorded.ok) throw new Error('The TEST office did not record the card.');
+}
+
+/**
+ * The card is still hidden: the TEST office forgets an earlier
+ * presentation (the launching page has already cleared this tab's card).
+ */
+async function rehearseCardHidden() {
+  const { simOffice } = await import('./sim/v1');
+  const office = await simOffice();
+  await office.pg.query('delete from public.ttc_membership_card');
+}
 
 /**
  * A rehearsal batch of Casino spins, issued through the real owner action

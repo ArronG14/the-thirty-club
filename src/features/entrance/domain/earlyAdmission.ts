@@ -7,8 +7,9 @@
  *
  * The clock shows the real time remaining until it reads 00:00:10, then
  * holds there. The final ten seconds begin only when the server says the
- * doors may open AND she is looking (page visible); if she looks away
- * they start again when she returns. At zero the doors open by themselves.
+ * doors may open AND her membership card has been presented on this device
+ * (ADR-023) AND she is looking (page visible); if she looks away they start
+ * again when she returns. At zero the doors open by themselves.
  */
 import type { TimePhase } from './countdown';
 import { FINAL_MINUTE_MS } from './countdown';
@@ -22,6 +23,13 @@ export interface EarlyAdmission {
   eligible: boolean;
   /** Server clock minus device clock, ms. */
   offsetMs: number;
+  /** The Butler's letter at the doors once the server has fired 19:00. */
+  letter: EarlyLetter | null;
+}
+
+export interface EarlyLetter {
+  title: string;
+  body: string;
 }
 
 export interface EarlyView {
@@ -48,16 +56,21 @@ export function earlyView(
   };
 }
 
-/** Whether the final ten seconds should begin now. */
+/**
+ * Whether the final ten seconds should begin now. The time alone never
+ * opens the doors: the membership card must have been presented (ADR-023).
+ */
 export function shouldStartFinal(
   now: number,
   admission: EarlyAdmission,
   finalStartedAt: number | null,
   visible: boolean,
+  carded: boolean,
 ): boolean {
   return (
     finalStartedAt === null &&
     admission.eligible &&
+    carded &&
     visible &&
     now >= admission.opensAt
   );
@@ -90,13 +103,43 @@ export function parseEntrance(
   deviceNow: number,
 ): EarlyAdmission | null {
   if (!data || typeof data !== 'object') return null;
-  const d = data as { now?: unknown; opensAt?: unknown; eligible?: unknown };
+  const d = data as {
+    now?: unknown;
+    opensAt?: unknown;
+    eligible?: unknown;
+    letter?: unknown;
+  };
   const server = typeof d.now === 'string' ? Date.parse(d.now) : NaN;
   const opensAt = typeof d.opensAt === 'string' ? Date.parse(d.opensAt) : NaN;
   if (!Number.isFinite(opensAt) || !Number.isFinite(server)) return null;
+  const eligible = d.eligible === true;
   return {
     opensAt,
-    eligible: d.eligible === true,
+    eligible,
     offsetMs: server - deviceNow,
+    letter: eligible ? parseLetter(d.letter) : null,
   };
+}
+
+function parseLetter(value: unknown): EarlyLetter | null {
+  if (!value || typeof value !== 'object') return null;
+  const { title, body } = value as { title?: unknown; body?: unknown };
+  return typeof title === 'string' &&
+    typeof body === 'string' &&
+    title.trim() !== '' &&
+    body.trim() !== ''
+    ? { title, body }
+    : null;
+}
+
+/**
+ * Server clock minus device clock from any entrance answer, or null. Used
+ * for the birthday's own countdown too, so changing the phone's clock
+ * never brings the doors forward once the server has been reached.
+ */
+export function serverOffset(data: unknown, deviceNow: number): number | null {
+  if (!data || typeof data !== 'object') return null;
+  const now = (data as { now?: unknown }).now;
+  const server = typeof now === 'string' ? Date.parse(now) : NaN;
+  return Number.isFinite(server) ? server - deviceNow : null;
 }

@@ -22,7 +22,11 @@ import { openingInstant } from '../entrance/domain/countdown';
 import { JOURNEY_CACHE_KEY } from '../journey/domain/access';
 import { browserEntranceStorage } from '../entrance/domain/entranceRecord';
 import { browserConciergeStorage } from '../concierge/client/localRecord';
-import { endRehearsal } from '../concierge/client/sessionStore';
+import {
+  activeSession,
+  clearSession,
+  endRehearsal,
+} from '../concierge/client/sessionStore';
 import {
   DEPARTURE_LOUNGE_OPENS,
   PRIVILEGES,
@@ -63,6 +67,12 @@ export const CASINO_MILESTONE = jamaica('2026-10-23', '09:00');
  * (13:00 Jamaica) once the owner arms the `early-membership` milestone.
  */
 export const EARLY_MEMBERSHIP = uk('2026-10-21', '19:00');
+/**
+ * The TEST membership card's link token (netlify/concierge/testing.ts,
+ * rehearsal only). A spare NFC card for physical rehearsal carries
+ * `/rehearse?scenario=early-admission-card-scan`, which arrives here.
+ */
+export const REHEARSAL_CARD_TOKEN = 'membership-test-token-0001';
 export const PRIVILEGES_OPENS = jamaica('2026-10-24', '10:00');
 export const DEPARTURE_OPENS = instantOf(DEPARTURE_LOUNGE_OPENS);
 
@@ -137,6 +147,12 @@ function writeCard(presented: boolean, at: number) {
     ...storage.load(),
     membershipAt: presented ? new Date(at).toISOString() : null,
   });
+  // Hidden: a card scanned in an earlier rehearsal no longer counts here.
+  if (!presented) {
+    const session = activeSession();
+    if (session?.claims.scopes.includes('membership'))
+      clearSession(session.claims.realm);
+  }
 }
 
 function inducted(at: number, rooms: readonly RoomId[] = []): MembershipRecord {
@@ -176,6 +192,12 @@ export interface Scenario {
   resume?: readonly string[];
   /** A rehearsal batch of server-issued Casino spins (with one voucher). */
   spins?: number;
+  /**
+   * The membership card (ADR-023): true = presented through the real
+   * credential path (the TEST office records it); false = still hidden
+   * (the TEST office forgets any earlier presentation).
+   */
+  card?: boolean;
   label: string;
   detail: string;
   at: number;
@@ -201,23 +223,46 @@ export const SCENARIOS: readonly Scenario[] = [
     apply: (at) => locked(at),
   },
   {
-    id: 'early-admission-doors',
-    label: 'Early admission: 19:00 UK, watching',
+    id: 'early-admission-awaiting-card',
+    label: 'Early admission: 19:00 UK, waiting for the card',
     detail:
-      '18:59:40 UK: the clock holds at 00:00:10, the final ten seconds begin at 19:00 and the doors open by themselves into the membership ceremony.',
-    at: EARLY_MEMBERSHIP - 20_000,
+      '19:00:30 UK: the clock holds at 00:00:10, the Butler’s letter (with the clue) waits on the step, and nothing opens until the membership card is presented — scan a TEST card, or present its printed TEST number by hand (TC-3010-2410).',
+    at: EARLY_MEMBERSHIP + 30_000,
     go: '/',
+    resume: ['early-membership'],
+    card: false,
+    apply: (at) => locked(at),
+  },
+  {
+    id: 'early-admission-card-scan',
+    label: 'Early admission: the card is scanned (NFC)',
+    detail:
+      '19:01 UK: what a TEST card opens. The card’s link is examined, the club records it, and the final ten seconds, the doors and the welcome follow in this tab — as when her real card opens a new Safari tab.',
+    at: EARLY_MEMBERSHIP + 60_000,
+    go: `/c/${REHEARSAL_CARD_TOKEN}`,
     resume: ['early-membership'],
     apply: (at) => locked(at),
   },
   {
-    id: 'early-admission-late',
-    label: 'Early admission: arriving after 19:00 UK',
+    id: 'early-admission-doors',
+    label: 'Early admission: 19:00 UK, card already presented',
     detail:
-      '20:15 UK: she opens the app later; the final ten seconds begin then, and the doors open.',
+      '18:59:40 UK, the card scanned earlier: the clock holds at 00:00:10, the final ten seconds begin at 19:00 and the doors open by themselves into the membership ceremony.',
+    at: EARLY_MEMBERSHIP - 20_000,
+    go: '/',
+    resume: ['early-membership'],
+    card: true,
+    apply: (at) => locked(at),
+  },
+  {
+    id: 'early-admission-late',
+    label: 'Early admission: arriving after 19:00 UK with the card',
+    detail:
+      '20:15 UK: she opens the app later with the card already presented; the final ten seconds begin then, and the doors open.',
     at: uk('2026-10-21', '20:15'),
     go: '/',
     resume: ['early-membership'],
+    card: true,
     apply: (at) => locked(at),
   },
   {
@@ -369,6 +414,7 @@ export async function applyScenario(id: string, go = true) {
     fire: scenario.fire,
     resume: scenario.resume,
     spins: scenario.spins,
+    card: scenario.card,
   });
   remember(scenario.label);
   if (go) window.location.assign(scenario.go);
@@ -433,6 +479,7 @@ async function syncAdmissions(
     fire?: readonly string[] | undefined;
     resume?: readonly string[] | undefined;
     spins?: number | undefined;
+    card?: boolean | undefined;
   } = {},
 ) {
   // A new moment: the journey cached from the last rehearsal no longer
@@ -473,7 +520,8 @@ async function syncAdmissions(
     ceremony.length === 0 &&
     fire.length === 0 &&
     resume.length === 0 &&
-    spins === 0
+    spins === 0 &&
+    also.card === undefined
   )
     return;
   // Applied by the page the launch opens, before its first journey read
@@ -481,7 +529,15 @@ async function syncAdmissions(
   // database flushing to IndexedDB before this page unloads.
   sessionStorage.setItem(
     PENDING_ADMISSIONS_KEY,
-    JSON.stringify({ admitted, ceremony, withdraw, fire, resume, spins }),
+    JSON.stringify({
+      admitted,
+      ceremony,
+      withdraw,
+      fire,
+      resume,
+      spins,
+      card: also.card,
+    }),
   );
 }
 

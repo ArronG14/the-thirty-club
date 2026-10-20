@@ -139,6 +139,10 @@ export type ApiErrorCode =
   | 'credential-invalid'
   /** Communications to Alise are paused by the owner (ADR-021). */
   | 'on-hold'
+  /** A cancellation would break a promise the Butler already made. */
+  | 'spins-promised'
+  /** Early admission needs the membership card first (ADR-023). */
+  | 'card-required'
   | 'server';
 export interface ApiError {
   error: ApiErrorCode;

@@ -479,3 +479,113 @@ describe('the Casino never promises spins that do not exist', () => {
     ).toEqual([]);
   });
 });
+
+/**
+ * Codex P1 (`f7eff13`, "Casino cancellation after admission"): one batch
+ * issued with announce:false, the 23 Oct opening run, the stored Letter of
+ * Admission verified to promise spins, then the untouched batch cancelled.
+ * Before the fix: announcementDelivered:false, available 0, and the letter
+ * still promised spins.
+ */
+describe('cancelling spins never leaves a letter promising them (Codex P1)', () => {
+  const letterOfAdmission = async () =>
+    (
+      await call<{
+        admissions: { roomId: string; letter: { body: string } | null }[];
+      }>('/journey', undefined, 'member')
+    ).data.admissions.find((a) => a.roomId === 'casino')?.letter?.body ?? '';
+  const cancel = (id: string) =>
+    call<{
+      error?: string;
+      status?: string;
+      duplicate?: boolean;
+      announcementDelivered?: boolean;
+    }>(`/owner/casino/batches/${id}/cancel`, {});
+  const openCasino = async () => {
+    await at('2026-10-23T14:00:30Z'); // 09:00:30 Jamaica
+    await runJourneyRound(db);
+  };
+  const issueQuiet = (quantity: number, key: string) =>
+    call<{ batchId: string }>('/owner/casino/batches', {
+      quantity,
+      prizeIds: [],
+      idempotencyKey: key,
+      announce: false,
+    });
+
+  it('the exact reproduction: the promised batch cannot be cancelled', async () => {
+    await at('2026-10-23T13:30:00Z');
+    const batch = await issueQuiet(3, 'codex-repro-batch');
+    await openCasino();
+    expect(await letterOfAdmission()).toContain(
+      'complimentary spins have been placed at your disposal',
+    );
+    const cancelled = await cancel(batch.data.batchId);
+    expect(cancelled.status).toBe(409);
+    expect(cancelled.data.error).toBe('spins-promised');
+    // The promise and the spins still agree.
+    expect(await letterOfAdmission()).toContain('complimentary spins');
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    expect(await available()).toBe(3);
+  });
+
+  it('a replacement batch issued first lets the wrong one be cancelled', async () => {
+    await at('2026-10-23T13:30:00Z');
+    const wrong = await issueQuiet(3, 'wrong-prizes-batch');
+    await openCasino();
+    const replacement = await issueQuiet(3, 'replacement-batch');
+    expect(replacement.status).toBe(201);
+    const cancelled = await cancel(wrong.data.batchId);
+    expect(cancelled.status).toBe(200);
+    expect(cancelled.data.status).toBe('cancelled');
+    // The other batch now refuses: it is the last one keeping the promise.
+    expect((await cancel(replacement.data.batchId)).status).toBe(409);
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    expect(await available()).toBe(3);
+  });
+
+  it('a letter that promised nothing allows cancellation; a retry is the same result', async () => {
+    await openCasino(); // spins milestone held: letter without spins
+    expect(await letterOfAdmission()).not.toContain('spins');
+    const batch = await issueQuiet(2, 'unpromised-batch');
+    const first = await cancel(batch.data.batchId);
+    expect(first.status).toBe(200);
+    const again = await cancel(batch.data.batchId);
+    expect(again.status).toBe(200);
+    expect(again.data).toMatchObject({ status: 'cancelled', duplicate: true });
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    expect(await available()).toBe(0);
+  });
+
+  it('a delivered spins announcement is a promise too; it is never rewritten', async () => {
+    await admit('casino');
+    const batch = await issue(3, [], 'announced-batch-1'); // announced
+    await runJourneyRound(db);
+    const announced = (await letters()).filter((l) =>
+      l.title.includes('spins'),
+    );
+    expect(announced).toHaveLength(1);
+    const refused = await cancel(batch.data.batchId);
+    expect(refused.status).toBe(409);
+    expect(refused.data.error).toBe('spins-promised');
+    const after = (await letters()).filter((l) => l.title.includes('spins'));
+    expect(after.map((l) => l.body)).toEqual(announced.map((l) => l.body));
+    expect(await available()).toBe(3);
+  });
+
+  it('a partially played batch cannot be cancelled, and play continues', async () => {
+    await admit('casino');
+    const batch = await issueQuiet(3, 'partly-played-batch');
+    expect((await spin('partly-played-spin-1')).status).toBe(201);
+    expect((await cancel(batch.data.batchId)).status).toBe(409);
+    expect(await available()).toBe(2);
+  });
+
+  it('cancelling before the opening invites without promising spins', async () => {
+    await at('2026-10-23T13:30:00Z');
+    const batch = await issueQuiet(3, 'early-cancel-batch');
+    expect((await cancel(batch.data.batchId)).status).toBe(200);
+    await openCasino();
+    expect(await letterOfAdmission()).not.toContain('spins');
+  });
+});

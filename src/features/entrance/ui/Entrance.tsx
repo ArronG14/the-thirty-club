@@ -34,9 +34,16 @@ export function Entrance({
       'membership',
   );
   const model = useEntrance(env, { presentedNow });
-  const { stage, anticipation, reducedMotion, admitted } = model;
-  // Admitted on another device (ADR-022): straight into the Lounge.
-  const knownMember = useJourney()?.stateOf('lounge') === 'admitted';
+  const { stage, anticipation, reducedMotion, admitted, member } = model;
+  // Admitted on another device (ADR-022): straight into the Lounge. Once
+  // this device holds the card (a member session follows it, ADR-023) the
+  // doors ask the server, so a second device or tab skips the ceremony.
+  const journey = useJourney();
+  const want = journey?.want;
+  useEffect(() => {
+    if (member) want?.();
+  }, [member, want]);
+  const knownMember = journey?.stateOf('lounge') === 'admitted';
   useEffect(() => {
     if (knownMember) admitted();
   }, [knownMember, admitted]);

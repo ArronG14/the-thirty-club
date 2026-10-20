@@ -114,3 +114,7 @@ The birthday journey and the Casino/rewards engine are one system on `feature/bi
 ## SMS operations and early admission (20 October 2026, not yet deployed)
 
 Every SMS now passes one server-side policy: the owner chooses OFF, REHEARSAL (copies to his own phone only) or LIVE, and the communication hold still decides whether anything may reach Alise. On Wednesday 21 October the Butler may send a teaser at 16:00 UK (only if approved in time), and the doors may open early at 19:00 UK with the full ceremony, if the owner arms it. Handover: `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`.
+
+## The membership card admission (20 October 2026, ADR-023, not yet deployed)
+
+On Wednesday 21 October the Butler's 19:00 UK letter tells Alise her membership card has been delivered and gives the owner's clue to where it is hidden. The entrance holds at 00:00:10 until she scans the physical card (an NFC tag carrying the existing `/c/` credential link; the printed number is the fallback). The scan authorises the final ten seconds, the doors, the welcome and the Lounge, and gives that device a member session, so her membership is the server's on every tab and device. 19:00 alone, a public visit or a changed phone clock admits nobody. The same revision makes a Casino batch impossible to cancel while a letter she has received still promises its spins. Owner runbook: `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md` §0.1–0.2. The 22–24 October storyline is assessed, not built: `docs/release/STORYLINE_DEPENDENCY_MAP.md`.

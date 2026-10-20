@@ -23,6 +23,7 @@ import {
 import { useButlerService } from '../../butler-service/useButlerService';
 import { ArrivedEnvelope } from '../../butler-service/ui/ArrivedEnvelope';
 import type { EntranceModel } from '../useEntrance';
+import { EarlyLetter } from './EarlyLetter';
 import { Portal } from './Portal';
 import { ServiceBell } from './ServiceBell';
 import { Timepiece } from './Timepiece';
@@ -51,6 +52,8 @@ export function Facade({ model }: { model: EntranceModel }) {
     presentMembership,
     now,
     early,
+    eligible,
+    earlyLetter,
   } = model;
   const [secretTap] = useState(() =>
     fiveTapGesture(() =>
@@ -61,6 +64,8 @@ export function Facade({ model }: { model: EntranceModel }) {
   const awaiting = stage === 'awaiting-entry';
   const awaitingCard = stage === 'awaiting-credential';
   const prepared = stage === 'locked' || stage === 'final-minute';
+  // 19:00 has fired: the clock holds at 00:00:10 for the card (ADR-023).
+  const awaitingEarlyCard = prepared && early && eligible && !member;
   const [mode, setMode] = useState<RenderMode>(() => {
     if (canRender3D()) return 'loading';
     noteEntrance({
@@ -149,15 +154,17 @@ export function Facade({ model }: { model: EntranceModel }) {
         <p className="facade__line">
           {awaitingCard
             ? 'Happy birthday, Alise. Your membership card, if you please.'
-            : prepared
-              ? early
-                ? remaining.totalMs <= 10_000
-                  ? 'Alise, the club is ready to receive you.'
-                  : 'Alise, your admission has been brought forward.'
-                : member
-                  ? 'Alise, your card is in order. Your table is being prepared.'
-                  : 'Alise, your table is being prepared.'
-              : 'Alise, your table is ready.'}
+            : awaitingEarlyCard
+              ? 'Alise, the club is ready to receive you. Your membership card, if you please.'
+              : prepared
+                ? early
+                  ? remaining.totalMs <= 10_000
+                    ? 'Alise, the club is ready to receive you.'
+                    : 'Alise, your admission has been brought forward.'
+                  : member
+                    ? 'Alise, your card is in order. Your table is being prepared.'
+                    : 'Alise, your table is being prepared.'
+                : 'Alise, your table is ready.'}
         </p>
         {locked && (
           <ArrivedEnvelope
@@ -178,6 +185,14 @@ export function Facade({ model }: { model: EntranceModel }) {
           </div>
         )}
         {awaitingCard && <MembershipPrompt onPresented={presentMembership} />}
+        {awaitingEarlyCard && earlyLetter && (
+          <div className="facade__letters">
+            <EarlyLetter letter={earlyLetter} />
+          </div>
+        )}
+        {awaitingEarlyCard && (
+          <MembershipPrompt onPresented={presentMembership} riddle={null} />
+        )}
         {awaiting && (
           <button type="button" className="facade__enter" onClick={enter}>
             Enter the club

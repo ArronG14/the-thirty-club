@@ -88,6 +88,6 @@ The new production Casino now uses the persisted `/api/v1/casino` spin API. The 
 
 ## Early admission and SMS rehearsal (ADR-022)
 
-- Scenarios: **Early admission: after the 16:00 teaser** (16:01 UK), **19:00 UK, watching** (20 s before), **arriving after 19:00 UK** (20:15). Each arms `early-membership` in the TEST office (`resume` intent).
+- Scenarios: **Early admission: after the 16:00 teaser** (16:01 UK), **19:00 UK, waiting for the card** (19:00:30; card forgotten by the TEST office; present the TEST number `TC-3010-2410` by hand), **the card is scanned (NFC)** (19:01; goes to `/c/membership-test-token-0001`, what a spare TEST card opens via `/rehearse?scenario=early-admission-card-scan`), **19:00 UK, card already presented** (20 s before), **arriving after 19:00 UK with the card** (20:15). Each arms `early-membership` in the TEST office (`resume` intent; a `[[…]]` placeholder in its letter is replaced with rehearsal wording in the TEST office only) and records or forgets the TEST card through the real handlers (`card` intent, applied last). ADR-023.
 - The TEST office starts in SMS mode LIVE with a fake provider; its SMS operations page can rehearse to the simulated owner number.
 - `/rehearse?path=…&scenario=…|launch=…` (the links in a real REHEARSAL SMS) asks for the private code, then launches the matching TEST rehearsal; it never acts on LIVE.

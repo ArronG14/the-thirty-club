@@ -109,6 +109,10 @@ function effects(value: unknown): MilestoneEffect[] {
         action: parsed,
       };
     }
+    if (effect.type === 'open-entrance') {
+      v.keys(effect, ['type']);
+      return { type: 'open-entrance' };
+    }
     if (effect.type === 'hook') {
       v.keys(effect, ['type', 'name', 'params']);
       if (

@@ -136,6 +136,9 @@ function Check({
  * resend, move release times and rehearse. Every action calls the service;
  * nothing here pretends.
  */
+/** A credential link whose secret is shorter than 32 characters. */
+const weakToken = (link: string) => (link.split('/').pop() ?? '').length < 32;
+
 export default function OwnerConsole({
   embedded = false,
 }: {
@@ -373,11 +376,19 @@ export default function OwnerConsole({
                   <h3>
                     {id === 'departure'
                       ? 'Travel credential (Thursday)'
-                      : 'Membership card (Saturday)'}
+                      : 'Membership card (early admission, Wednesday 19:00 UK)'}
                   </h3>
                   <p className="owner-mono">
                     {credential.link ?? 'Not configured'}
                   </p>
+                  {credential.link && weakToken(credential.link) && (
+                    <p className="owner-small owner-warning" role="alert">
+                      This link’s secret is short enough to guess. Before
+                      programming the card, set a new 43-character value
+                      (`openssl rand -base64 32 | tr '+/' '-_' | tr -d '='`) in
+                      Netlify and redeploy.
+                    </p>
+                  )}
                   <p className="owner-small">
                     Manual code: {credential.code ?? '—'}
                   </p>
@@ -394,7 +405,10 @@ export default function OwnerConsole({
             })}
             <p className="owner-small">
               Write each link to an NTAG213/215 tag as a URL record. Test tags
-              from a rehearsal (below), not from Alise’s live journey.
+              from a rehearsal (below), not from Alise’s live journey: opening
+              the LIVE membership link records the card as presented and tells
+              Arron. Check a programmed LIVE card by reading the tag in your NFC
+              app, never by opening it.
             </p>
           </section>
 

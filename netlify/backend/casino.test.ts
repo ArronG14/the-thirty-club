@@ -230,9 +230,10 @@ describe('owner-controlled Casino and rewards', () => {
       (await memberCall<{ available: number }>('casino-status')).available,
     ).toBe(0);
     await expect(spin()).rejects.toThrow('not-open');
-    await expect(
-      owner('owner-casino-cancel', { id: batch.batchId }),
-    ).rejects.toThrow('conflict');
+    // A retried cancellation is the same answer (ADR-023).
+    expect(
+      await owner('owner-casino-cancel', { id: batch.batchId }),
+    ).toMatchObject({ status: 'cancelled', duplicate: true });
   });
   it('requests, cancels, re-requests and fulfils a voucher without implying delivery early', async () => {
     const id = await prize();

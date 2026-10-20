@@ -33,7 +33,11 @@ const TIMEOUT_MS = 15_000;
 
 export async function deskRequest<T>(
   path: string,
-  init: { method?: 'GET' | 'POST' | 'PATCH'; body?: unknown } = {},
+  init: {
+    method?: 'GET' | 'POST' | 'PATCH';
+    body?: unknown;
+    headers?: Record<string, string>;
+  } = {},
 ): Promise<DeskResult<T>> {
   if (typeof navigator !== 'undefined' && navigator.onLine === false)
     return { ok: false, kind: 'offline' };
@@ -52,6 +56,7 @@ export async function deskRequest<T>(
               'x-concierge-request': '1',
             }
           : {}),
+        ...init.headers,
       },
       ...(method !== 'GET' ? { body: JSON.stringify(init.body ?? {}) } : {}),
       signal: AbortSignal.timeout(TIMEOUT_MS),

@@ -72,7 +72,7 @@ test('Early admission at 19:00 UK: the hold at ten seconds, the final ten, the d
   await expect(page.getByRole('timer')).toContainText('2 hours, 58 minutes');
   await shot(page, '01-after-the-teaser');
 
-  await scenario(page, 'Early admission: 19:00 UK, watching');
+  await scenario(page, 'Early admission: 19:00 UK, card already presented');
   await expect(page.getByRole('timer')).toContainText('0 minutes, 10 seconds', {
     timeout: 60_000,
   });
@@ -168,4 +168,94 @@ test('A rehearsal SMS link opens the matching TEST rehearsal only after the priv
     page.getByText('Alise, your admission has been brought forward.'),
   ).toBeVisible({ timeout: 90_000 });
   await expect(page.getByTestId('rehearsal-indicator')).toBeAttached();
+});
+
+test('19:00 without the card: the clock holds at ten seconds; the letter, then the card, then the doors', async ({
+  page,
+}) => {
+  test.setTimeout(240_000);
+  await unlock(page);
+  const calls = apiCalls(page);
+  await scenario(page, 'Early admission: 19:00 UK, waiting for the card');
+  const club = page.locator('.club');
+  await expect(page.getByRole('timer')).toContainText('0 minutes, 10 seconds', {
+    timeout: 60_000,
+  });
+  await expect(
+    page.getByText(
+      'Alise, the club is ready to receive you. Your membership card, if you please.',
+    ),
+  ).toBeVisible({ timeout: 60_000 });
+  // 19:00 alone opens nothing.
+  await page.waitForTimeout(12_000);
+  await expect(club).toHaveAttribute('data-stage', 'final-minute');
+  await expect(page.getByRole('timer')).toContainText('0 minutes, 10 seconds');
+  // The Butler's letter (the TEST office's rehearsal clue).
+  await page.getByRole('button', { name: 'Your early admission' }).click();
+  await expect(page.getByText('beneath the second cushion')).toBeVisible();
+  await shot(page, '06-the-letter-and-the-clue');
+  await page.getByRole('button', { name: 'Close' }).click();
+  // The printed number by hand (the fallback to scanning).
+  await page.getByRole('button', { name: 'Present the card by hand' }).click();
+  await page
+    .getByLabel('The number on your membership card')
+    .fill('TC-3010-2410');
+  await page.getByRole('button', { name: 'Present membership' }).click();
+  await expect(club).toHaveAttribute('data-stage', /unlocking|opening|foyer/, {
+    timeout: 30_000,
+  });
+  await expect(
+    page.getByRole('heading', { name: 'The Members’ Lounge' }),
+  ).toBeVisible({ timeout: 30_000 });
+  for (let i = 0; i < 3; i++)
+    await page.getByRole('button', { name: 'Continue', exact: true }).click();
+  await page.getByRole('button', { name: 'Accept your membership' }).click();
+  await page.reload();
+  await expect(
+    page.getByRole('heading', { name: 'The Members’ Lounge' }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    page.getByRole('button', { name: 'Accept your membership' }),
+  ).toHaveCount(0);
+  expect(calls).toEqual([]);
+});
+
+test('The card scanned with NFC: a new tab, the final ten seconds, the doors and the Lounge', async ({
+  context,
+  page,
+}) => {
+  test.setTimeout(240_000);
+  // What a spare TEST card carries; iPhone opens it in a new Safari tab.
+  const tab = await context.newPage();
+  const calls = apiCalls(tab);
+  await tab.goto('/rehearse?scenario=early-admission-card-scan');
+  await tab
+    .getByRole('button', { name: 'Enter the private access code' })
+    .click();
+  await tab.getByLabel('Private access code').fill('1414');
+  await tab.getByRole('button', { name: 'Unlock private office' }).click();
+  const club = tab.locator('.club');
+  await expect(club).toHaveAttribute('data-stage', /final-minute|unlocking/, {
+    timeout: 90_000,
+  });
+  await expect(club).toHaveAttribute('data-stage', /unlocking|opening|foyer/, {
+    timeout: 30_000,
+  });
+  await expect(
+    tab.getByRole('heading', { name: 'The Members’ Lounge' }),
+  ).toBeVisible({ timeout: 30_000 });
+  await shot(tab, '07-after-the-card-scan');
+  for (let i = 0; i < 3; i++)
+    await tab.getByRole('button', { name: 'Continue', exact: true }).click();
+  await tab.getByRole('button', { name: 'Accept your membership' }).click();
+  // A reload (or backgrounding) of that tab: no second ceremony.
+  await tab.reload();
+  await expect(
+    tab.getByRole('heading', { name: 'The Members’ Lounge' }),
+  ).toBeVisible({ timeout: 30_000 });
+  await expect(
+    tab.getByRole('button', { name: 'Accept your membership' }),
+  ).toHaveCount(0);
+  expect(calls).toEqual([]);
+  await page.close();
 });

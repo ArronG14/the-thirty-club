@@ -23,6 +23,7 @@ import {
 import { simulationActive } from '../rehearsal/mode';
 import { deviceStorage } from '../rehearsal/storage';
 import { acceptAdmission, enterClub, journeyState } from './client/journeyApi';
+import { holdsCard, presentCardToClub } from './client/membershipCard';
 import {
   JourneyContext,
   type AcceptOutcome,
@@ -54,6 +55,32 @@ function applyLaunchAdmissions(): Promise<void> {
         .catch(() => undefined)
     : Promise.resolve();
   return launchAdmissions;
+}
+
+/**
+ * Her acceptance of membership, kept until the server has recorded it
+ * (ADR-023, Codex P1-B). The Lounge never waits on hotel Wi-Fi, so an
+ * acceptance that could not be recorded (offline, no member session yet,
+ * card not yet seen by the server) is retried on every later read.
+ */
+const ENTER_PENDING_KEY = 'thirty-club:journey-enter-pending';
+
+function enterPending(): boolean {
+  try {
+    return deviceStorage().getItem(ENTER_PENDING_KEY) !== null;
+  } catch {
+    return false;
+  }
+}
+
+function setEnterPending(pending: boolean) {
+  try {
+    if (pending)
+      deviceStorage().setItem(ENTER_PENDING_KEY, new Date().toISOString());
+    else deviceStorage().removeItem(ENTER_PENDING_KEY);
+  } catch {
+    // Without storage the acceptance is retried only while this page lives.
+  }
 }
 
 function readCache(): JourneySnapshot | null {
@@ -88,6 +115,37 @@ export function JourneyProvider({
   const [wanted, setWanted] = useState(false);
   const want = useCallback(() => setWanted(true), []);
   const generation = useRef(0);
+  const flushing = useRef(false);
+
+  /** Records a pending acceptance; true once the server has it. */
+  const flushEnter = useCallback(async (): Promise<boolean> => {
+    if (flushing.current || !enterPending()) return false;
+    flushing.current = true;
+    try {
+      let result = await enterClub();
+      // No member session yet, or the server has not seen the card: present
+      // the card this device holds (it opens a session), then once more.
+      if (
+        !result.ok &&
+        result.kind === 'http' &&
+        (result.status === 401 || result.status === 403) &&
+        holdsCard() &&
+        (await presentCardToClub())
+      )
+        result = await enterClub();
+      if (!result.ok) return false;
+      setEnterPending(false);
+      generation.current++;
+      setSnapshot((current) => {
+        const next = admit(current, 'lounge');
+        writeCache(next);
+        return next;
+      });
+      return true;
+    } finally {
+      flushing.current = false;
+    }
+  }, []);
 
   const load = useCallback(async () => {
     const mine = ++generation.current;
@@ -111,13 +169,15 @@ export function JourneyProvider({
       setSnapshot(next);
       writeCache(next);
       setStatus('ready');
+      if (next.rooms.lounge === 'admitted') setEnterPending(false);
+      else void flushEnter();
       return;
     }
     if (result.kind === 'offline') setStatus('offline');
     else if (result.kind === 'http' && result.status === 401)
       setStatus('needs-membership');
     else setStatus('unavailable');
-  }, []);
+  }, [flushEnter]);
 
   useEffect(() => {
     if (enabled) void applyLaunchAdmissions();
@@ -161,15 +221,11 @@ export function JourneyProvider({
   );
 
   const enter = useCallback(async () => {
-    const result = await enterClub();
-    if (!result.ok) return;
-    generation.current++;
-    setSnapshot((current) => {
-      const next = admit(current, 'lounge');
-      writeCache(next);
-      return next;
-    });
-  }, []);
+    // Kept until recorded: later reads (focus, online, every minute) retry.
+    setEnterPending(true);
+    setWanted(true);
+    await flushEnter();
+  }, [flushEnter]);
 
   const value = useMemo<JourneyValue>(
     () => ({

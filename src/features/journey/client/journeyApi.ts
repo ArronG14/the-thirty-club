@@ -9,16 +9,32 @@ import type {
   AcceptAdmissionResult,
   AdmissionRoomId,
   MemberJourney,
+  MilestoneEffect,
   MilestoneInput,
   OwnerJourney,
   OwnerMilestone,
 } from '../../../shared/journey/contract';
+import type { Session } from '../../../shared/concierge/types';
 import { deskRequest } from '../../correspondence/client/correspondenceApi';
 
 export const journeyState = () => deskRequest<MemberJourney>('/journey');
 
 export const enterClub = () =>
   deskRequest<AcceptAdmissionResult>('/journey/enter', { body: {} });
+
+/**
+ * The membership card was presented on this device (ADR-023): the server
+ * verifies the concierge's credential, records the card and gives this
+ * device a member session if it has none.
+ */
+export const presentCard = (conciergeToken: string) =>
+  deskRequest<{
+    session: Session;
+    card: { firstPresentedAt: string; presentations: number };
+  }>('/auth/member/card', {
+    body: {},
+    headers: { authorization: `Bearer ${conciergeToken}` },
+  });
 
 export const acceptAdmission = (room: AdmissionRoomId) =>
   deskRequest<AcceptAdmissionResult>(`/journey/admissions/${room}/accept`, {
@@ -35,6 +51,13 @@ export const commandMilestone = (key: string, command: MilestoneCommand) =>
   deskRequest<{ milestone: OwnerMilestone }>(
     `/owner/journey/milestones/${key}/${command}`,
     { body: {} },
+  );
+
+/** Replaces a milestone's effects (e.g. the wording of its letter). */
+export const editMilestoneEffects = (key: string, effects: MilestoneEffect[]) =>
+  deskRequest<{ milestone: OwnerMilestone }>(
+    `/owner/journey/milestones/${key}`,
+    { method: 'PATCH', body: { effects } },
   );
 
 export const rescheduleMilestone = (key: string, fireAt: string) =>

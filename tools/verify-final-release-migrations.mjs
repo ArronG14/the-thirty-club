@@ -3,7 +3,7 @@
  * (docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md). Applies the nine migrations
  * the hosted project already has, seeds LIVE-like records (a redeemed
  * privilege, a published letter, outbox rows, a vault), then applies the
- * three release migrations in order and checks that nothing existing
+ * five release migrations in order and checks that nothing existing
  * changed, the communication hold is active, and every new table and
  * function is closed to browser roles. Run: node tools/verify-final-release-migrations.mjs
  * It never connects to a hosted database.
@@ -19,6 +19,7 @@ const RELEASE = [
   '20261022100000_casino_rewards.sql',
   '20261022110000_communication_hold.sql',
   '20261022120000_sms_operations.sql',
+  '20261022130000_membership_card_admission.sql',
 ];
 const dir = resolve('supabase/migrations');
 const all = readdirSync(dir)
@@ -96,13 +97,34 @@ try {
     'the communication hold is not active until 21 Oct 00:00 Jamaica',
   );
   const early = await rows(
-    "select state, fire_at from public.ttc_journey_milestones where key='early-membership'",
+    "select state, fire_at, effects from public.ttc_journey_milestones where key='early-membership'",
   );
   assert(
     early[0]?.state === 'held' &&
       new Date(early[0].fire_at).toISOString() === '2026-10-21T18:00:00.000Z',
     'early admission is not held at 21 October 19:00 UK',
   );
+  // ADR-023: the 19:00 letter exists and still awaits the owner's clue, so
+  // it cannot be sent until written.
+  const earlyLetter = early[0].effects.find((e) => e.type === 'letter');
+  assert(
+    early[0].effects.some((e) => e.type === 'open-entrance') &&
+      earlyLetter?.body.includes('[[CLUE') &&
+      earlyLetter.action?.kind === 'admission',
+    'the 19:00 letter is missing or no longer awaits the clue',
+  );
+  const cards = await rows(
+    'select count(*)::int as n from public.ttc_membership_card',
+  );
+  assert(cards[0].n === 0, 'a membership card is recorded before any scan');
+  let placeholderRefused = false;
+  try {
+    await pg.exec(`select public.ttc_journey_letter((select id from public.ttc_members where slug='alise'),
+      'verify:placeholder','T','Hidden [[CLUE]]',null,null,'{}'::jsonb)`);
+  } catch (error) {
+    placeholderRefused = /placeholder/.test(error.message);
+  }
+  assert(placeholderRefused, 'a [[placeholder]] letter was not refused');
   const sms = await rows('select mode from public.ttc_sms_operations');
   assert(sms.length === 1 && sms[0].mode === 'off', 'SMS mode is not OFF');
   const teaser = await rows(
@@ -146,6 +168,8 @@ try {
     'public.ttc_casino_action(uuid,text,text,jsonb)',
     'public.ttc_hold_action(uuid,text,text,jsonb)',
     'public.ttc_sms_action(uuid,text,text,jsonb)',
+    'public.ttc_journey_action_uncarded(uuid,text,text,jsonb)',
+    'public.ttc_casino_action_core(uuid,text,text,jsonb)',
   ])
     assert(
       (await rows('select to_regprocedure($1) is not null as ok', [fn]))[0].ok,
@@ -158,10 +182,10 @@ try {
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r' and (c.relname like 'ttc_journey%' or c.relname like 'ttc_room%'
       or c.relname like 'ttc_casino%' or c.relname like 'ttc_sms%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
-      'ttc_voucher_requests','ttc_communication_hold'))`);
+      'ttc_voucher_requests','ttc_communication_hold','ttc_membership_card'))`);
   assert(
-    tables.length === 12,
-    `expected 12 release tables, found ${tables.length}`,
+    tables.length === 13,
+    `expected 13 release tables, found ${tables.length}`,
   );
   for (const t of tables)
     assert(
@@ -186,7 +210,8 @@ try {
         existingRecordsUnchanged: true,
         unsentAliseSmsHeld: true,
         holdActiveUntil: '2026-10-21T00:00 America/Jamaica',
-        earlyAdmission: 'held, 21 October 19:00 UK (13:00 Jamaica)',
+        earlyAdmission:
+          'held, 21 October 19:00 UK (13:00 Jamaica); letter awaits the clue; card required',
         smsMode: 'off',
         teaser: 'draft, 21 October 16:00 UK, unapproved',
         armed,

@@ -31,6 +31,8 @@ const codes = new Set<ApiErrorCode>([
   'vault-locked',
   'credential-invalid',
   'on-hold',
+  'spins-promised',
+  'card-required',
   'server',
 ]);
 /**

@@ -26,6 +26,7 @@ import { casinoRoute } from './casino.ts';
 import {
   bridgeMemberSession,
   releaseCasinoVaults,
+  requireMembershipCard,
   vaultRoute,
 } from './vault.ts';
 const statuses: Record<string, number> = {
@@ -44,6 +45,8 @@ const statuses: Record<string, number> = {
   'vault-locked': 409,
   'credential-invalid': 404,
   'on-hold': 409,
+  'spins-promised': 409,
+  'card-required': 403,
   server: 500,
 };
 const messages: Record<string, string> = {
@@ -64,6 +67,9 @@ const messages: Record<string, string> = {
   'credential-invalid': 'This key is not recognised by the vault.',
   'on-hold':
     'Communications to Alise are on hold. Release them in the Owner Control Centre first.',
+  'spins-promised':
+    'Her letters already promise these spins. Issue a replacement batch first, then cancel this one.',
+  'card-required': 'The membership card has not been presented yet.',
   server: 'The Butler is momentarily unavailable. Please try again.',
 };
 export interface ApiDeps {
@@ -121,7 +127,12 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
       }
       if (
         request.method === 'POST' &&
-        ['/auth/owner', '/auth/member', '/auth/member/concierge'].includes(path)
+        [
+          '/auth/owner',
+          '/auth/member',
+          '/auth/member/concierge',
+          '/auth/member/card',
+        ].includes(path)
       ) {
         const rate = await db.action<{ allowed: boolean }>(
           null,
@@ -146,6 +157,27 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
             'system-session-create',
             { hash: hashToken(token) },
           );
+        } else if (path === '/auth/member/card') {
+          // The membership card was presented (ADR-023): record it, and give
+          // this device a member session unless it already has one. The
+          // card is never an owner credential.
+          v.keys(body, []);
+          await requireMembershipCard(request, env);
+          const current = await requireSession(db, request).catch(() => null);
+          if (current?.role === 'owner') throw new BackendError('forbidden');
+          const presented = await db.action<{
+            card: { firstPresentedAt: string; presentations: number };
+            session?: Session;
+          }>(
+            null,
+            'system',
+            'system-journey-card',
+            current ? {} : { hash: hashToken(token) },
+          );
+          if (current)
+            return respond({ session: current, card: presented.card });
+          headers.set('set-cookie', sessionCookie(url, token, 2592000));
+          return respond({ session: presented.session, card: presented.card });
         } else if (path === '/auth/member/concierge') {
           v.keys(body, []);
           session = await bridgeMemberSession(request, db, env, token);

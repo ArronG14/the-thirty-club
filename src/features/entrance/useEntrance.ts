@@ -13,6 +13,7 @@ import {
   earlyView,
   parseEntrance,
   resumableStart,
+  serverOffset,
   shouldStartFinal,
   type EarlyAdmission,
 } from './domain/earlyAdmission';
@@ -34,7 +35,7 @@ interface Timing {
   /** A target such that `target - now` is what the clock shows. */
   now: number;
   target: number;
-  /** The doors may open without the physical card (early admission). */
+  /** The doors may open: server-eligible and the card presented (ADR-023). */
   admitted: boolean;
 }
 
@@ -53,6 +54,8 @@ export function useEntrance(
   const [early, setEarly] = useState<EarlyAdmission | null>(null);
   const earlyRef = useRef(early);
   const finalRef = useRef<number | null>(null);
+  // Server clock minus device clock, once the server has answered.
+  const offsetRef = useRef(0);
 
   /** What the clock shows now, and whether the doors may open. */
   const timing = useCallback((): Timing => {
@@ -66,12 +69,14 @@ export function useEntrance(
         phase: view.phase,
         now,
         target: now + view.remainingMs,
-        admitted: e.eligible,
+        admitted: e.eligible && memberRef.current,
       };
     }
+    // The birthday's own countdown, by the server's clock once known.
+    const now = deviceNow + offsetRef.current;
     return {
-      phase: timePhase(deviceNow, birthday),
-      now: deviceNow,
+      phase: timePhase(now, birthday),
+      now,
       target: birthday,
       admitted: false,
     };
@@ -104,6 +109,7 @@ export function useEntrance(
           e,
           finalRef.current,
           document.visibilityState !== 'hidden',
+          memberRef.current,
         )
       ) {
         finalRef.current = now;
@@ -132,6 +138,8 @@ export function useEntrance(
       if (!alive) return;
       const deviceNow = clock.now();
       // Unreachable: keep what the server last said (never invent eligibility).
+      const offset = serverOffset(data, deviceNow);
+      if (offset !== null) offsetRef.current = offset;
       if (data !== null) {
         const next = parseEntrance(data, deviceNow);
         earlyRef.current = next;
@@ -244,7 +252,34 @@ export function useEntrance(
     memberRef.current = true;
     setMember(true);
     dispatch({ type: 'credential' });
-  }, []);
+    // Early admission: the final ten seconds may begin at once.
+    evaluate();
+  }, [evaluate]);
+
+  // Another tab of this browser (the card's link opens a new Safari tab):
+  // a card presented there counts here, and a ceremony completed there is
+  // not played again here.
+  useEffect(() => {
+    const recheck = () => {
+      if (!memberRef.current && card.isPresented()) presentMembership();
+      const stored = storage.load();
+      if (stored.ceremonySeenAt && !recordRef.current.ceremonySeenAt) {
+        recordRef.current = stored;
+        dispatch({ type: 'admitted' });
+      }
+    };
+    const onVisible = () => {
+      if (document.visibilityState !== 'hidden') recheck();
+    };
+    window.addEventListener('storage', recheck);
+    window.addEventListener('pageshow', recheck);
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.removeEventListener('storage', recheck);
+      window.removeEventListener('pageshow', recheck);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [card, storage, presentMembership]);
   const replay = useCallback(() => dispatch({ type: 'replay' }), []);
   /** Already a member by the server's record: no second ceremony. */
   const admitted = useCallback(() => dispatch({ type: 'admitted' }), []);
@@ -262,6 +297,14 @@ export function useEntrance(
     member,
     /** The doors open early by the owner's schedule (ADR-022). */
     early: early !== null && earlyActive(early, openingInstant()),
+    /** 19:00 has fired on the server: the doors wait only for the card. */
+    eligible:
+      early !== null && earlyActive(early, openingInstant()) && early.eligible,
+    /** The Butler's 19:00 letter (with the clue), once the server shows it. */
+    earlyLetter:
+      early !== null && earlyActive(early, openingInstant())
+        ? early.letter
+        : null,
     /** The entrance clock, refreshed every second while counting. */
     now: view.now,
     enter,

@@ -1,8 +1,10 @@
 /**
- * Early admission at the entrance (ADR-022), driven by a fake server: the
- * countdown to 19:00 UK on 21 October, the hold at ten seconds, the final
- * ten seconds only when the server agrees and she is looking, the doors
- * opening by themselves, reloads, looking away and a wrong device clock.
+ * Early admission at the entrance (ADR-022/023), driven by a fake server:
+ * the countdown to 19:00 UK on 21 October, the hold at ten seconds, the
+ * final ten seconds only when the server agrees, the membership card has
+ * been presented and she is looking, the doors opening by themselves,
+ * reloads, looking away, the card arriving from another tab and a wrong
+ * device clock.
  */
 import { act, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
@@ -16,9 +18,9 @@ import {
 } from '../domain/earlyAdmission';
 import { memoryEntranceStorage } from '../domain/entranceRecord';
 import {
-  absentCard,
   systemClock,
   type EarlyAdmissionSource,
+  type MembershipCard,
 } from '../domain/environment';
 import { Entrance } from './Entrance';
 
@@ -33,6 +35,10 @@ interface FakeServer {
   finalStart: number | null;
 }
 let server: FakeServer;
+/** Whether this browser holds the card (its /c/ link was opened). */
+let carded: boolean;
+const card: MembershipCard = { isPresented: () => carded };
+const CLUE = 'Your card is beneath the second cushion.';
 
 const source = (): EarlyAdmissionSource => ({
   async read() {
@@ -43,6 +49,9 @@ const source = (): EarlyAdmissionSource => ({
       opensAt: server.authorised ? new Date(OPENS).toISOString() : null,
       // The server fires the milestone lazily when it is due.
       eligible: server.authorised && now >= OPENS,
+      ...(server.authorised && now >= OPENS
+        ? { letter: { title: 'Your early admission', body: CLUE } }
+        : {}),
     };
   },
   loadFinalStart: () => server.finalStart,
@@ -59,7 +68,7 @@ function open() {
           clock: systemClock,
           storage: memoryEntranceStorage(),
           membership: memoryMembershipStorage(),
-          card: absentCard,
+          card,
           preview: null,
           admission: source(),
         }}
@@ -100,6 +109,7 @@ beforeEach(() => {
     removeEventListener: vi.fn(),
   });
   server = { skewMs: 0, authorised: true, reachable: true, finalStart: null };
+  carded = true;
   setVisible(true);
 });
 
@@ -108,7 +118,7 @@ afterEach(() => {
 });
 
 describe('the rules', () => {
-  const a = { opensAt: OPENS, eligible: false, offsetMs: 0 };
+  const a = { opensAt: OPENS, eligible: false, offsetMs: 0, letter: null };
   it('counts truthfully, then holds at ten seconds until the server agrees', () => {
     expect(earlyView(OPENS - 3_600_000, a, null)).toEqual({
       remainingMs: 3_600_000,
@@ -120,11 +130,13 @@ describe('the rules', () => {
       phase: 'final-minute',
     });
   });
-  it('begins the final ten seconds only when eligible and visible', () => {
+  it('begins the final ten seconds only when eligible, carded and visible', () => {
     const ok = { ...a, eligible: true };
-    expect(shouldStartFinal(OPENS, ok, null, true)).toBe(true);
-    expect(shouldStartFinal(OPENS, ok, null, false)).toBe(false);
-    expect(shouldStartFinal(OPENS, a, null, true)).toBe(false);
+    expect(shouldStartFinal(OPENS, ok, null, true, true)).toBe(true);
+    expect(shouldStartFinal(OPENS, ok, null, false, true)).toBe(false);
+    expect(shouldStartFinal(OPENS, a, null, true, true)).toBe(false);
+    // 19:00 alone never opens the doors (ADR-023).
+    expect(shouldStartFinal(OPENS, ok, null, true, false)).toBe(false);
     expect(earlyView(OPENS + 4_000, ok, OPENS)).toEqual({
       remainingMs: 6_000,
       phase: 'final-minute',
@@ -143,6 +155,31 @@ describe('the rules', () => {
         0,
       ),
     ).toBeNull();
+  });
+  it('shows the Butler’s letter only once the server has fired 19:00', () => {
+    const letter = { title: 'Your early admission', body: CLUE };
+    expect(
+      parseEntrance(
+        {
+          now: '2026-10-21T17:00:00Z',
+          opensAt: '2026-10-21T18:00:00Z',
+          eligible: false,
+          letter,
+        },
+        0,
+      )?.letter,
+    ).toBeNull();
+    expect(
+      parseEntrance(
+        {
+          now: '2026-10-21T18:00:01Z',
+          opensAt: '2026-10-21T18:00:00Z',
+          eligible: true,
+          letter,
+        },
+        0,
+      )?.letter,
+    ).toEqual(letter);
   });
 });
 
@@ -232,6 +269,59 @@ describe('at the entrance', () => {
     expect(club.dataset.stage).toBe('locked');
     // 16:00:15 UTC on the server: 1 h 59 min 45 s to 18:00 UTC.
     expect(timer()).toMatch(/0 days, 1 hour, 59 minutes, 4[56] seconds/);
+  });
+
+  it('19:00 without the card: the clock holds at ten seconds, the letter and the card prompt wait', async () => {
+    carded = false;
+    vi.setSystemTime(OPENS + 60_000);
+    const club = open();
+    await settle();
+    advance(30_000);
+    expect(club.dataset.stage).toBe('final-minute');
+    expect(timer()).toContain('0 minutes, 10 seconds');
+    expect(
+      screen.getByText(
+        'Alise, the club is ready to receive you. Your membership card, if you please.',
+      ),
+    ).toBeInTheDocument();
+    act(() => {
+      screen.getByRole('button', { name: 'Your early admission' }).click();
+    });
+    expect(screen.getByText(CLUE)).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Present the card by hand' }),
+    ).toBeInTheDocument();
+  });
+
+  it('the card scanned in a new tab: this tab begins the final ten and opens the doors', async () => {
+    carded = false;
+    vi.setSystemTime(OPENS + 60_000);
+    const club = open();
+    await settle();
+    advance(5_000);
+    expect(timer()).toContain('0 minutes, 10 seconds');
+    // The NFC link opened another Safari tab, which stored the card.
+    carded = true;
+    act(() => {
+      window.dispatchEvent(new StorageEvent('storage'));
+    });
+    advance(4_000);
+    expect(timer()).toMatch(/0 minutes, [5-7] seconds/);
+    advance(7_000);
+    expect(club.dataset.stage).toBe('unlocking');
+  });
+
+  it('a phone clock running ahead never runs out the birthday countdown: the server’s clock counts', async () => {
+    // The phone believes it is ten seconds before the birthday; the server
+    // says it is Wednesday afternoon and early admission is not armed.
+    server.authorised = false;
+    vi.setSystemTime(Date.parse('2026-10-24T04:59:50Z'));
+    server.skewMs = Date.parse('2026-10-21T15:00:00Z') - Date.now();
+    const club = open();
+    await settle();
+    advance(20_000);
+    expect(club.dataset.stage).toBe('locked');
+    expect(timer()).toContain('2 days');
   });
 
   it('a dropped connection never invents eligibility', async () => {

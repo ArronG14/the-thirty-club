@@ -26,6 +26,7 @@ import {
 import {
   commandMilestone,
   commandRoom,
+  editMilestoneEffects,
   ownerCommunications,
   ownerJourney,
   rescheduleMilestone,
@@ -64,11 +65,27 @@ const ROOM_STATES = {
   admitted: 'Admitted',
 } as const;
 
+/** Wording still to be written: such a letter is never sent (ADR-023). */
+const hasPlaceholder = (m: OwnerMilestone) =>
+  m.effects.some(
+    (e) =>
+      e.type === 'letter' && (e.title.includes('[[') || e.body.includes('[[')),
+  );
+
+interface Wording {
+  key: string;
+  index: number;
+  title: string;
+  body: string;
+}
+
 function effectText(effect: MilestoneEffect): string {
   if (effect.type === 'invite-room')
     return `Invite: ${ADMISSION_ROOM_NAMES[effect.room]} (Letter of Admission + Butler letter)`;
   if (effect.type === 'letter')
     return `Butler letter “${effect.title}”${effect.action ? ` with ${effect.action.kind === 'return' ? 'RETURN TO' : 'ENTER'} ${ADMISSION_ROOM_NAMES[effect.action.room]}` : ''}`;
+  if (effect.type === 'open-entrance')
+    return 'The doors may open (the clock holds at 00:00:10 until she presents her membership card)';
   return `Hook ${effect.name} ${JSON.stringify(effect.params)}`;
 }
 
@@ -79,6 +96,7 @@ export function JourneyOffice() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [wall, setWall] = useState('');
+  const [wording, setWording] = useState<Wording | null>(null);
   // The communication hold (ADR-021): actions that reach Alise wait for it.
   const [held, setHeld] = useState(false);
 
@@ -163,6 +181,24 @@ export function JourneyOffice() {
         ? `Introduce ${ADMISSION_ROOM_NAMES[room]} now? Alise receives a Butler letter at once and her Letter of Admission waits in the Lounge.`
         : `Withdraw the invitation to ${ADMISSION_ROOM_NAMES[room]}? The Butler letter she already has stays in her correspondence, but its button will no longer lead anywhere.`,
     );
+
+  function saveWording(m: OwnerMilestone) {
+    if (!wording) return;
+    const title = wording.title.trim();
+    const body = wording.body.trim();
+    if (!title || !body) {
+      setError('The letter needs a title and some words.');
+      return;
+    }
+    const effects = m.effects.map((e, i) =>
+      i === wording.index && e.type === 'letter' ? { ...e, title, body } : e,
+    );
+    setWording(null);
+    void run(
+      () => editMilestoneEffects(m.key, effects),
+      `The wording of “${m.title}” is saved. Alise sees it only when it fires.`,
+    );
+  }
 
   function saveTime(m: OwnerMilestone) {
     let instant: string;
@@ -287,6 +323,46 @@ export function JourneyOffice() {
                 {ADMISSION_ROOM_NAMES[r.roomId]}: {ROOM_STATES[r.state]}
               </p>
             ))}
+            {m.state !== 'fired' && hasPlaceholder(m) && (
+              <p className="office-error" role="alert">
+                Its letter still contains wording to write ([[…]]). It will not
+                be sent until you replace it: at its time the milestone fails
+                and nothing reaches Alise.
+              </p>
+            )}
+            {m.state !== 'fired' && wording?.key === m.key && (
+              <div className="office-form-row office-journey__wording">
+                <label>
+                  Letter title
+                  <input
+                    value={wording.title}
+                    maxLength={120}
+                    onChange={(e) =>
+                      setWording({ ...wording, title: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Letter (Alise reads this exactly)
+                  <textarea
+                    value={wording.body}
+                    maxLength={4000}
+                    rows={8}
+                    onChange={(e) =>
+                      setWording({ ...wording, body: e.target.value })
+                    }
+                  />
+                </label>
+                <div className="office-actions">
+                  <button disabled={busy} onClick={() => saveWording(m)}>
+                    Save wording
+                  </button>
+                  <button disabled={busy} onClick={() => setWording(null)}>
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            )}
             {m.lastError && (
               <p className="office-error">
                 Last error ({m.attempts} attempt
@@ -353,6 +429,24 @@ export function JourneyOffice() {
                 >
                   Change time
                 </button>
+                {m.effects.map((e, i) =>
+                  e.type === 'letter' ? (
+                    <button
+                      key={i}
+                      disabled={busy}
+                      onClick={() =>
+                        setWording({
+                          key: m.key,
+                          index: i,
+                          title: e.title,
+                          body: e.body,
+                        })
+                      }
+                    >
+                      Edit wording
+                    </button>
+                  ) : null,
+                )}
               </div>
             )}
           </li>
