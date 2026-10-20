@@ -512,6 +512,9 @@ test.describe.serial('the Butler’s service', () => {
       name: 'Open Dev Mode',
     });
     await expect(toggle).toBeVisible();
+    // Before the code the doors are a guest's: they may ask the real server
+    // whether an early admission is scheduled. Dev Mode starts here.
+    calls.length = 0;
     // Letters are written and delivered in TEST, through the simulated Desk.
     await page.goto('/concierge/owner/test');
     await expect(

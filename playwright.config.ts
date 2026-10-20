@@ -12,6 +12,7 @@ export default defineConfig({
     'rehearsal.spec.ts',
     'journey.spec.ts',
     'integration.spec.ts',
+    'release.spec.ts',
     'casino.look.spec.ts',
     // WebKit with a phone profile: playwright.webkit.config.ts.
     'entrance-webkit.spec.ts',

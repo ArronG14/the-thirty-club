@@ -41,18 +41,18 @@ LOCKED rooms are never named to her: not in the Directory, the 3D directory boar
 
 Seeded with `on conflict do nothing`, so an owner's edits are never overwritten.
 
-| Key                      | When (Jamaica)                                           | Does                                                                                | Seeded             |
-| ------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------ |
-| `early-membership`       | Wed 21 Oct, time chosen by the owner (00:00 placeholder) | Invite the Members' Lounge (founding membership) — the first communication          | **held** (ADR-021) |
-| `departure-ugg`          | Thu 22 Oct 03:00                                         | Butler letter (wording provisional)                                                 | held               |
-| `departure-privileges`   | Thu 22 Oct 08:00                                         | Butler note pointing to the Departure Lounge (which releases the privileges itself) | held               |
-| `departure-airpods`      | Thu 22 Oct 09:00                                         | Butler hint for the hidden NFC tag                                                  | held               |
-| `casino-opening`         | Fri 23 Oct 09:00                                         | Invite the Grand Casino                                                             | **armed**          |
-| `casino-opening-spins`   | Fri 23 Oct 09:00                                         | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook         | held               |
-| `casino-evening-mystery` | Fri 23 Oct 20:00                                         | Butler letter with RETURN TO THE GRAND CASINO                                       | held               |
-| `birthday-screening`     | Sat 24 Oct 00:00                                         | Invite the Private Screening Room                                                   | **armed**          |
-| `birthday-vault`         | Sat 24 Oct 00:00                                         | Invite the Gift Vault                                                               | **armed**          |
-| `birthday-breakfast`     | Sat 24 Oct 10:30                                         | Butler letter "Breakfast is served"                                                 | held               |
+| Key                      | When (Jamaica)                       | Does                                                                                                                     | Seeded             |
+| ------------------------ | ------------------------------------ | ------------------------------------------------------------------------------------------------------------------------ | ------------------ |
+| `early-membership`       | Wed 21 Oct, 19:00 UK (13:00 Jamaica) | Early admission: the doors open at the entrance (`open-entrance`), then the membership ceremony and the Lounge (ADR-022) | **held** (ADR-021) |
+| `departure-ugg`          | Thu 22 Oct 03:00                     | Butler letter (wording provisional)                                                                                      | held               |
+| `departure-privileges`   | Thu 22 Oct 08:00                     | Butler note pointing to the Departure Lounge (which releases the privileges itself)                                      | held               |
+| `departure-airpods`      | Thu 22 Oct 09:00                     | Butler hint for the hidden NFC tag                                                                                       | held               |
+| `casino-opening`         | Fri 23 Oct 09:00                     | Invite the Grand Casino                                                                                                  | **armed**          |
+| `casino-opening-spins`   | Fri 23 Oct 09:00                     | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook                                              | held               |
+| `casino-evening-mystery` | Fri 23 Oct 20:00                     | Butler letter with RETURN TO THE GRAND CASINO                                                                            | held               |
+| `birthday-screening`     | Sat 24 Oct 00:00                     | Invite the Private Screening Room                                                                                        | **armed**          |
+| `birthday-vault`         | Sat 24 Oct 00:00                     | Invite the Gift Vault                                                                                                    | **armed**          |
+| `birthday-breakfast`     | Sat 24 Oct 10:30                     | Butler letter "Breakfast is served"                                                                                      | held               |
 
 Held milestones carry provisional wording or depend on Codex. Review each one, then **Resume** it. Change times in the journey tab. If the migration is applied after a milestone's time, that milestone fires at the next round.
 
@@ -75,7 +75,7 @@ Status words: Scheduled, Held, Failed, Triggered, Delivered (in-app), Opened, Co
 
 - In-app delivery works: the envelope at the doors and in the Lounge, My Correspondence, unread state, and opened stamps.
 - SMS: every journey letter queues the Correspondence Desk's existing invitation SMS in the approved outbox. It is sent only while `SMS_SENDING_ENABLED=true`, which is **false** in LIVE, so no SMS reaches Alise. No real SMS was sent or tested in this work.
-- Alise needs a v1 member session to receive journey letters and admissions. Today she gets one from the Correspondence Desk's one-time introduction link (`/correspondence#invitation=…`, task CD06), from her live Departure credential (Thursday), or from the membership card at midnight (concierge bridge). **Before `early-membership` fires on 20 October, send her the introduction link**, or the letter waits until she has a session.
+- Alise needs a v1 member session to receive journey letters and admissions. Today she gets one from the Correspondence Desk's one-time introduction link (`/correspondence#invitation=…`, task CD06), from her live Departure credential (Thursday), or from the membership card at midnight (concierge bridge). **After the 19:00 UK early admission on 21 October, send her the introduction link** (the "formal documentation"), or letters and the 23 October Casino admission wait until she has a session.
 
 ## Rehearsing the admission ceremony (TEST only)
 

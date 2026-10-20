@@ -114,3 +114,10 @@ Migration `20261022110000_communication_hold.sql`. While the hold is active (it 
 2. Implement `public.ttc_journey_hook` for `casino.spins.issue` if milestone-driven opening spins are wanted; tell the owner to resume `casino-opening-spins` once it is deployed.
 3. Guard Casino play with `ttc_room_admitted(member,'casino')`.
 4. Name your migrations after `20261022090000` so the journey's tables and functions exist first.
+
+## 12. SMS policy, links and early admission _(added 20 Oct evening, ADR-022)_
+
+- **SMS:** every SMS goes through `deliverSms` (`netlify/backend/smsPolicy.ts`); nothing else may call Twilio. A journey letter's SMS is sent only in LIVE mode, with the hold released, after its milestone fires (arming is the approval).
+- **Links:** each invitation template must contain the club link; `ttc_journey_invitations` points it at the room (return), the entrance (admission summons) or `/correspondence`. Paths: `JOURNEY_LINKS` in `src/shared/journey/templates.ts`.
+- **Effect `open-entrance`:** fires early admission (`early-membership`, 21 Oct 18:00 UTC); records `journey.entrance.opened`. Public `GET /entrance`; member `POST /journey/enter`.
+- **Casino copy:** the Letter of Admission uses `letterWithoutSpins` unless an active batch has spins left; `casino-opening-spins` fires first. `owner-casino-cancel` withdraws an undelivered `spins-batch-<id>` announcement and returns `announcementDelivered`.

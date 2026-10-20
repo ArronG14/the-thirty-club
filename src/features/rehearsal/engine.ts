@@ -19,6 +19,7 @@ import {
   type MembershipRecord,
 } from '../club/domain/membershipRecord';
 import { openingInstant } from '../entrance/domain/countdown';
+import { JOURNEY_CACHE_KEY } from '../journey/domain/access';
 import { browserEntranceStorage } from '../entrance/domain/entranceRecord';
 import { browserConciergeStorage } from '../concierge/client/localRecord';
 import { endRehearsal } from '../concierge/client/sessionStore';
@@ -43,7 +44,7 @@ import {
 } from '../../shared/journey/contract';
 import { rehearsalNow, resetRehearsalClock, setRehearsalTime } from './clock';
 import { PENDING_ADMISSIONS_KEY } from './office';
-import { clearRehearsalLocal } from './storage';
+import { clearRehearsalLocal, deviceStorage } from './storage';
 
 const MINUTE = 60_000;
 const HOUR = 60 * MINUTE;
@@ -434,6 +435,13 @@ async function syncAdmissions(
     spins?: number | undefined;
   } = {},
 ) {
+  // A new moment: the journey cached from the last rehearsal no longer
+  // holds (it could open the doors before the office has been read).
+  try {
+    deviceStorage().removeItem(JOURNEY_CACHE_KEY);
+  } catch {
+    // Nothing cached.
+  }
   const record = browserMembershipStorage().load();
   const open = Object.entries(record.rooms)
     .filter(([, progress]) => progress?.unlockedAt)
@@ -448,10 +456,19 @@ async function syncAdmissions(
   const admitted = [...new Set([...open, ...extra])].filter(
     (room) => !ceremony.includes(room),
   );
+  // A moment before her membership: the simulated office must not remember
+  // a Lounge admission from an earlier rehearsal (the doors would open).
+  const withdraw: AdmissionRoomId[] =
+    !record.inductedAt &&
+    !admitted.includes('lounge') &&
+    !ceremony.includes('lounge')
+      ? ['lounge']
+      : [];
   const fire = also.fire ?? [];
   const resume = also.resume ?? [];
   const spins = also.spins ?? 0;
   if (
+    withdraw.length === 0 &&
     admitted.length === 0 &&
     ceremony.length === 0 &&
     fire.length === 0 &&
@@ -464,7 +481,7 @@ async function syncAdmissions(
   // database flushing to IndexedDB before this page unloads.
   sessionStorage.setItem(
     PENDING_ADMISSIONS_KEY,
-    JSON.stringify({ admitted, ceremony, fire, resume, spins }),
+    JSON.stringify({ admitted, ceremony, withdraw, fire, resume, spins }),
   );
 }
 
@@ -628,7 +645,7 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
     id: 'casino-admission',
     label: 'Admission ceremony: the Grand Casino',
     detail:
-      'Friday 23 Oct after 09:00 Jamaica, as a founding member: the Butler’s summons at the doors, then the Letter of Admission in the Lounge and the escort into the Casino.',
+      'Friday 23 Oct after 09:00 Jamaica, as a founding member (admitted on 21 Oct): the doors open into the Lounge, the Letter of Admission, and the escort into the Casino.',
     launch: async () => {
       const at = atLeast(CASINO_MILESTONE + MINUTE);
       writeEntrance('locked', at);

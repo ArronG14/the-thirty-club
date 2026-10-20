@@ -181,3 +181,13 @@ Full contract: `docs/BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md`; types `src/share
 - `POST /api/v1/owner/communications/hold` `{}` → hold state; cancels unsent SMS to Alise.
 - New error code `on-hold` (409): an action that would publish a letter to Alise, or approve/send an SMS to her, while held — including `POST /owner/invitations`, milestone `fire`/`retry`, room `invite`, event `retry`, correspondence `send-now`, SMS retry and Butler direct SMS.
 - `POST /owner/journey/milestones` requires `key` (`MILESTONE_KEY_PATTERN`) and is idempotent on it (200 `duplicate`, 409 `idempotency-conflict`).
+
+## SMS operations, entrance and admission (additive, ADR-022)
+
+- `GET /api/v1/owner/sms` (owner): mode, transport readiness (booleans only, no numbers), hold, messages with their state, rehearsable journey letters, rehearsal log.
+- `POST /api/v1/owner/sms/mode` (owner) `{mode:"off"|"rehearsal"|"live", confirm?:"LIVE"}`: LIVE requires `confirm`. Audited.
+- `POST /api/v1/owner/sms/messages/:id/approve` (owner): approves an Alise SMS for LIVE; `409 on-hold` while held, `invalid` unless the mode is LIVE and the send time has not passed.
+- `POST /api/v1/owner/sms/rehearsals` (owner) `{kind:"message"|"milestone", id, idempotencyKey}`: REHEARSAL mode only; sends a bannered copy to the server's `SMS_REHEARSAL_TO`; idempotent.
+- `GET /api/v1/entrance` (public, no session): `{now, opensAt|null, eligible}`; `opensAt` only once the owner has armed early admission.
+- `POST /api/v1/journey/enter` (member): records the Lounge admission; refused before the doors may open.
+- Legacy `POST /api/owner/message` send in LIVE: `409 {"error":"on-hold"}` while communications are held or the hold cannot be read.

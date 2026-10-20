@@ -58,3 +58,10 @@ LIVE calls the existing Netlify API and hosted Supabase. TEST uses the existing 
 - The member Lounge Wallet is wired, but the Butler's conversational offer and the Journey admission UI must be reconciled with Opus's branch. The existing Owner Control Centre provides an actionable request list; no separate owner SMS is sent for a voucher request.
 - The committed Journey contract records `vault.gift.unlocked` without a Butler letter. The Casino result links to the Vault, whose room gate must enforce first admission. A later Butler invitation to the Vault requires an explicit Journey contract extension; this branch does not invent a competing letter.
 - No production migration, production spin, real notification, physical NFC/iPhone rehearsal or end-to-end integrated Journey browser run has occurred on this branch.
+
+## Final release consistency (20 October evening, ADR-022)
+
+- Opening spins (`casino-opening-spins`, sort 49) are issued before the Letter of Admission (`casino-opening`, 50); the letter promises spins only when a batch with spins left exists.
+- The journey tab warns while the Casino is armed but its spins are held.
+- Cancelling a batch asks first, withdraws an undelivered announcement and reports one already delivered.
+- The member Casino refreshes its spins on focus, visibility and every 30 seconds.

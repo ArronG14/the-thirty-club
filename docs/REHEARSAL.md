@@ -85,3 +85,9 @@ The new production Casino now uses the persisted `/api/v1/casino` spin API. The 
 - Launch intents (applied by the destination page) can now also trigger milestones (`fire`) and issue a Casino batch through the real owner action (`spins`: three spins with one "Rehearsal voucher · two cocktails"). The Casino launches, the Casino ceremony launch, _Casino jackpot_ and _All rooms open_ use it.
 - The _Early membership (the first invitation)_ scenario is 21 Oct, 10:00 Jamaica (a rehearsal time): it triggers the held Lounge introduction as the owner will after release.
 - Browser test: `tests/integration.spec.ts` (voucher round trip; the hold enforced by the simulated server).
+
+## Early admission and SMS rehearsal (ADR-022)
+
+- Scenarios: **Early admission: after the 16:00 teaser** (16:01 UK), **19:00 UK, watching** (20 s before), **arriving after 19:00 UK** (20:15). Each arms `early-membership` in the TEST office (`resume` intent).
+- The TEST office starts in SMS mode LIVE with a fake provider; its SMS operations page can rehearse to the simulated owner number.
+- `/rehearse?path=…&scenario=…|launch=…` (the links in a real REHEARSAL SMS) asks for the private code, then launches the matching TEST rehearsal; it never acts on LIVE.

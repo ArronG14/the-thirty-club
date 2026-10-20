@@ -81,7 +81,7 @@ test('mobile office signs in, issues membership, redeems beauty and fulfils the 
   ).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Approve this SMS' }),
-  ).toHaveCount(5); // Three timed drafts plus this claim; Friday stays disabled.
+  ).toHaveCount(6); // Three timed drafts, the 21 Oct teaser draft and this claim; Friday stays disabled.
   await page.screenshot({
     path: '/private/tmp/thirty-office-mobile.png',
     fullPage: true,

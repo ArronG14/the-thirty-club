@@ -5,7 +5,12 @@ import { defineConfig, devices } from '@playwright/test';
 // reach Twilio, Telegram or Supabase.
 export default defineConfig({
   testDir: './tests',
-  testMatch: ['rehearsal.spec.ts', 'journey.spec.ts', 'integration.spec.ts'],
+  testMatch: [
+    'rehearsal.spec.ts',
+    'journey.spec.ts',
+    'integration.spec.ts',
+    'release.spec.ts',
+  ],
   workers: 1,
   timeout: 180000,
   use: {

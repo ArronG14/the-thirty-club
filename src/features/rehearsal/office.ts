@@ -73,14 +73,16 @@ async function simMember<T>(path: string, body?: unknown): Promise<T> {
  * member actions: `admitted` rooms are invited and accepted, `ceremony`
  * rooms are invited fresh so their Letter of Admission can be rehearsed
  * (a rehearsal may start a ceremony again; the real office never can).
+ * `withdrawn` rooms are returned to locked for a moment before them.
  */
 export async function rehearseAdmissions(
   admitted: readonly AdmissionRoomId[],
   ceremony: readonly AdmissionRoomId[] = [],
+  withdrawn: readonly AdmissionRoomId[] = [],
 ) {
   const { simOffice } = await import('./sim/v1');
   const office = await simOffice();
-  for (const room of ceremony)
+  for (const room of [...ceremony, ...withdrawn])
     await office.pg.query(
       'delete from public.ttc_room_admissions where room_id = $1',
       [room],
@@ -102,6 +104,7 @@ export async function applyPendingAdmissions() {
   let pending: {
     admitted?: unknown;
     ceremony?: unknown;
+    withdraw?: unknown;
     fire?: unknown;
     resume?: unknown;
     spins?: unknown;
@@ -117,7 +120,11 @@ export async function applyPendingAdmissions() {
   if (!pending) return;
   const rooms = (value: unknown) =>
     Array.isArray(value) ? value.filter(isAdmissionRoom) : [];
-  await rehearseAdmissions(rooms(pending.admitted), rooms(pending.ceremony));
+  await rehearseAdmissions(
+    rooms(pending.admitted),
+    rooms(pending.ceremony),
+    rooms(pending.withdraw),
+  );
   if (Array.isArray(pending.resume))
     for (const key of pending.resume)
       if (typeof key === 'string')

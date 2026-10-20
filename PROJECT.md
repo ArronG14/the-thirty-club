@@ -110,3 +110,7 @@ An isolated feature branch implements owner-issued spin batches, an editable pri
 ## Final integration and the communication hold (20 October 2026, not yet deployed)
 
 The birthday journey and the Casino/rewards engine are one system on `feature/birthday-final-integration`: the owner controls spins and prizes, the server decides every spin, vouchers and Vault gifts become entitlements, and the Butler presents each new room through its Letter of Admission and each later reward by letter. At the owner's instruction nothing new reaches Alise until he releases communications, which the server refuses before 21 October (Jamaica). Handover: `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`.
+
+## SMS operations and early admission (20 October 2026, not yet deployed)
+
+Every SMS now passes one server-side policy: the owner chooses OFF, REHEARSAL (copies to his own phone only) or LIVE, and the communication hold still decides whether anything may reach Alise. On Wednesday 21 October the Butler may send a teaser at 16:00 UK (only if approved in time), and the doors may open early at 19:00 UK with the full ceremony, if the owner arms it. Handover: `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`.

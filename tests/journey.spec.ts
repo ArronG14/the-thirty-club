@@ -57,36 +57,20 @@ async function launch(page: Page, name: string) {
   await page.waitForLoadState('load');
 }
 
-test('Casino admission: summons at the doors, Letter of Admission in the Lounge, escort, Directory, return link', async ({
+test('Casino admission: a founding member’s Letter of Admission in the Lounge, escort, Directory', async ({
   page,
 }) => {
   await unlock(page);
   const calls = apiCalls(page);
   const guestBefore = await page.evaluate(() => JSON.stringify(localStorage));
 
-  // Before admission a direct link names nothing.
   await launch(page, 'Admission ceremony: the Grand Casino');
-  await expect(page.locator('.club')).toHaveAttribute('data-stage', 'locked');
-
-  // The Butler's summons waits at the locked doors (Friday morning).
-  const envelope = page.getByRole('button', {
-    name: /Open your new letter: Your presence is requested in the Lounge/,
+  // A founding member since 21 October (early admission): the doors know
+  // her on the server and open straight into the Lounge, where the Butler's
+  // Letter of Admission is presented.
+  await expect(page.locator('.club')).toHaveAttribute('data-stage', 'foyer', {
+    timeout: 60_000,
   });
-  await expect(envelope).toBeVisible({ timeout: 60_000 });
-  await envelope.click();
-  await page
-    .getByRole('button', { name: /Break the seal and open the letter/ })
-    .first()
-    .click();
-  const toLounge = page.getByRole('link', {
-    name: 'ENTER THE MEMBERS’ LOUNGE',
-  });
-  await expect(toLounge).toBeVisible({ timeout: 15_000 });
-  await shot(page, '01-summons-at-the-doors');
-  await toLounge.click();
-
-  // The Lounge (before the birthday doors) presents the Letter of Admission.
-  await expect(page).toHaveURL(/\/lounge\?admission=casino$/);
   const letter = page.getByRole('dialog', { name: 'The Grand Casino' });
   await expect(letter).toBeVisible({ timeout: 30_000 });
   await expect(letter).toContainText('Letter of Admission');
