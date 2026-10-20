@@ -15,6 +15,7 @@ import {
 } from '../../src/shared/journey/contract.ts';
 import { JOURNEY_TEMPLATES } from '../../src/shared/journey/templates.ts';
 import { BackendError, type Database } from './database.ts';
+import { requireCommunications } from './hold.ts';
 import * as v from './validation.ts';
 
 /** Every journey call carries the Butler's words. */
@@ -224,6 +225,9 @@ export async function journeyRoute({
     }
     if (method === 'POST' && milestone[2]) {
       v.keys(body, []);
+      // Firing delivers to Alise; refused while communications are held.
+      if (milestone[2] === 'fire' || milestone[2] === 'retry')
+        await requireCommunications(db);
       return {
         data: await call(`owner-journey-milestone-${milestone[2]}`, { key }),
       };
@@ -235,6 +239,7 @@ export async function journeyRoute({
   ).exec(path);
   if (rooms && method === 'POST') {
     v.keys(body, []);
+    if (rooms[2] === 'invite') await requireCommunications(db);
     return {
       data: await call(`owner-journey-room-${rooms[2]}`, {
         roomId: room(rooms[1]),
@@ -244,6 +249,7 @@ export async function journeyRoute({
   const retry = new RegExp(`^/owner/journey/events/${ID}/retry$`).exec(path);
   if (retry && method === 'POST') {
     v.keys(body, []);
+    await requireCommunications(db);
     return {
       data: await call('owner-journey-event-retry', {
         id: v.uuid(retry[1]).toLowerCase(),

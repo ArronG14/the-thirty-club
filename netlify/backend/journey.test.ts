@@ -48,6 +48,10 @@ async function freshDatabase(dataDir?: string) {
   );
   await pg.exec(CLOCK_SQL);
   await migrate(pg);
+  // Delivery is under test here; the hold (ADR-021) is tested in hold.test.ts.
+  await pg.exec(
+    'update public.ttc_communication_hold set active = false, released_at = now()',
+  );
   return pg;
 }
 
@@ -439,7 +443,7 @@ describe('milestones', () => {
     expect((await milestone('casino-opening')).state).toBe('pending');
     await at('2026-10-23T14:00:30Z'); // 09:00:30 in Jamaica
     const first = await runJourneyRound(db);
-    expect(first.fired).toBeGreaterThanOrEqual(2); // early membership + casino
+    expect(first.fired).toBe(1); // the Casino; early membership is held
     const again = await runJourneyRound(db);
     expect(again.fired).toBe(0);
     const casino = await milestone('casino-opening');
@@ -605,12 +609,12 @@ describe('milestones', () => {
         .filter((m) => m.state === 'pending')
         .map((m) => m.key)
         .sort(),
-    ).toEqual([
-      'birthday-screening',
-      'birthday-vault',
-      'casino-opening',
-      'early-membership',
-    ]);
+    ).toEqual(['birthday-screening', 'birthday-vault', 'casino-opening']);
+    // The Lounge introduction moved to 21 October and waits for the owner.
+    expect(byKey['early-membership']).toMatchObject({
+      state: 'held',
+      fireAt: '2026-10-21T05:00:00+00:00',
+    });
   });
 });
 
@@ -622,7 +626,7 @@ describe('durability', () => {
       await disk.query('update public.ttc_sim_clock set offset_ms = $1', [
         Date.parse('2026-10-22T12:00:00Z') - Date.now(),
       ]);
-      await runJourneyRound(databaseFor(disk)); // fires early membership only
+      await runJourneyRound(databaseFor(disk)); // nothing due yet
       await disk.close();
       // The "server" restarts; the schedule is still in the database.
       disk = new PGlite(dir);
@@ -641,7 +645,7 @@ describe('durability', () => {
       );
       expect(rows.rows).toEqual([
         { key: 'casino-opening', state: 'fired', attempts: 1 },
-        { key: 'early-membership', state: 'fired', attempts: 1 },
+        { key: 'early-membership', state: 'held', attempts: 0 },
       ]);
       await disk.close();
     } finally {
@@ -714,7 +718,7 @@ describe('Jamaica time', () => {
       'birthday-breakfast': '2026-10-24 10:30',
       'birthday-screening': '2026-10-24 00:00',
       'casino-opening': '2026-10-23 09:00',
-      'early-membership': '2026-10-20 13:00',
+      'early-membership': '2026-10-21 00:00',
     });
   });
 });

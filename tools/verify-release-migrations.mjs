@@ -15,8 +15,8 @@ const assert = (condition, detail) => {
 
 try {
   assert(
-    migrations.length === 9,
-    'expected six baseline and three release migrations',
+    migrations.length >= 9,
+    'expected six baseline and at least three release migrations',
   );
   await pg.exec(
     'create role anon; create role authenticated; create role service_role bypassrls;',

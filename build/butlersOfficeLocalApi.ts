@@ -22,6 +22,11 @@ async function initialize() {
     .filter((x) => x.endsWith('.sql'))
     .sort())
     await pg.exec(await readFile(resolve('supabase/migrations', file), 'utf8'));
+  // Local browser tests exercise delivery with fake providers only; the
+  // communication hold (ADR-021) is released here and nowhere else.
+  await pg.exec(
+    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'",
+  );
   const db: Database = {
     async action<T>(
       actor: string | null,

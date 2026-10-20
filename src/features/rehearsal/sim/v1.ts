@@ -125,6 +125,12 @@ async function boot(): Promise<SimOffice> {
     await pg.exec(CLOCK_SQL);
     for (const file of Object.keys(MIGRATIONS).sort())
       await pg.exec(rewriteClock(MIGRATIONS[file]!));
+    // The rehearsal office starts released so every room and letter can be
+    // rehearsed; TEST → Office → journey can hold and release it again to
+    // rehearse the procedure. LIVE's hold (ADR-021) is untouched by this.
+    await pg.exec(
+      "update public.ttc_communication_hold set active = false, released_at = public.ttc_sim_now(), release_note = 'TEST rehearsal office'",
+    );
     await pg.query('insert into public.ttc_sim_meta(schema) values ($1)', [
       SCHEMA,
     ]);

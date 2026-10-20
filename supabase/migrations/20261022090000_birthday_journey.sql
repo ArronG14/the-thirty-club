@@ -592,7 +592,7 @@ end $$;
 insert into public.ttc_journey_milestones(key,title,description,fire_at,state,effects,sort) values
  ('early-membership','Early membership — the Members’ Lounge',
   'Founding membership: the Lounge opens to Alise before the birthday. She accepts from the Butler’s letter.',
-  '2026-10-20 13:00:00-05','pending','[{"type":"invite-room","room":"lounge"}]',10),
+  '2026-10-21 00:00:00-05','held','[{"type":"invite-room","room":"lounge"}]',10),
  ('departure-ugg','Departure — the UGG presentation',
   'Before leaving for the airport. Wording and time to confirm, then resume.',
   '2026-10-22 03:00:00-05','held',

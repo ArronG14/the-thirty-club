@@ -137,6 +137,8 @@ export type ApiErrorCode =
   | 'not-configured'
   | 'vault-locked'
   | 'credential-invalid'
+  /** Communications to Alise are paused by the owner (ADR-021). */
+  | 'on-hold'
   | 'server';
 export interface ApiError {
   error: ApiErrorCode;

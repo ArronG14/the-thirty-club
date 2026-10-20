@@ -129,6 +129,11 @@ beforeAll(async () => {
     await pg.exec(
       readFileSync(resolve('supabase/migrations', filename), 'utf8'),
     );
+  // These tests exercise delivery; the communication hold (ADR-021) has
+  // its own tests in hold.test.ts.
+  await pg.exec(
+    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'",
+  );
   member = (
     await pg.query<{ id: string }>(
       "select id from public.ttc_members where slug='alise'",

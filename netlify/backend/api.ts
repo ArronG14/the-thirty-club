@@ -15,6 +15,7 @@ import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
 import { journeyRoute } from './journey.ts';
+import { requireCommunications } from './hold.ts';
 import { serviceRoute } from './service.ts';
 import { casinoRoute } from './casino.ts';
 import {
@@ -37,6 +38,7 @@ const statuses: Record<string, number> = {
   'not-configured': 503,
   'vault-locked': 409,
   'credential-invalid': 404,
+  'on-hold': 409,
   server: 500,
 };
 const messages: Record<string, string> = {
@@ -55,6 +57,8 @@ const messages: Record<string, string> = {
   'not-configured': 'The Butler’s Office is awaiting server configuration.',
   'vault-locked': 'This compartment has not yet been prepared.',
   'credential-invalid': 'This key is not recognised by the vault.',
+  'on-hold':
+    'Communications to Alise are on hold. Release them in the Owner Control Centre first.',
   server: 'The Butler is momentarily unavailable. Please try again.',
 };
 export interface ApiDeps {
@@ -252,8 +256,22 @@ export function createBackendApi({ db, env }: ApiDeps) {
         if (typeof body.transactionalSmsApproved !== 'boolean') v.invalid();
         return respond(await call('owner-notification-policy', body));
       }
+      if (route === 'GET /owner/communications')
+        return respond(await call('owner-communications'));
+      if (route === 'POST /owner/communications/release') {
+        v.keys(body, ['confirm', 'note']);
+        if (body.confirm !== 'RELEASE') v.invalid();
+        if (body.note !== undefined) v.text(body.note, 0, 300);
+        return respond(await call('owner-communications-release', body));
+      }
+      if (route === 'POST /owner/communications/hold') {
+        v.keys(body, []);
+        return respond(await call('owner-communications-hold'));
+      }
       if (route === 'POST /owner/invitations') {
         v.keys(body, []);
+        // An invitation link is how Alise is first contacted (ADR-021).
+        await requireCommunications(db);
         const token = newToken();
         return respond(
           {
