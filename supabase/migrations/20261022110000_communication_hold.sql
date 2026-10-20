@@ -118,15 +118,8 @@ begin
  return public.ttc_journey_process_events_unheld(p_member, p_tpl);
 end $$;
 
--- The original 20 October Lounge introduction is replaced: held, on
--- 21 October, at a time the owner has not yet chosen (00:00 is a
--- placeholder that cannot fire while held).
-update public.ttc_journey_milestones
-  set state = 'held', fire_at = '2026-10-21 00:00:00-05',
-      title = 'Early membership — the Members’ Lounge (21 October)',
-      description = 'The first communication to Alise. Held until the owner chooses the time on 21 October (Jamaica) and releases communications. The 00:00 time is a placeholder: change it before resuming.',
-      updated_at = now()
-  where key = 'early-membership' and state in ('pending', 'held') and fired_at is null;
+-- The original 20 October Lounge introduction no longer exists: the
+-- journey seeds early admission held at 21 Oct 19:00 UK (owner approval).
 
 /* ---------- Owner controls ---------- */
 

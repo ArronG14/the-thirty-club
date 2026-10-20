@@ -1,5 +1,6 @@
-// Sends the Butler's Shopping Privilege announcement to Alise, once, only
-// when run deliberately:  npm run butler:shopping
+// RETIRED as a sender (ADR-022): prints the Butler's Shopping Privilege
+// announcement with --dry-run and refuses to send. Historically it sent it
+// once, deliberately:  npm run butler:shopping
 // Flags: --dry-run (send nothing), --force (send again after a previous send).
 // Uses TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN, TWILIO_FROM and ALISE_PHONE
 // from the environment (.env is loaded by the npm script). Prints no
@@ -48,6 +49,14 @@ if (args.has('--dry-run')) {
   console.log(`${BODY}\n\nDry run: nothing was sent.`);
   process.exit(0);
 }
+// Retired (ADR-022, 20 October 2026): every SMS must pass the server's SMS
+// policy and the communication hold, which this local script cannot check.
+// The Shopping Privilege announcement was sent on 18 October and the
+// privilege has been redeemed; there is nothing left for this script to do.
+console.error(
+  'Not sent. This script no longer sends SMS: every message goes through the Owner Control Centre (SMS operations), which enforces the hold and the SMS mode. --dry-run still prints the text.',
+);
+process.exit(1);
 if (existsSync(MARKER) && !args.has('--force')) {
   console.error(
     'Not sent. The announcement was already sent from this machine. Use --force to send it again.',

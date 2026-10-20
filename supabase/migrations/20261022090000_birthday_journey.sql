@@ -162,6 +162,36 @@ end $$;
 
 /* ---------- Butler letters ---------- */
 
+-- The SMS invitation a journey letter earns: the Desk's invitation templates
+-- with the club link pointed at the right destination (a return → the room;
+-- an admission summons → the entrance; otherwise → her correspondence).
+-- Used for publication and for owner rehearsals, so both say the same.
+create function public.ttc_journey_invitations(p_tpl jsonb, p_action_kind text, p_action_room text) returns jsonb
+language plpgsql stable set search_path = '' as $$
+declare base text := p_tpl->'links'->>'base'; path text; result jsonb := '{}'; k text; v text;
+begin
+ if base is null or base !~ '^https://' or jsonb_typeof(p_tpl->'invitations') is distinct from 'object' then
+   perform public.ttc_fail('not-configured');
+ end if;
+ path := case when p_action_kind = 'return' then p_tpl->'links'->'rooms'->>p_action_room
+              when p_action_kind = 'admission' then ''
+              else p_tpl->'links'->>'correspondence' end;
+ if path is null then perform public.ttc_fail('not-configured'); end if;
+ for k, v in select key, value from jsonb_each_text(p_tpl->'invitations') loop
+   -- Every invitation must carry the club's link; refuse rather than send one without.
+   if position(base in v) = 0 then perform public.ttc_fail('not-configured'); end if;
+   result := result || jsonb_build_object(k, replace(v, base, base || path));
+ end loop;
+ return result;
+end $$;
+
+-- The exact SMS a journey letter delivered at p_at would carry.
+create function public.ttc_journey_letter_sms(p_tpl jsonb, p_at timestamptz, p_action_kind text, p_action_room text)
+returns text language sql stable set search_path = '' as $$
+ select public.ttc_journey_invitations(p_tpl, p_action_kind, p_action_room)
+   ->> public.ttc_letter_slot(p_at, 'America/Jamaica')
+$$;
+
 -- Publishes one journey letter, once per reference. Returns its id.
 create function public.ttc_journey_letter(p_member uuid, p_ref text, p_title text, p_body text,
   p_action_kind text, p_action_room text, p_tpl jsonb) returns uuid
@@ -186,7 +216,8 @@ begin
    values (p_member,left(btrim(p_title),120),'Madam,',btrim(p_body),'America/Jamaica',now(),'scheduled',now(),
      p_ref,p_action_kind,p_action_room,v_label)
    returning id into v_id;
- perform public.ttc_letter_publish(v_id, p_tpl->'invitations', 'send-now');
+ perform public.ttc_letter_publish(v_id,
+   public.ttc_journey_invitations(p_tpl, p_action_kind, p_action_room), 'send-now');
  return v_id;
 end $$;
 
@@ -205,12 +236,23 @@ $$;
 -- carries the admission). Returns the room's state after the call.
 create function public.ttc_journey_invite(p_member uuid, p_room text, p_via text, p_milestone text, p_tpl jsonb)
 returns text language plpgsql security invoker set search_path = '' as $$
-declare a public.ttc_room_admissions; copy jsonb; v_letter uuid; v_at timestamptz := now();
+declare a public.ttc_room_admissions; copy jsonb; v_letter uuid; v_at timestamptz := now(); v_spins boolean;
 begin
  if p_room not in ('lounge','screening-room','casino','gift-vault','privileges') then perform public.ttc_fail('invalid'); end if;
  copy := p_tpl->'admissions'->p_room;
  if copy is null or copy->'letter'->>'title' is null or copy->'summons'->>'title' is null then
    perform public.ttc_fail('not-configured');
+ end if;
+ -- Never promise spins that do not exist: the Casino's letter mentions
+ -- complimentary spins only when an issued batch still has spins to play.
+ if p_room = 'casino' and copy ? 'letterWithoutSpins' then
+   if to_regclass('public.ttc_casino_batches') is null then
+     copy := copy || jsonb_build_object('letter', copy->'letterWithoutSpins');
+   else
+     execute 'select exists(select 1 from public.ttc_casino_batches where member_id = $1 and status = ''active'' and next_position <= quantity)'
+       into v_spins using p_member;
+     if not v_spins then copy := copy || jsonb_build_object('letter', copy->'letterWithoutSpins'); end if;
+   end if;
  end if;
  insert into public.ttc_room_admissions(member_id,room_id,state,invited_at,invited_via,milestone_key,letter_title,letter_body)
    values (p_member,p_room,'invited',v_at,p_via,p_milestone,copy->'letter'->>'title',copy->'letter'->>'body')
@@ -369,6 +411,11 @@ begin
        v_kind := eff->'action'->>'kind'; v_room := eff->'action'->>'room';
        v_letter := public.ttc_journey_letter(p_member,'milestone:'||m.key||':'||i, eff->>'title', eff->>'body', v_kind, v_room, p_tpl);
        letters := letters || to_jsonb(v_letter);
+     elsif eff->>'type' = 'open-entrance' then
+       -- Early admission: the milestone's firing is the server's record that
+       -- the doors may open (read by system-journey-entrance). No letter.
+       insert into public.ttc_activity_events(type,detail)
+         values ('journey.entrance.opened',jsonb_build_object('milestone',m.key));
      elsif eff->>'type' = 'hook' then
        if to_regprocedure('public.ttc_journey_hook(text,jsonb,text)') is null then
          raise exception 'hook-unavailable: % is not installed yet', eff->>'name';
@@ -444,6 +491,8 @@ begin
      if eff->'action' is not null and jsonb_typeof(eff->'action') <> 'null' then
        if not (eff->'action'->>'kind' in ('admission','return')) or not (eff->'action'->>'room' = any(rooms)) then return false; end if;
      end if;
+   elsif eff->>'type' = 'open-entrance' then
+     null;
    elsif eff->>'type' = 'hook' then
      if coalesce(eff->>'name','') !~ '^[a-z][a-z0-9_.-]{2,60}$' then return false; end if;
      if eff->'params' is not null and jsonb_typeof(eff->'params') <> 'object' then return false; end if;
@@ -452,6 +501,17 @@ begin
    end if;
  end loop;
  return true;
+end $$;
+
+-- Whether communications are held (ADR-021). The hold arrives in a later
+-- migration; until then nothing is held here.
+create function public.ttc_journey_comms_held() returns boolean
+language plpgsql stable set search_path = '' as $$
+declare held boolean;
+begin
+ if to_regprocedure('public.ttc_communications_held()') is null then return false; end if;
+ execute 'select public.ttc_communications_held()' into held;
+ return held;
 end $$;
 
 /* ---------- The RPC ---------- */
@@ -489,6 +549,35 @@ begin
    select * into e from public.ttc_journey_events where id = v_event;
    return jsonb_build_object('event',jsonb_build_object('id',e.id,'state',e.state,'letterId',e.letter_id));
 
+ elsif p_action = 'system-journey-entrance' then
+   -- Public: when the doors open early, if the owner has authorised it and
+   -- communications are released. `eligible` only once the server fired it.
+   select * into m from public.ttc_journey_milestones where key = 'early-membership';
+   return jsonb_build_object('now', now(),
+     'opensAt', case when m.state in ('pending','fired')
+                      and (m.state = 'fired' or not public.ttc_journey_comms_held())
+                     then m.fire_at end,
+     'eligible', coalesce(m.state = 'fired', false));
+ elsif p_action = 'journey-enter' then
+   -- Her membership accepted in the Lounge after the doors opened: the
+   -- server's record, so other devices skip the ceremony. Only once the
+   -- early admission has fired or the birthday has begun.
+   select * into m from public.ttc_journey_milestones where key = 'early-membership';
+   if coalesce(m.state, '') <> 'fired' and now() < '2026-10-24 05:00:00+00' then
+     perform public.ttc_fail('not-open');
+   end if;
+   select * into a from public.ttc_room_admissions where member_id = member and room_id = 'lounge' for update;
+   if a.state = 'admitted' then
+     return jsonb_build_object('admission',public.ttc_admission_member_json(a),'duplicate',true);
+   end if;
+   insert into public.ttc_room_admissions(member_id,room_id,state,invited_via,letter_title,letter_body,admitted_at)
+     values (member,'lounge','admitted','event',tpl->'admissions'->'lounge'->'letter'->>'title',
+       tpl->'admissions'->'lounge'->'letter'->>'body',now())
+     on conflict (member_id, room_id) do update set state = 'admitted', admitted_at = now(), updated_at = now()
+     returning * into a;
+   perform public.ttc_journey_note('room.admission.accepted','admission:lounge:accepted', jsonb_build_object('roomId','lounge'));
+   insert into public.ttc_activity_events(type,detail) values ('journey.room.admitted',jsonb_build_object('roomId','lounge','via','entrance'));
+   return jsonb_build_object('admission',public.ttc_admission_member_json(a),'duplicate',false);
  elsif p_action = 'journey-state' then
    return jsonb_build_object('now',now(),'admissions',coalesce((select jsonb_agg(public.ttc_admission_member_json(x) order by x.invited_at)
      from public.ttc_room_admissions x where x.member_id = member),'[]'));
@@ -621,9 +710,9 @@ end $$;
 -- the owner (and the Casino spins hook, until Codex deploys it) are held.
 
 insert into public.ttc_journey_milestones(key,title,description,fire_at,state,effects,sort) values
- ('early-membership','Early membership — the Members’ Lounge',
-  'Founding membership: the Lounge opens to Alise before the birthday. She accepts from the Butler’s letter.',
-  '2026-10-21 00:00:00-05','held','[{"type":"invite-room","room":"lounge"}]',10),
+ ('early-membership','Early admission — the doors open (Wed 21 Oct, 19:00 UK)',
+  'The entrance counts down to this time once you resume it (and communications are released); at 19:00 UK / 13:00 Jamaica the doors may open, with a final ten seconds when she is watching. No letter. Held until you approve.',
+  '2026-10-21 18:00:00+00','held','[{"type":"open-entrance"}]',10),
  ('departure-ugg','Departure — the UGG presentation',
   'Before leaving for the airport. Wording and time to confirm, then resume.',
   '2026-10-22 03:00:00-05','held',
@@ -637,11 +726,11 @@ insert into public.ttc_journey_milestones(key,title,description,fire_at,state,ef
   '2026-10-22 09:00:00-05','held',
   '[{"type":"letter","title":"Listen carefully","body":"A small instruction: something is hidden close at hand. When you find it, hold your telephone to it. I believe you will hear about it shortly."}]',40),
  ('casino-opening','The Grand Casino opens',
-  'Casino admission letter in the Lounge; the Casino appears in the Directory once accepted.',
+  'Casino admission letter in the Lounge; the Casino appears in the Directory once accepted. Its letter promises complimentary spins only if a batch has really been issued (the opening spins milestone fires first when armed).',
   '2026-10-23 09:00:00-05','pending','[{"type":"invite-room","room":"casino"}]',50),
  ('casino-opening-spins','Complimentary spins at the opening',
-  'Issued by the Casino system through its journey hook. Held until that hook is deployed; then resume.',
-  '2026-10-23 09:00:00-05','held','[{"type":"hook","name":"casino.spins.issue","params":{"quantity":5,"announce":false}}]',51),
+  'Issued by the Casino engine through its journey hook just before the admission. Held: set the quantity and prize IDs, then resume. While held, the admission letter does not mention spins.',
+  '2026-10-23 09:00:00-05','held','[{"type":"hook","name":"casino.spins.issue","params":{"quantity":5,"announce":false}}]',49),
  ('casino-evening-mystery','An evening mystery at the Casino',
   'Optional. Wording and reward to confirm with the Casino system, then resume.',
   '2026-10-23 20:00:00-05','held',

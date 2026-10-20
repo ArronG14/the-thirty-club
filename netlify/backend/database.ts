@@ -38,23 +38,25 @@ const codes = new Set<ApiErrorCode>([
  * `ttc_action` stays untouched.
  */
 export const rpcFor = (action: string) =>
-  /^(owner-communications|system-communications)/.test(action)
-    ? 'ttc_hold_action'
-    : /^(casino-|owner-casino-|voucher-|owner-voucher-)/.test(action)
-      ? 'ttc_casino_action'
-      : /^(vault-|owner-vault-|system-vault-|system-member-bridge$)/.test(
-            action,
-          )
-        ? 'ttc_vault_action'
-        : /^(correspondence-|owner-correspondence-|system-correspondence-)/.test(
+  /^(owner-sms|system-sms)/.test(action)
+    ? 'ttc_sms_action'
+    : /^(owner-communications|system-communications)/.test(action)
+      ? 'ttc_hold_action'
+      : /^(casino-|owner-casino-|voucher-|owner-voucher-)/.test(action)
+        ? 'ttc_casino_action'
+        : /^(vault-|owner-vault-|system-vault-|system-member-bridge$)/.test(
               action,
             )
-          ? 'ttc_correspondence_action'
-          : /^(service-|owner-request|owner-direct-sms-)/.test(action)
-            ? 'ttc_service_action'
-            : /^(journey-|owner-journey|system-journey-)/.test(action)
-              ? 'ttc_journey_action'
-              : 'ttc_action';
+          ? 'ttc_vault_action'
+          : /^(correspondence-|owner-correspondence-|system-correspondence-)/.test(
+                action,
+              )
+            ? 'ttc_correspondence_action'
+            : /^(service-|owner-request|owner-direct-sms-)/.test(action)
+              ? 'ttc_service_action'
+              : /^(journey-|owner-journey|system-journey-)/.test(action)
+                ? 'ttc_journey_action'
+                : 'ttc_action';
 export function database(
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,

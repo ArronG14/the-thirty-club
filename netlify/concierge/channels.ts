@@ -1,6 +1,6 @@
 /**
- * Outbound channels. Telegram reaches Arron; Twilio SMS (optional) reaches
- * Alise. Plain HTTPS calls with an injected `fetch`, so automated tests
+ * Outbound channels. Telegram reaches Arron; SMS go through the server's
+ * single SMS policy boundary (ADR-022). Plain HTTPS calls with an injected `fetch`, so automated tests
  * never reach a real provider. A send counts as successful only when the
  * provider says so.
  */
@@ -49,9 +49,13 @@ function describe(error: unknown): string {
   return 'Unknown error.';
 }
 
+/** Sends one SMS through the server's policy; see netlify/backend/smsPolicy.ts. */
+export type SmsBoundary = (to: string, body: string) => Promise<SendResult>;
+
 export function createChannels(
   config: ConciergeConfig,
   fetchImpl: typeof fetch,
+  smsBoundary: SmsBoundary,
 ): Channels {
   const telegram = config.telegram;
   const twilio = config.twilio;
@@ -102,46 +106,8 @@ export function createChannels(
         return { ok: false, error: describe(error) };
       }
     },
-    async sms(to, body) {
-      if (!twilio) {
-        return {
-          ok: false,
-          unconfigured: true,
-          error: 'SMS is not configured.',
-        };
-      }
-      try {
-        const response = await fetchImpl(
-          `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(twilio.accountSid)}/Messages.json`,
-          {
-            method: 'POST',
-            headers: {
-              authorization: `Basic ${btoa(`${twilio.accountSid}:${twilio.authToken}`)}`,
-              'content-type': 'application/x-www-form-urlencoded',
-            },
-            body: new URLSearchParams({
-              To: to,
-              From: twilio.from,
-              Body: body,
-            }),
-            signal: AbortSignal.timeout(TIMEOUT_MS),
-          },
-        );
-        const data = (await response.json().catch(() => null)) as {
-          sid?: string;
-          message?: string;
-          status?: string;
-        } | null;
-        if (response.ok && data?.sid && data.status !== 'failed') {
-          return { ok: true, reference: data.sid };
-        }
-        return {
-          ok: false,
-          error: `Twilio ${response.status}: ${data?.message ?? 'no description'}`,
-        };
-      } catch (error) {
-        return { ok: false, error: describe(error) };
-      }
-    },
+    // SMS leave only through the server's SMS policy boundary (ADR-022):
+    // the caller supplies it, so this module never talks to Twilio itself.
+    sms: smsBoundary,
   };
 }

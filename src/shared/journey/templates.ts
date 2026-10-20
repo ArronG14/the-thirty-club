@@ -6,6 +6,7 @@
  *
  * Placeholders: `{room}` (the room's name), `{quantity}`, `{title}`.
  */
+import { CLUB_LINK } from '../correspondence/templates.ts';
 import type { AdmissionRoomId, JourneyEventType } from './contract.ts';
 
 export const ADMISSION_ROOM_NAMES: Record<AdmissionRoomId, string> = {
@@ -27,6 +28,11 @@ export interface AdmissionCopy {
   letter: { title: string; body: string };
   /** The Butler letter that summons her to collect it. */
   summons: { title: string; body: string };
+  /**
+   * The Casino only: the Letter of Admission when no spins have been issued
+   * yet, so the Butler never promises spins that do not exist.
+   */
+  letterWithoutSpins?: { title: string; body: string };
 }
 
 export const ADMISSION_COPY: Record<AdmissionRoomId, AdmissionCopy> = {
@@ -54,6 +60,10 @@ export const ADMISSION_COPY: Record<AdmissionRoomId, AdmissionCopy> = {
     letter: {
       title: 'Letter of Admission — The Grand Casino',
       body: 'Madam, it is my privilege to confirm your admission to the Grand Casino. The tables have been dressed, the croupier has been warned, and a number of complimentary spins have been placed at your disposal. The house always wins, Madam. Today, the house is yours.',
+    },
+    letterWithoutSpins: {
+      title: 'Letter of Admission — The Grand Casino',
+      body: 'Madam, it is my privilege to confirm your admission to the Grand Casino. The tables have been dressed and the croupier has been warned. I shall write the moment he is ready to deal you in. The house always wins, Madam. Today, the house is yours.',
     },
     summons: {
       title: 'Your presence is requested in the Lounge',
@@ -113,7 +123,25 @@ export const EVENT_LETTERS: Partial<
 };
 
 /** Everything the server needs, passed with each journey call. */
+/**
+ * Real routes (src/app/App.tsx) the Butler's SMS links to: a return to a
+ * room → the room; an admission summons → the entrance; any other letter →
+ * her correspondence.
+ */
+export const JOURNEY_LINKS = {
+  base: CLUB_LINK,
+  correspondence: '/correspondence',
+  rooms: {
+    lounge: '/lounge',
+    'screening-room': '/rooms/screening-room',
+    casino: '/rooms/casino',
+    'gift-vault': '/rooms/gift-vault',
+    privileges: '/rooms/privileges',
+  } satisfies Record<AdmissionRoomId, string>,
+};
+
 export const JOURNEY_TEMPLATES = {
+  links: JOURNEY_LINKS,
   roomNames: ADMISSION_ROOM_NAMES,
   admissions: ADMISSION_COPY,
   events: EVENT_LETTERS,

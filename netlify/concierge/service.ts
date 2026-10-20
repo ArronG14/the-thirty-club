@@ -48,6 +48,11 @@ export interface ServiceDeps {
   /** Real time, epoch ms. */
   clock: () => number;
   log?: (event: string, detail?: Record<string, unknown>) => void;
+  /**
+   * Whether communications to Alise are held (ADR-021), read from the
+   * database. Missing or failing means held: LIVE sends fail closed.
+   */
+  communicationsHeld?: () => Promise<boolean>;
 }
 
 // ---------- Records ----------

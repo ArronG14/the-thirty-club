@@ -14,8 +14,13 @@ import {
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
-import { journeyRoute, processJourneyEvents } from './journey.ts';
+import {
+  journeyRoute,
+  processJourneyEvents,
+  withJourneyTemplates,
+} from './journey.ts';
 import { requireCommunications } from './hold.ts';
+import { smsRoute } from './smsOperations.ts';
 import { serviceRoute } from './service.ts';
 import { casinoRoute } from './casino.ts';
 import {
@@ -64,8 +69,10 @@ const messages: Record<string, string> = {
 export interface ApiDeps {
   db: Database;
   env: NodeJS.ProcessEnv;
+  /** The provider transport; tests and the rehearsal office pass a fake. */
+  send?: typeof fetch;
 }
-export function createBackendApi({ db, env }: ApiDeps) {
+export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
   return async (request: Request, ip: string): Promise<Response> => {
     const requestId = crypto.randomUUID();
     const url = new URL(request.url);
@@ -159,6 +166,17 @@ export function createBackendApi({ db, env }: ApiDeps) {
         );
         return respond({ session });
       }
+      // Public: when the doors open early, if authorised (ADR-022). It
+      // reveals only an opening time and the server's own clock.
+      if (path === '/entrance' && request.method === 'GET')
+        return respond(
+          await db.action(
+            null,
+            'system',
+            'system-journey-entrance',
+            withJourneyTemplates(),
+          ),
+        );
       const session = await requireSession(db, request);
       const call = <T = Record<string, unknown>>(
         action: string,
@@ -387,6 +405,17 @@ export function createBackendApi({ db, env }: ApiDeps) {
         env,
       });
       if (desk) return respond(desk.data, desk.status);
+      const sms = await smsRoute({
+        route,
+        path,
+        method: request.method,
+        body,
+        session,
+        db,
+        env,
+        send,
+      });
+      if (sms) return respond(sms.data, sms.status);
       const journey = await journeyRoute({
         route,
         path,

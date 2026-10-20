@@ -84,6 +84,8 @@ export type ErrorCode =
   | 'already-redeemed'
   | 'rate-limited'
   | 'not-configured'
+  /** A LIVE send while communications to Alise are held (ADR-021). */
+  | 'on-hold'
   | 'server';
 
 export interface ApiErrorBody {

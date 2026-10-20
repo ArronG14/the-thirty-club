@@ -1,6 +1,7 @@
 import { createHmac, timingSafeEqual } from 'node:crypto';
 import type { ScheduledMessage } from '../../src/shared/concierge/types.ts';
 import { BackendError, type Database } from './database.ts';
+import { deliverSms, transportStatus, type SmsAudience } from './smsPolicy.ts';
 interface ClaimedMessage extends ScheduledMessage {
   claimId: string;
 }
@@ -15,21 +16,22 @@ export function recipientFor(
     return env.ARRON_PHONE;
   return undefined;
 }
+/**
+ * The every-minute outbox worker. Claims one message the SMS policy allows
+ * (mode LIVE; for Alise also the released hold and a post-LIVE approval —
+ * `ttc_sms_claim`), then sends it through `deliverSms`, which re-reads the
+ * policy immediately before Twilio. If the policy changed in between, the
+ * message is put back unsent (`system-sms-unclaim`). ADR-022.
+ */
 export async function processMessages(
   db: Database,
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,
 ): Promise<{ processed: number }> {
-  // This is deliberately opt-in. Tests inject a fake provider.
-  if (env.SMS_SENDING_ENABLED !== 'true') return { processed: 0 };
-  if (
-    !env.TWILIO_ACCOUNT_SID ||
-    !env.TWILIO_AUTH_TOKEN ||
-    !env.TWILIO_MESSAGING_SERVICE_SID ||
-    !env.CONCIERGE_SITE_URL ||
-    !env.ALISE_PHONE ||
-    !env.ARRON_PHONE
-  )
+  const transport = transportStatus(env);
+  // The transport must be available; it never authorises anything itself.
+  if (!transport.enabled) return { processed: 0 };
+  if (!transport.configured || !env.CONCIERGE_SITE_URL)
     throw new BackendError('not-configured');
   let processed = 0;
   // At most one eight-second request, safely inside Netlify's scheduler budget.
@@ -37,12 +39,11 @@ export async function processMessages(
     const item = await db.action<ClaimedMessage | null>(
       null,
       'system',
-      'system-message-claim',
+      'system-sms-claim',
     );
     if (!item) break;
-    const to = recipientFor(item.category, env);
-    let result: Record<string, unknown>;
-    if (!to) {
+    const audience = audienceFor(item.category);
+    if (!audience) {
       await db.action(null, 'system', 'system-message-result', {
         id: item.id,
         claimId: item.claimId,
@@ -52,52 +53,27 @@ export async function processMessages(
       processed++;
       continue;
     }
-    try {
-      const response = await send(
-        `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(env.TWILIO_ACCOUNT_SID)}/Messages.json`,
-        {
-          method: 'POST',
-          headers: {
-            authorization: `Basic ${Buffer.from(`${env.TWILIO_ACCOUNT_SID}:${env.TWILIO_AUTH_TOKEN}`).toString('base64')}`,
-            'content-type': 'application/x-www-form-urlencoded',
-          },
-          body: new URLSearchParams({
-            To: to,
-            MessagingServiceSid: env.TWILIO_MESSAGING_SERVICE_SID,
-            Body: item.body,
-            StatusCallback: `${env.CONCIERGE_SITE_URL.replace(/\/$/, '')}/api/v1/twilio/status?messageId=${item.id}&claimId=${item.claimId}`,
-          }),
-          signal: AbortSignal.timeout(8000),
-        },
-      );
-      const data = (await response.json().catch(() => null)) as {
-        sid?: string;
-        status?: string;
-        code?: number;
-      } | null;
-      if (response.ok && data?.sid && /^SM[a-f0-9]{32}$/i.test(data.sid))
-        result = { state: 'accepted', providerSid: data.sid };
-      else if (response.status === 429)
-        result = {
-          state: 'approved',
-          error: 'Twilio rate limit; retry scheduled.',
-        };
-      else if (response.status >= 400 && response.status < 500)
-        result = {
-          state: 'failed',
-          error: `Twilio rejected request (${response.status}, code ${data?.code ?? 'unknown'}).`,
-        };
-      else
-        result = {
-          state: 'uncertain',
-          error: 'Ambiguous provider response; reconcile before resending.',
-        };
-    } catch {
-      result = {
-        state: 'uncertain',
-        error: 'Provider request interrupted; reconcile before resending.',
-      };
+    const sent = await deliverSms(db, env, send, {
+      audience,
+      body: item.body,
+      statusCallback: `${env.CONCIERGE_SITE_URL.replace(/\/$/, '')}/api/v1/twilio/status?messageId=${item.id}&claimId=${item.claimId}`,
+    });
+    if (sent.state === 'refused') {
+      await db.action(null, 'system', 'system-sms-unclaim', {
+        id: item.id,
+        claimId: item.claimId,
+        reason: `Not sent: ${sent.error}`,
+      });
+      continue;
     }
+    const result =
+      sent.state === 'accepted'
+        ? { state: 'accepted', providerSid: sent.providerSid }
+        : sent.state === 'rate-limited'
+          ? { state: 'approved', error: 'Twilio rate limit; retry scheduled.' }
+          : sent.state === 'rejected'
+            ? { state: 'failed', error: sent.error }
+            : { state: 'uncertain', error: sent.error };
     await db.action(null, 'system', 'system-message-result', {
       id: item.id,
       claimId: item.claimId,
@@ -106,6 +82,17 @@ export async function processMessages(
     processed++;
   }
   return { processed };
+}
+
+/** Which policy audience an outbox category belongs to. */
+export function audienceFor(
+  category: ScheduledMessage['category'],
+): SmsAudience | undefined {
+  if (category === 'scheduled-alise' || category === 'correspondence-alise')
+    return 'alise';
+  if (category === 'transactional-arron' || category === 'correspondence-arron')
+    return 'arron';
+  return undefined;
 }
 export function validTwilioSignature(
   url: string,

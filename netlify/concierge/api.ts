@@ -469,6 +469,19 @@ async function ownerMessage(deps: ServiceDeps, body: Record<string, unknown>) {
   }
   switch (body.action) {
     case 'send': {
+      // A LIVE send contacts Alise (SMS, or Arron forwarding the text): it
+      // waits for the owner's release of the communication hold (ADR-021).
+      if (realm === 'live') {
+        const held = deps.communicationsHeld
+          ? await deps.communicationsHeld().catch(() => true)
+          : true;
+        if (held)
+          return fail(
+            409,
+            'on-hold',
+            'Communications to Alise are on hold. Release them in the Owner Control Centre first.',
+          );
+      }
       const record = await dispatchMessage(deps, realm, body.messageId, {
         force: true,
       });

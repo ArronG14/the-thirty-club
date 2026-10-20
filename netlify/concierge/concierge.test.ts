@@ -531,7 +531,11 @@ describe('real channels with a fake network', () => {
         ),
       )
       .mockRejectedValueOnce(new TypeError('network down'));
-    const real = createChannels(config, fetchImpl as unknown as typeof fetch);
+    const real = createChannels(
+      config,
+      fetchImpl as unknown as typeof fetch,
+      async () => ({ ok: false, error: 'not used' }),
+    );
     expect(await real.arron('<b>hi</b>', 'live')).toEqual({
       ok: true,
       reference: '9',
@@ -558,6 +562,7 @@ describe('real channels with a fake network', () => {
     const real = createChannels(
       readConfig({ ...TEST_ENV, TELEGRAM_REHEARSAL_CHAT_ID: '2' }),
       fetchImpl as unknown as typeof fetch,
+      async () => ({ ok: false, error: 'not used' }),
     );
     expect(await real.arron('hello', 'rehearsal')).toEqual({
       ok: true,
@@ -566,19 +571,12 @@ describe('real channels with a fake network', () => {
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 
-  it('sends Twilio SMS with basic auth and treats failures honestly', async () => {
-    const fetchImpl = vi
+  it('never contacts Twilio itself: SMS go through the policy boundary (ADR-022)', async () => {
+    const fetchImpl = vi.fn();
+    const boundary = vi
       .fn()
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ sid: 'SM1', status: 'queued' }), {
-          status: 201,
-        }),
-      )
-      .mockResolvedValueOnce(
-        new Response(JSON.stringify({ message: 'invalid number' }), {
-          status: 400,
-        }),
-      );
+      .mockResolvedValueOnce({ ok: true, reference: 'SM1' })
+      .mockResolvedValueOnce({ ok: false, error: 'SMS operations are OFF.' });
     const real = createChannels(
       readConfig({
         ...TEST_ENV,
@@ -587,6 +585,7 @@ describe('real channels with a fake network', () => {
         TWILIO_FROM: 'ThirtyClub',
       }),
       fetchImpl as unknown as typeof fetch,
+      boundary,
     );
     expect(await real.sms('+447700900000', 'Hello')).toEqual({
       ok: true,
@@ -594,11 +593,10 @@ describe('real channels with a fake network', () => {
     });
     expect(await real.sms('+447700900000', 'Hello')).toMatchObject({
       ok: false,
+      error: 'SMS operations are OFF.',
     });
-    const init = (fetchImpl.mock.calls[0] as [string, RequestInit])[1];
-    expect((init.headers as Record<string, string>).authorization).toBe(
-      `Basic ${btoa('AC1:secret')}`,
-    );
+    expect(boundary).toHaveBeenCalledWith('+447700900000', 'Hello');
+    expect(fetchImpl).not.toHaveBeenCalled();
   });
 
   it('reports missing configuration without calling the network', async () => {
@@ -606,15 +604,13 @@ describe('real channels with a fake network', () => {
     const real = createChannels(
       readConfig({}),
       fetchImpl as unknown as typeof fetch,
+      async () => ({ ok: false, error: 'SMS transport is not configured.' }),
     );
     expect(await real.arron('x', 'live')).toMatchObject({
       ok: false,
       unconfigured: true,
     });
-    expect(await real.sms('+1', 'x')).toMatchObject({
-      ok: false,
-      unconfigured: true,
-    });
+    expect(await real.sms('+1', 'x')).toMatchObject({ ok: false });
     expect(fetchImpl).not.toHaveBeenCalled();
   });
 });

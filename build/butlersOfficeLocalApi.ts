@@ -25,7 +25,7 @@ async function initialize() {
   // Local browser tests exercise delivery with fake providers only; the
   // communication hold (ADR-021) is released here and nowhere else.
   await pg.exec(
-    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'",
+    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'; update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'",
   );
   const db: Database = {
     async action<T>(

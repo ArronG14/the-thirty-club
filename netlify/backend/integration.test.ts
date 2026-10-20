@@ -173,7 +173,8 @@ beforeEach(async () => {
       public.ttc_sessions, public.ttc_messages, public.ttc_message_delivery_logs, public.ttc_activity_events cascade;
     delete from public.ttc_journey_milestones;
     insert into public.ttc_journey_milestones select * from public.seeded_milestones;
-    update public.ttc_communication_hold set active = false, released_at = now();`);
+    update public.ttc_communication_hold set active = false, released_at = now();
+    update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z';`);
   await at('2026-10-23T14:30:00Z'); // 09:30 in Jamaica, Casino day
   await pg.query(
     "insert into public.ttc_sessions(token_hash,role,member_id,expires_at) values($1,'member',$2,now()+interval '30 days'),($3,'owner',null,now()+interval '30 days')",

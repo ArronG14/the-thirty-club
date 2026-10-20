@@ -5,6 +5,10 @@ import { publishDueLetters } from '../backend/correspondence.ts';
 import { runJourneyRound } from '../backend/journey.ts';
 import { blobStore } from '../concierge/blobStore.ts';
 import { createChannels } from '../concierge/channels.ts';
+import {
+  legacyCommunicationsHeld,
+  legacySmsBoundary,
+} from '../backend/legacySms.ts';
 import { readConfig } from '../concierge/config.ts';
 import { scheduledRound } from '../backend/scheduledRound.ts';
 
@@ -29,7 +33,12 @@ export default async function conciergeDispatch(): Promise<Response> {
           ? postgresLegacyStore(process.env)
           : blobStore(),
       config,
-      channels: createChannels(config, fetch),
+      channels: createChannels(
+        config,
+        fetch,
+        legacySmsBoundary(database(process.env), process.env, config, fetch),
+      ),
+      communicationsHeld: legacyCommunicationsHeld(database(process.env)),
       clock: () => Date.now(),
       log: (event, detail) => console.log(`[concierge] ${event}`, detail ?? {}),
     },

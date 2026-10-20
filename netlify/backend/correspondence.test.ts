@@ -169,7 +169,7 @@ beforeAll(async () => {
   // These tests exercise delivery; the communication hold (ADR-021) has
   // its own tests in hold.test.ts.
   await pg.exec(
-    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'",
+    "update public.ttc_communication_hold set active = false, released_at = now(), release_note = 'test harness'; update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'",
   );
   member = (
     await pg.query<{ id: string }>(

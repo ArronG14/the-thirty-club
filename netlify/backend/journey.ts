@@ -165,6 +165,12 @@ export async function journeyRoute({
   if (path === '/journey' || path.startsWith('/journey/')) {
     if (session.role !== 'member') throw new BackendError('forbidden');
     if (route === 'GET /journey') return { data: await call('journey-state') };
+    // Her membership, accepted in the Lounge after the doors opened.
+    if (route === 'POST /journey/enter') {
+      v.keys(body, []);
+      const result = await call<{ duplicate: boolean }>('journey-enter');
+      return { data: result, status: result.duplicate ? 200 : 201 };
+    }
     const accept = new RegExp(`^/journey/admissions/${ROOM}/accept$`).exec(
       path,
     );

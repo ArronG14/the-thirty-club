@@ -131,6 +131,11 @@ async function boot(): Promise<SimOffice> {
     await pg.exec(
       "update public.ttc_communication_hold set active = false, released_at = public.ttc_sim_now(), release_note = 'TEST rehearsal office'",
     );
+    // Its SMS operations start LIVE so the simulated outbox delivers to the
+    // fake provider; TEST can switch them to rehearse the modes (ADR-022).
+    await pg.exec(
+      "update public.ttc_sms_operations set mode = 'live', live_since = public.ttc_sim_now() - interval '1 day', changed_at = public.ttc_sim_now(), changed_by = 'TEST rehearsal office'",
+    );
     await pg.query('insert into public.ttc_sim_meta(schema) values ($1)', [
       SCHEMA,
     ]);
@@ -173,7 +178,20 @@ async function boot(): Promise<SimOffice> {
     },
   };
 
-  const api = createBackendApi({ db, env: SIM_ENV });
+  // Owner rehearsal sends in TEST go to a fake provider in this tab.
+  const fakeRehearsalSend = (async () =>
+    new Response(
+      JSON.stringify({
+        sid: `SM${Array.from(crypto.getRandomValues(new Uint8Array(16)), (b) => b.toString(16).padStart(2, '0')).join('')}`,
+        status: 'accepted',
+      }),
+      { status: 201, headers: { 'content-type': 'application/json' } },
+    )) as typeof fetch;
+  const api = createBackendApi({
+    db,
+    env: { ...SIM_ENV, SMS_SENDING_ENABLED: 'true' },
+    send: fakeRehearsalSend,
+  });
 
   const signIn = async (actor: Actor): Promise<Session> => {
     const token = newToken();

@@ -50,7 +50,7 @@ async function freshDatabase(dataDir?: string) {
   await migrate(pg);
   // Delivery is under test here; the hold (ADR-021) is tested in hold.test.ts.
   await pg.exec(
-    'update public.ttc_communication_hold set active = false, released_at = now()',
+    "update public.ttc_communication_hold set active = false, released_at = now(); update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'",
   );
   return pg;
 }
@@ -610,10 +610,10 @@ describe('milestones', () => {
         .map((m) => m.key)
         .sort(),
     ).toEqual(['birthday-screening', 'birthday-vault', 'casino-opening']);
-    // The Lounge introduction moved to 21 October and waits for the owner.
+    // Early admission: 21 October, 19:00 UK / 13:00 Jamaica, held for the owner.
     expect(byKey['early-membership']).toMatchObject({
       state: 'held',
-      fireAt: '2026-10-21T05:00:00+00:00',
+      fireAt: '2026-10-21T18:00:00+00:00',
     });
   });
 });
@@ -718,7 +718,7 @@ describe('Jamaica time', () => {
       'birthday-breakfast': '2026-10-24 10:30',
       'birthday-screening': '2026-10-24 00:00',
       'casino-opening': '2026-10-23 09:00',
-      'early-membership': '2026-10-21 00:00',
+      'early-membership': '2026-10-21 13:00',
     });
   });
 });

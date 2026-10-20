@@ -124,6 +124,11 @@ beforeAll(async () => {
   );
   for (const file of files.filter((f) => f > HOLD_MIGRATION))
     await pg.exec(rewriteClock(readFileSync(join(MIGRATIONS, file), 'utf8')));
+  // SMS operations LIVE (ADR-022), so the hold is the only thing standing
+  // between the outbox and Alise in these tests.
+  await pg.exec(
+    "update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'",
+  );
   await pg.query(
     "insert into public.ttc_sessions(token_hash,role,member_id,expires_at) values($1,'member',$2,now()+interval '30 days'),($3,'owner',null,now()+interval '30 days')",
     [hashToken(memberToken), member, hashToken(ownerToken)],
@@ -182,12 +187,21 @@ describe('the hold, from the moment the migration is applied', () => {
     expect(hold.data.waiting.smsCancelledByHold).toBe(1);
   });
 
-  it('replaces the 20 October Lounge introduction with a held 21 October one', async () => {
-    const m = await pg.query<{ state: string; local: string }>(
-      `select state, to_char(fire_at at time zone 'America/Jamaica','YYYY-MM-DD') as local
-       from public.ttc_journey_milestones where key='early-membership'`,
+  it('a re-armed 20 October introduction cannot fire while held (the audit’s scenario)', async () => {
+    // Codex's reproduction: the milestone re-armed at 20 Oct 13:00 Jamaica,
+    // the scheduler and a member read at 18:00:01 UTC.
+    await at('2026-10-20T18:00:01Z');
+    expect(await runJourneyRound(db)).toEqual({ fired: 0, processed: 0 });
+    expect((await call('/journey', undefined, 'member')).status).toBe(200);
+    const m = await pg.query<{ state: string }>(
+      "select state from public.ttc_journey_milestones where key='early-membership'",
     );
-    expect(m.rows).toEqual([{ state: 'held', local: '2026-10-21' }]);
+    expect(m.rows).toEqual([{ state: 'pending' }]);
+    expect(await published()).toBe(0);
+    // The public entrance shows no early opening while held.
+    expect(
+      (await call<{ opensAt: string | null }>('/entrance')).data.opensAt,
+    ).toBeNull();
   });
 
   it('the schedulers deliver nothing: due letters, milestones and events all wait', async () => {
@@ -313,7 +327,7 @@ describe('release on 21 October', () => {
     expect(released.data.active).toBe(false);
     expect(released.data.released).toEqual({
       lettersReturnedToDraft: 1,
-      milestonesHeld: 1,
+      milestonesHeld: 2,
       eventsToRetry: 1,
     });
     await runJourneyRound(db);
@@ -336,27 +350,36 @@ describe('release on 21 October', () => {
     ).toBe(true);
   });
 
-  it('the first invitation goes only when the owner sends it; scheduling works again', async () => {
-    // The owner chooses the time, then resumes the Lounge introduction.
+  it('early admission opens only when the owner arms it; scheduling works again', async () => {
+    // The owner arms the 19:00 UK early admission.
     await call(
       '/owner/journey/milestones/early-membership',
-      { fireAt: '2026-10-21T15:00:00Z' },
+      { fireAt: '2026-10-21T18:00:00Z' },
       'owner',
       'PATCH',
     );
     await call('/owner/journey/milestones/early-membership/resume', {});
     await runJourneyRound(db);
-    expect(await published()).toBe(0); // 10:00 Jamaica not reached yet
-    await at('2026-10-21T15:00:30Z');
-    await runJourneyRound(db);
-    const letters = await pg.query<{ title: string }>(
-      "select title from public.ttc_letters where state='published'",
+    const before = await call<{ opensAt: string; eligible: boolean }>(
+      '/entrance',
     );
-    expect(letters.rows).toEqual([
-      { title: 'The Members’ Lounge is open to you' },
-    ]);
-    // Its SMS invitation is queued only now, and only while SMS is enabled
-    // would it leave; the outbox no longer refuses it.
+    expect(before.data).toMatchObject({
+      opensAt: '2026-10-21T18:00:00+00:00',
+      eligible: false,
+    });
+    // Her membership cannot be recorded before the doors open.
+    expect((await call('/journey/enter', {}, 'member')).status).toBe(403);
+    await at('2026-10-21T18:00:01Z');
+    const after = await call<{ eligible: boolean }>('/entrance');
+    expect(after.data.eligible).toBe(true);
+    // Accepted in the Lounge: recorded once, for every device.
+    expect((await call('/journey/enter', {}, 'member')).status).toBe(201);
+    expect((await call('/journey/enter', {}, 'member')).status).toBe(200);
+    // No letter is published by the early admission itself.
+    expect(await published()).toBe(0);
+    // A letter milestone resumed now is delivered, with its SMS queued.
+    await call('/owner/journey/milestones/departure-ugg/fire', {});
+    expect(await published()).toBe(1);
     expect(await aliseSmsApproved()).toBe(1);
     // The invitation link that establishes her member session works again.
     expect((await call('/owner/invitations', {})).status).toBe(201);

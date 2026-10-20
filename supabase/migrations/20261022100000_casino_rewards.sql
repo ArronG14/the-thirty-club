@@ -179,8 +179,16 @@ begin
    if b.id is null then perform public.ttc_fail('not-found'); end if;
    if b.status<>'active' or b.next_position<>1 then perform public.ttc_fail('conflict'); end if;
    update public.ttc_casino_batches set status='cancelled',completed_at=now() where id=b.id;
+   -- An announcement not yet delivered is withdrawn: the Butler never
+   -- promises spins that were cancelled. One already delivered is reported
+   -- back so the owner can write to her (it is never recalled silently).
+   update public.ttc_journey_events set state='recorded', processed_at=now(),
+       last_error='Batch cancelled before the announcement was delivered.'
+     where source='casino' and idempotency_key='spins-batch-'||b.id and state in ('pending','deferred','failed');
    insert into public.ttc_activity_events(type,detail) values('casino.batch.cancelled',jsonb_build_object('batchId',b.id));
-   return jsonb_build_object('batchId',b.id,'status','cancelled');
+   return jsonb_build_object('batchId',b.id,'status','cancelled',
+     'announcementDelivered', exists(select 1 from public.ttc_journey_events
+        where source='casino' and idempotency_key='spins-batch-'||b.id and state='processed'));
  elsif p_action='casino-status' then
    select coalesce(sum(quantity-next_position+1),0)::integer into available from public.ttc_casino_batches where member_id=m and status='active';
    return jsonb_build_object('available',available,'spins',coalesce((select jsonb_agg(jsonb_build_object(

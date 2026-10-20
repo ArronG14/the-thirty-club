@@ -24,6 +24,7 @@ export const SIM_ENV: NodeJS.ProcessEnv = {
   TWILIO_FROM: 'ThirtyClub',
   ALISE_PHONE: '+440000000001',
   ARRON_PHONE: '+440000000002',
+  SMS_REHEARSAL_TO: '+440000000003',
   SMS_SENDING_ENABLED: 'false',
 };
 
