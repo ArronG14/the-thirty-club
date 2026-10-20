@@ -65,28 +65,24 @@ test('mobile activation, incorrect PIN, room launches, test rewards, reset and e
   await launch(page, /^The Private Screening Room/);
   await expect(page.locator('.cinema').first()).toBeVisible();
   await launch(page, /^The Grand Casino/);
-  await expect(page.locator('.casino')).toBeVisible();
+  // The authoritative Casino (Casino/rewards engine): a rehearsal batch of
+  // three spins issued by the simulated server, never by the browser.
+  const count = page.locator('.casino-live__count');
+  await expect(count).toHaveText('3 spins at your pleasure', {
+    timeout: 60_000,
+  });
   const guestBefore = await page.evaluate(() => JSON.stringify(localStorage));
-  await page.getByRole('button', { name: 'Casino test controls' }).click();
-  await page
-    .getByRole('button', { name: 'Completed state', exact: true })
-    .click();
-  const testLedger = await page.evaluate(() =>
-    sessionStorage.getItem('thirty-club:owner:thirty-club:prizes'),
-  );
-  expect(testLedger).toContain('claimed');
+  await page.getByRole('button', { name: 'Spin the wheel' }).click();
+  await expect(count).toHaveText('2 spins at your pleasure', {
+    timeout: 30_000,
+  });
+  // The spin is the simulated server's record; Alise's real device records
+  // are untouched. (Persistence across pages is covered by
+  // tests/integration.spec.ts: under this test's frozen clock the simulated
+  // database does not flush to IndexedDB, docs/REHEARSAL.md.)
   expect(await page.evaluate(() => JSON.stringify(localStorage))).toBe(
     guestBefore,
   );
-  await page.reload();
-  await expect(
-    page.getByRole('button', { name: 'Casino test controls' }),
-  ).toBeVisible();
-  expect(
-    await page.evaluate(() =>
-      sessionStorage.getItem('thirty-club:owner:thirty-club:prizes'),
-    ),
-  ).toBe(testLedger);
   // An independent tab has no owner authorization, even on the same origin.
   const guest = await context.newPage();
   await poster(guest);

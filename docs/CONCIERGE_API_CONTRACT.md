@@ -173,3 +173,11 @@ Full contract: `docs/BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md`; types `src/share
 - Member: `GET /api/v1/journey` → `{ now, admissions: MemberAdmission[] }` (invited and admitted rooms only); `POST /api/v1/journey/admissions/:roomId/accept` `{}` → `{ admission, duplicate }` (201, then 200 with `duplicate: true`); `403 not-open` when not invited.
 - Owner: `GET /api/v1/owner/journey`; `POST /owner/journey/milestones`; `PATCH /owner/journey/milestones/:key`; `POST /owner/journey/milestones/:key/{fire|hold|resume|retry}`; `POST /owner/journey/rooms/:roomId/{invite|withdraw}`; `POST /owner/journey/events/:id/retry`.
 - Correspondence letters (`MemberLetter`, `OwnerLetter`) gain an optional `action` `{ kind: 'admission' | 'return', roomId, label }`; owner letters also gain `journeyRef`.
+
+## Communication hold (additive, ADR-021)
+
+- `GET /api/v1/owner/communications` → `HoldState` (`src/shared/journey/contract.ts`).
+- `POST /api/v1/owner/communications/release` `{ confirm: "RELEASE", note? }` → hold state plus `released` counts; `403 not-open` before 21 Oct 2026 00:00 Jamaica; `400` without the confirmation; idempotent.
+- `POST /api/v1/owner/communications/hold` `{}` → hold state; cancels unsent SMS to Alise.
+- New error code `on-hold` (409): an action that would publish a letter to Alise, or approve/send an SMS to her, while held — including `POST /owner/invitations`, milestone `fire`/`retry`, room `invite`, event `retry`, correspondence `send-now`, SMS retry and Butler direct SMS.
+- `POST /owner/journey/milestones` requires `key` (`MILESTONE_KEY_PATTERN`) and is idempotent on it (200 `duplicate`, 409 `idempotency-conflict`).

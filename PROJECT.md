@@ -106,3 +106,7 @@ The club reveals itself through the Butler. The owner's milestones (Jamaica time
 ## Casino rewards integration (2026-10-19)
 
 An isolated feature branch implements owner-issued spin batches, an editable prize catalogue, server-authoritative results, voucher requests and fulfilment, and Casino-linked Gift Vault entitlements. The member Casino now reveals only server results. This branch depends on the Birthday Journey migration for room admission and Butler event delivery, so it is not an independently deployable release. See `docs/CASINO_REWARDS_INTEGRATION.md` for the handover and remaining integrated rehearsal.
+
+## Final integration and the communication hold (20 October 2026, not yet deployed)
+
+The birthday journey and the Casino/rewards engine are one system on `feature/birthday-final-integration`: the owner controls spins and prizes, the server decides every spin, vouchers and Vault gifts become entitlements, and the Butler presents each new room through its Letter of Admission and each later reward by letter. At the owner's instruction nothing new reaches Alise until he releases communications, which the server refuses before 21 October (Jamaica). Handover: `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`.

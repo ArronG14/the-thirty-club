@@ -207,7 +207,7 @@ export default function AuthoritativeCasino({
                   <li key={entry.id}>
                     {entry.prize?.title ?? 'A quiet spin'}
                     {entry.createdAt
-                      ? ` · ${new Date(entry.createdAt).toLocaleString('en-GB')}`
+                      ? ` · ${new Date(entry.createdAt).toLocaleString('en-GB', { timeZone: 'America/Jamaica' })}`
                       : ''}
                   </li>
                 ))}

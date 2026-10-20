@@ -1,5 +1,7 @@
 # The Birthday Journey — operations and rehearsal (ADR-020)
 
+> **20 October 2026:** integrated with the Casino/rewards engine and placed under the **communication hold** (ADR-021) on `feature/birthday-final-integration`. Nothing reaches Alise until the owner releases communications (not before 21 Oct 00:00 Jamaica). The release and first-invitation procedure, the migration order (three migrations) and the iPhone checklist are in `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`, which supersedes the deployment order below.
+
 The club now reveals itself through the Butler. Every exclusive room is **LOCKED → INVITED → ADMITTED**. The owner's milestones (or a manual action) invite a room. The Butler writes to Alise, and a **Letter of Admission** waits in the Members' Lounge. Accepting it admits her permanently, the room appears in the Members' Directory, and the Butler escorts her in. Later invitations (for example new Casino spins) are Butler letters with **RETURN TO THE …**, which open the room directly.
 
 - Integration contract for the Casino, rewards and Gift Vault: [`BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md`](BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md).
@@ -39,18 +41,18 @@ LOCKED rooms are never named to her: not in the Directory, the 3D directory boar
 
 Seeded with `on conflict do nothing`, so an owner's edits are never overwritten.
 
-| Key                      | When (Jamaica)   | Does                                                                                | Seeded    |
-| ------------------------ | ---------------- | ----------------------------------------------------------------------------------- | --------- |
-| `early-membership`       | Tue 20 Oct 13:00 | Invite the Members' Lounge (founding membership)                                    | **armed** |
-| `departure-ugg`          | Thu 22 Oct 03:00 | Butler letter (wording provisional)                                                 | held      |
-| `departure-privileges`   | Thu 22 Oct 08:00 | Butler note pointing to the Departure Lounge (which releases the privileges itself) | held      |
-| `departure-airpods`      | Thu 22 Oct 09:00 | Butler hint for the hidden NFC tag                                                  | held      |
-| `casino-opening`         | Fri 23 Oct 09:00 | Invite the Grand Casino                                                             | **armed** |
-| `casino-opening-spins`   | Fri 23 Oct 09:00 | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook         | held      |
-| `casino-evening-mystery` | Fri 23 Oct 20:00 | Butler letter with RETURN TO THE GRAND CASINO                                       | held      |
-| `birthday-screening`     | Sat 24 Oct 00:00 | Invite the Private Screening Room                                                   | **armed** |
-| `birthday-vault`         | Sat 24 Oct 00:00 | Invite the Gift Vault                                                               | **armed** |
-| `birthday-breakfast`     | Sat 24 Oct 10:30 | Butler letter "Breakfast is served"                                                 | held      |
+| Key                      | When (Jamaica)                                           | Does                                                                                | Seeded             |
+| ------------------------ | -------------------------------------------------------- | ----------------------------------------------------------------------------------- | ------------------ |
+| `early-membership`       | Wed 21 Oct, time chosen by the owner (00:00 placeholder) | Invite the Members' Lounge (founding membership) — the first communication          | **held** (ADR-021) |
+| `departure-ugg`          | Thu 22 Oct 03:00                                         | Butler letter (wording provisional)                                                 | held               |
+| `departure-privileges`   | Thu 22 Oct 08:00                                         | Butler note pointing to the Departure Lounge (which releases the privileges itself) | held               |
+| `departure-airpods`      | Thu 22 Oct 09:00                                         | Butler hint for the hidden NFC tag                                                  | held               |
+| `casino-opening`         | Fri 23 Oct 09:00                                         | Invite the Grand Casino                                                             | **armed**          |
+| `casino-opening-spins`   | Fri 23 Oct 09:00                                         | Hook `casino.spins.issue` {quantity 5, announce false} — needs Codex's hook         | held               |
+| `casino-evening-mystery` | Fri 23 Oct 20:00                                         | Butler letter with RETURN TO THE GRAND CASINO                                       | held               |
+| `birthday-screening`     | Sat 24 Oct 00:00                                         | Invite the Private Screening Room                                                   | **armed**          |
+| `birthday-vault`         | Sat 24 Oct 00:00                                         | Invite the Gift Vault                                                               | **armed**          |
+| `birthday-breakfast`     | Sat 24 Oct 10:30                                         | Butler letter "Breakfast is served"                                                 | held               |
 
 Held milestones carry provisional wording or depend on Codex. Review each one, then **Resume** it. Change times in the journey tab. If the migration is applied after a milestone's time, that milestone fires at the next round.
 

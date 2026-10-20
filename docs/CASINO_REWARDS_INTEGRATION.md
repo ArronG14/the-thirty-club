@@ -1,5 +1,7 @@
 # Casino and rewards integration
 
+> **Integrated 20 October 2026** on `feature/birthday-final-integration` with the birthday journey (see `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`). The "not-configured until integrated" limitation below no longer applies: the journey migration precedes this one, the real `ttc_journey_publish`/`ttc_room_admitted` are used, the milestone key mismatch is fixed (`MilestoneInput.key`), `vault.gift.unlocked` now earns the full Butler journey, the scheduling form uses Jamaica time and arms its milestone, owner times display in Jamaica, the Lounge wallet appears only once the Casino is admitted, and every Butler reaction waits while the communication hold is active (Casino state still commits). Original isolated-branch notes follow.
+
 **Branch:** `feature/casino-rewards-vault` from verified production `54b9cf2`. **Contract:** exact files from Opus commit `586191b` (`docs/BIRTHDAY_JOURNEY_INTEGRATION_CONTRACT.md`, `src/shared/journey/{contract,templates}.ts`). No production database write or deployment was performed.
 
 ## Implemented and tested locally

@@ -429,7 +429,10 @@ export default function CasinoRewardsDesk() {
           {batches.map((b) => (
             <li key={b.id}>
               <strong>{b.quantity} spins</strong> · {b.remaining} remaining ·{' '}
-              {b.status} · {new Date(b.createdAt).toLocaleString('en-GB')}
+              {b.status} ·{' '}
+              {new Date(b.createdAt).toLocaleString('en-GB', {
+                timeZone: 'America/Jamaica',
+              })}
               <details>
                 <summary>Inspect spins and prizes</summary>
                 <ol>
@@ -474,7 +477,9 @@ export default function CasinoRewardsDesk() {
           {requests.map((r) => (
             <li key={r.id}>
               <strong>{titleOf(r.entitlementId)}</strong> · {r.state} ·{' '}
-              {new Date(r.requestedAt).toLocaleString('en-GB')}
+              {new Date(r.requestedAt).toLocaleString('en-GB', {
+                timeZone: 'America/Jamaica',
+              })}
               {r.state === 'REQUESTED' && (
                 <span className="cr-actions">
                   <button

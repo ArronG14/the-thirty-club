@@ -11,6 +11,7 @@ export default defineConfig({
     'butler-service.spec.ts',
     'rehearsal.spec.ts',
     'journey.spec.ts',
+    'integration.spec.ts',
     'casino.look.spec.ts',
     // WebKit with a phone profile: playwright.webkit.config.ts.
     'entrance-webkit.spec.ts',

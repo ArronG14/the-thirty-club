@@ -146,7 +146,7 @@ test('Dev Menu launches every room into a coherent rehearsal', async ({
 
   await page.goto('/');
   await launch(page, /^The Grand Casino/);
-  await expect(page.locator('.casino')).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60000 });
   await shot(page, '13-casino', 1500);
 
   await page.goto('/');
@@ -217,13 +217,10 @@ test('Entrance letters: unread on the step, gone once opened, kept in My Corresp
   await expect(page.locator('.cd-paper__body')).toBeVisible({ timeout: 10000 });
   await shot(page, '23-desk-letter-open');
   await page.locator('.bs-return').click();
-  // The Desk letter has been read. "Before departure" (21 Oct) is after the
-  // default early-membership milestone (20 Oct 13:00 Jamaica, ADR-020), so
-  // the only letter still waiting is the Butler's Lounge invitation.
-  await expect(envelope).toHaveAttribute(
-    'aria-label',
-    'Open your new letter: The Members’ Lounge is open to you',
-  );
+  // The Desk letter has been read and nothing else waits: the Lounge
+  // introduction is held until the owner releases it on 21 October
+  // (ADR-021), so it never arrives by itself.
+  await expect(envelope).toHaveCount(0);
 
   // Both remain in My Correspondence.
   await page.getByRole('button', { name: 'Ring for service' }).first().click();
@@ -273,7 +270,7 @@ test('A letter that mentions a Casino she has not been admitted to names nothing
   await page
     .getByRole('button', { name: /Rehearsal: launch The Grand Casino/ })
     .click();
-  await expect(page.locator('.casino')).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60000 });
 });
 
 test('Scenario: birthday midnight plays the door ceremony into the induction', async ({

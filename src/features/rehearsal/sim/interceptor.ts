@@ -50,6 +50,9 @@ export function installRehearsalFetch() {
       return refusal(401, 'Enter Dev Mode (the PIN) to use the rehearsal.');
     try {
       if (url.pathname.startsWith('/api/v1/')) {
+        // A launch's state (admissions, milestones, spins) is in place
+        // before this page's first answer, so no request sees it half-made.
+        await (await import('../office')).applyLaunchIntents();
         const { simOffice } = await import('./v1');
         const office = await simOffice();
         return await office.handle(

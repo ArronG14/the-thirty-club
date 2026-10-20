@@ -81,7 +81,9 @@ export function VoucherWallet() {
             {item.prize.validUntil && (
               <p>
                 Valid until{' '}
-                {new Date(item.prize.validUntil).toLocaleDateString('en-GB')}
+                {new Date(item.prize.validUntil).toLocaleDateString('en-GB', {
+                  timeZone: 'America/Jamaica',
+                })}
               </p>
             )}
             <p>

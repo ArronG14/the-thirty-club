@@ -78,3 +78,10 @@ Observed while testing: under a frozen Playwright clock (`page.clock.setFixedTim
 ## Casino/rewards branch update (2026-10-19)
 
 The new production Casino now uses the persisted `/api/v1/casino` spin API. The older local roulette/slots and jackpot controls above describe the previous build and remain development previews only. The TEST Control Centre gains a Casino & rewards section for prize catalogue, immediate and scheduled batches, vouchers and gift fulfilment. The same API handlers and Casino migration run in TEST PGlite, but the isolated Casino branch does not contain Opus's Journey migration. Issue/spin correctly returns `not-configured` until the two branches are integrated. Follow `docs/CASINO_REWARDS_INTEGRATION.md` for the combined TEST and iPhone rehearsal; do not use a local jackpot as proof of an authoritative prize.
+
+## Final integration (ADR-021)
+
+- The simulated office applies all three release migrations and then **releases the communication hold** (LIVE stays held until the owner releases it). TEST → Control Centre top panel can hold it again to rehearse the hold and the release; release follows the rehearsal clock (refused before 21 Oct 00:00 Jamaica).
+- Launch intents (applied by the destination page) can now also trigger milestones (`fire`) and issue a Casino batch through the real owner action (`spins`: three spins with one "Rehearsal voucher · two cocktails"). The Casino launches, the Casino ceremony launch, _Casino jackpot_ and _All rooms open_ use it.
+- The _Early membership (the first invitation)_ scenario is 21 Oct, 10:00 Jamaica (a rehearsal time): it triggers the held Lounge introduction as the owner will after release.
+- Browser test: `tests/integration.spec.ts` (voucher round trip; the hold enforced by the simulated server).

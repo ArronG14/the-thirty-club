@@ -50,7 +50,7 @@ let launchAdmissions: Promise<void> | null = null;
 function applyLaunchAdmissions(): Promise<void> {
   launchAdmissions ??= simulationActive
     ? import('../rehearsal/office')
-        .then((office) => office.applyPendingAdmissions())
+        .then((office) => office.applyLaunchIntents())
         .catch(() => undefined)
     : Promise.resolve();
   return launchAdmissions;

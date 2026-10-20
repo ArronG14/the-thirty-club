@@ -162,6 +162,15 @@ export async function issueRehearsalSpins(quantity: number) {
   });
 }
 
+let launchIntents: Promise<void> | null = null;
+/** Applies this page's launch intents once; every simulated request waits. */
+export function applyLaunchIntents(): Promise<void> {
+  launchIntents ??= applyPendingAdmissions().catch((error: unknown) => {
+    console.error('[rehearsal] launch could not be prepared', error);
+  });
+  return launchIntents;
+}
+
 /** Triggers a journey milestone now, as the owner would from TEST. */
 export async function fireRehearsalMilestone(key: string) {
   await simOwner(`/owner/journey/milestones/${key}/fire`, {});
