@@ -547,13 +547,16 @@ export function Lounge({
                   <Glyph kind="bell" />
                   Ring for service
                 </button>
-                <button
-                  type="button"
-                  className="dock__item"
-                  onClick={(e) => openSheet('vouchers', e.currentTarget)}
-                >
-                  Your Casino vouchers
-                </button>
+                {/* Named only once she has been admitted to the Casino. */}
+                {journey?.stateOf('casino') === 'admitted' && (
+                  <button
+                    type="button"
+                    className="dock__item"
+                    onClick={(e) => openSheet('vouchers', e.currentTarget)}
+                  >
+                    Your Casino vouchers
+                  </button>
+                )}
               </nav>
             </>
           )}

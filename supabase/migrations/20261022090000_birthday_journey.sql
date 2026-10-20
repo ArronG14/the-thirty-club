@@ -58,7 +58,7 @@ create table public.ttc_room_admissions (
   room_id text not null check (room_id in ('lounge','screening-room','casino','gift-vault','privileges')),
   state text not null check (state in ('invited','admitted')),
   invited_at timestamptz not null default now(),
-  invited_via text not null check (invited_via in ('milestone','owner')),
+  invited_via text not null check (invited_via in ('milestone','owner','event')),
   milestone_key text,
   letter_title text not null check (length(btrim(letter_title)) between 1 and 160),
   letter_body text not null check (length(btrim(letter_body)) between 1 and 4000),
@@ -259,7 +259,7 @@ end $$;
 
 create function public.ttc_journey_react(p_member uuid, p_event_id uuid, p_tpl jsonb) returns void
 language plpgsql security invoker set search_path = '' as $$
-declare e public.ttc_journey_events; v_room text; v_announce boolean; v_copy jsonb; v_letter uuid; q text;
+declare e public.ttc_journey_events; v_room text; v_announce boolean; v_copy jsonb; v_letter uuid; q text; v_state text;
 begin
  select * into e from public.ttc_journey_events where id = p_event_id for update;
  if e.state not in ('pending','deferred') then return; end if;
@@ -276,6 +276,26 @@ begin
    end if;
  elsif e.type = 'reward.voucher.fulfilled' then
    v_room := null; v_announce := coalesce((e.payload->>'announce')::boolean, true);
+ elsif e.type = 'vault.gift.unlocked' then
+   -- The publisher has already committed the gift entitlement and readied its
+   -- compartment. Admitted: a letter straight to the Vault. Not yet: the
+   -- Vault is introduced (summons + Letter of Admission in the Lounge); once
+   -- accepted she is escorted in, so no second letter follows.
+   v_announce := coalesce((e.payload->>'announce')::boolean, true);
+   if v_announce then
+     v_state := public.ttc_journey_room_state(p_member, 'gift-vault');
+     if v_state = 'admitted' then
+       v_room := 'gift-vault';
+     else
+       if v_state = 'locked' then
+         perform public.ttc_journey_invite(p_member, 'gift-vault', 'event', null, p_tpl);
+       end if;
+       update public.ttc_journey_events set state = 'processed', processed_at = now(), last_error = null where id = e.id;
+       insert into public.ttc_activity_events(type,detail)
+         values ('journey.event.delivered',jsonb_build_object('eventId',e.id,'type',e.type,'via','admission'));
+       return;
+     end if;
+   end if;
  else
    update public.ttc_journey_events set state = 'recorded', processed_at = now(), last_error = null where id = e.id;
    return;
@@ -509,9 +529,20 @@ begin
    insert into public.ttc_journey_milestones(key,title,description,fire_at,state,effects,sort)
      values (p_input->>'key',btrim(p_input->>'title'),coalesce(p_input->>'description',''),(p_input->>'fireAt')::timestamptz,
        'held',p_input->'effects',100)
+     on conflict (key) do nothing
      returning * into m;
+   if m.key is null then
+     -- The key is the creation's idempotency key: a retried submit returns
+     -- the same milestone; the same key with other details is refused.
+     select * into m from public.ttc_journey_milestones where key = p_input->>'key';
+     if m.title <> btrim(p_input->>'title') or m.fire_at <> (p_input->>'fireAt')::timestamptz
+        or m.effects <> p_input->'effects' then
+       perform public.ttc_fail('idempotency-conflict');
+     end if;
+     return jsonb_build_object('milestone',public.ttc_journey_milestone_json(m, member),'duplicate',true);
+   end if;
    insert into public.ttc_activity_events(type,detail) values ('journey.milestone.created',jsonb_build_object('key',m.key));
-   return jsonb_build_object('milestone',public.ttc_journey_milestone_json(m, member));
+   return jsonb_build_object('milestone',public.ttc_journey_milestone_json(m, member),'duplicate',false);
  elsif p_action like 'owner-journey-milestone-%' then
    select * into m from public.ttc_journey_milestones where key = p_input->>'key' for update;
    if m.key is null then perform public.ttc_fail('not-found'); end if;

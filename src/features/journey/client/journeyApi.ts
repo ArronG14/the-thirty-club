@@ -39,10 +39,11 @@ export const rescheduleMilestone = (key: string, fireAt: string) =>
     { method: 'PATCH', body: { fireAt } },
   );
 
-export const createMilestone = (key: string, input: MilestoneInput) =>
-  deskRequest<{ milestone: OwnerMilestone }>('/owner/journey/milestones', {
-    body: { key, ...input },
-  });
+export const createMilestone = (input: MilestoneInput) =>
+  deskRequest<{ milestone: OwnerMilestone; duplicate: boolean }>(
+    '/owner/journey/milestones',
+    { body: input },
+  );
 
 export const commandRoom = (
   room: AdmissionRoomId,

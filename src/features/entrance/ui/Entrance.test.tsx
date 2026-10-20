@@ -521,8 +521,9 @@ describe('after the birthday has passed', () => {
       'Members’ Directory',
       'Membership card',
       'Ring for service',
-      'Your Casino vouchers',
     ]);
+    // The voucher wallet names the Casino, so it appears only once the
+    // journey has admitted her to it (ADR-020; none in this unit test).
     expect(screen.queryAllByRole('link')).toHaveLength(0);
   });
 });

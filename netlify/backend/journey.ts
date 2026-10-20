@@ -10,6 +10,7 @@ import type { Session } from '../../src/shared/concierge/types.ts';
 import { INVITATION_TEMPLATES } from '../../src/shared/correspondence/templates.ts';
 import {
   isAdmissionRoom,
+  isMilestoneKey,
   type JourneyEventType,
   type MilestoneEffect,
 } from '../../src/shared/journey/contract.ts';
@@ -189,13 +190,10 @@ export async function journeyRoute({
     };
   if (route === 'POST /owner/journey/milestones') {
     v.keys(body, ['key', 'title', 'description', 'fireAt', 'effects']);
-    if (
-      typeof body.key !== 'string' ||
-      !/^[a-z0-9][a-z0-9-]{2,59}$/.test(body.key)
-    )
-      v.invalid();
-    return {
-      data: await call('owner-journey-milestone-create', {
+    if (!isMilestoneKey(body.key)) v.invalid();
+    const created = await call<{ duplicate: boolean }>(
+      'owner-journey-milestone-create',
+      {
         key: body.key,
         title: v.text(body.title, 1, 120),
         description:
@@ -204,9 +202,9 @@ export async function journeyRoute({
             : v.text(body.description, 0, 1000),
         fireAt: v.instant(body.fireAt),
         effects: effects(body.effects),
-      }),
-      status: 201,
-    };
+      },
+    );
+    return { data: created, status: created.duplicate ? 200 : 201 };
   }
   const milestone = new RegExp(
     `^/owner/journey/milestones/${KEY}(?:/(fire|hold|resume|retry))?$`,

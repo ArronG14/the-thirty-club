@@ -1,5 +1,15 @@
 import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { officeRequest } from '../butlers-office/client';
+import { instantToWall, wallTimeToInstant } from '../../shared/concierge/time';
+import {
+  JOURNEY_TIME_ZONE,
+  type MilestoneInput,
+} from '../../shared/journey/contract';
+import { failureText } from '../correspondence/client/correspondenceApi';
+import {
+  commandMilestone,
+  createMilestone,
+} from '../journey/client/journeyApi';
 import './casinoRewardsDesk.css';
 
 interface Prize {
@@ -156,11 +166,13 @@ export default function CasinoRewardsDesk() {
       JSON.stringify({ fingerprint, key }),
     );
     void run(async () => {
-      await officeRequest('/owner/journey/milestones', {
+      // Jamaica wall-clock time, never the owner's browser zone (ADR-020).
+      const fireAt = wallTimeToInstant(scheduleAt, JOURNEY_TIME_ZONE);
+      const input: MilestoneInput = {
         key,
         title: `${quantity} Casino spins`,
         description: 'Owner-scheduled Casino spins',
-        fireAt: new Date(scheduleAt).toISOString(),
+        fireAt,
         effects: [
           {
             type: 'hook',
@@ -168,9 +180,24 @@ export default function CasinoRewardsDesk() {
             params: { quantity, prizeIds: selected, announce: true },
           },
         ],
-      });
+      };
+      const created = await createMilestone(input);
+      if (!created.ok) throw new Error(failureText(created));
+      // New milestones start held; this form's submission arms it. It still
+      // waits while communications to Alise are held (ADR-021).
+      const armed = await commandMilestone(key, 'resume');
+      if (!armed.ok) throw new Error(failureText(armed));
       sessionStorage.removeItem('thirty-club:owner:pending-milestone');
-      setMessage('Casino spins scheduled in the Birthday Journey.');
+      setMessage(
+        `Casino spins scheduled for ${new Intl.DateTimeFormat('en-GB', {
+          weekday: 'short',
+          day: 'numeric',
+          month: 'short',
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: JOURNEY_TIME_ZONE,
+        }).format(new Date(fireAt))} Jamaica, in the Birthday Journey.`,
+      );
       setScheduleAt('');
       setSelected([]);
     });
@@ -243,7 +270,7 @@ export default function CasinoRewardsDesk() {
           </p>
           <form onSubmit={schedule}>
             <label>
-              Delivery date and time{' '}
+              Delivery date and time (Jamaica){' '}
               <input
                 required
                 type="datetime-local"
@@ -324,15 +351,18 @@ export default function CasinoRewardsDesk() {
               />
             </label>
             <label>
-              Valid until{' '}
+              Valid until (Jamaica){' '}
               <input
                 type="datetime-local"
-                value={form.validUntil?.slice(0, 16) ?? ''}
+                value={instantToWall(
+                  form.validUntil ?? null,
+                  JOURNEY_TIME_ZONE,
+                )}
                 onChange={(e) =>
                   setForm({
                     ...form,
                     validUntil: e.target.value
-                      ? new Date(e.target.value).toISOString()
+                      ? wallTimeToInstant(e.target.value, JOURNEY_TIME_ZONE)
                       : null,
                   })
                 }

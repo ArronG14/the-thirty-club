@@ -102,6 +102,10 @@ export const EVENT_LETTERS: Partial<
     title: '{title}',
     body: 'A new privilege has been placed at your disposal: {title}. It awaits you whenever you wish to make use of it.',
   },
+  'vault.gift.unlocked': {
+    title: 'Something has been placed in the Vault',
+    body: 'A gift has been placed in the Gift Vault in your name: {title}. It awaits you behind a door that, I am assured, already knows your name.',
+  },
   'reward.voucher.fulfilled': {
     title: '{title} has been arranged',
     body: 'Your request has been attended to: {title}. Everything has been arranged. Do let me know if anything is not entirely to your satisfaction.',

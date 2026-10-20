@@ -14,7 +14,7 @@ import {
 import * as v from './validation.ts';
 import { statusCallback } from './sms.ts';
 import { correspondenceRoute } from './correspondence.ts';
-import { journeyRoute } from './journey.ts';
+import { journeyRoute, processJourneyEvents } from './journey.ts';
 import { requireCommunications } from './hold.ts';
 import { serviceRoute } from './service.ts';
 import { casinoRoute } from './casino.ts';
@@ -185,7 +185,14 @@ export function createBackendApi({ db, env }: ApiDeps) {
         path.startsWith('/owner/vouchers')
       ) {
         const result = await casinoRoute({ route, path, body, session, db });
-        if (result) return respond(result.data, result.status);
+        if (result) {
+          // The Casino publishes its events in its own transaction (contract
+          // §2); let the Butler react now rather than at the next round. A
+          // failure here never undoes the committed Casino action.
+          if (request.method !== 'GET')
+            await processJourneyEvents(db).catch(() => undefined);
+          return respond(result.data, result.status);
+        }
       }
       if (route === 'GET /privileges') return respond(await call('privileges'));
       if (route === 'GET /redemptions')

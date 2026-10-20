@@ -421,17 +421,17 @@ describe('Casino events through the shared contract', () => {
 
   it('records events with no reaction, and SQL publication joins the caller’s transaction', async () => {
     await pg.exec(`begin;
-      select public.ttc_journey_publish('vault.gift.unlocked','vault','vault-gift-0001','{"vaultId":"v1"}');
+      select public.ttc_journey_publish('casino.spins.available','casino','spins-available-0001','{"available":2}');
       rollback;`);
     expect(
-      (await owner()).events.filter((e) => e.type === 'vault.gift.unlocked'),
+      (await owner()).events.filter((e) => e.type === 'casino.spins.available'),
     ).toHaveLength(0);
     await pg.query(
-      "select public.ttc_journey_publish('vault.gift.unlocked','vault','vault-gift-0001','{\"vaultId\":\"v1\"}')",
+      "select public.ttc_journey_publish('casino.spins.available','casino','spins-available-0001','{\"available\":2}')",
     );
     await runJourneyRound(db);
     const [recorded] = (await owner()).events.filter(
-      (e) => e.type === 'vault.gift.unlocked',
+      (e) => e.type === 'casino.spins.available',
     );
     expect(recorded!.state).toBe('recorded');
   });

@@ -200,7 +200,18 @@ export interface JourneyEventPayloads {
     announce?: boolean;
     letter?: EventLetterOverride;
   };
-  'vault.gift.unlocked': { vaultId: string; title?: string };
+  /**
+   * Published after the gift entitlement is committed and its compartment
+   * is ready. Admitted to the Gift Vault: a letter with RETURN TO THE GIFT
+   * VAULT. Not yet: the Vault is introduced (summons → Lounge → Letter of
+   * Admission → Vault), with no second letter.
+   */
+  'vault.gift.unlocked': {
+    vaultId: string;
+    title?: string;
+    announce?: boolean;
+    letter?: EventLetterOverride;
+  };
 }
 
 export type JourneyEventState =
@@ -271,12 +282,27 @@ export interface OwnerJourney {
   smsEnabled: boolean;
 }
 
+/** Milestone keys: lowercase letters, digits and hyphens, 3–60 characters. */
+export const MILESTONE_KEY_PATTERN = /^[a-z0-9][a-z0-9-]{2,59}$/;
+export const isMilestoneKey = (value: unknown): value is string =>
+  typeof value === 'string' && MILESTONE_KEY_PATTERN.test(value);
+
+/**
+ * `POST /owner/journey/milestones`. The key is chosen by the caller and is
+ * the creation's idempotency key: retrying the same input returns the same
+ * milestone (`duplicate: true`); the same key with other details is refused
+ * (`idempotency-conflict`). New milestones start **held**: resume to arm.
+ */
 export interface MilestoneInput {
+  key: string;
   title: string;
   description: string;
   fireAt: ISODateTime;
   effects: MilestoneEffect[];
 }
+
+/** `PATCH /owner/journey/milestones/:key`: any of these, never the key. */
+export type MilestoneUpdate = Partial<Omit<MilestoneInput, 'key'>>;
 
 /** The journey's zone: every milestone is displayed in Jamaica time. */
 export const JOURNEY_TIME_ZONE = 'America/Jamaica';
