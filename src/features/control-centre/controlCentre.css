@@ -305,3 +305,44 @@
     grid-template-columns: 1fr 1fr;
   }
 }
+
+/* The communication hold (ADR-021): unmistakable while active. */
+.cc-hold {
+  margin: 0 0 1rem;
+  padding: 0.9rem 1rem;
+  border: 2px solid #2f855a;
+  border-radius: 6px;
+  background: rgb(47 133 90 / 0.08);
+}
+.cc-hold[data-active='true'] {
+  border-color: #c05621;
+  background: rgb(192 86 33 / 0.1);
+}
+.cc-hold h2 {
+  margin: 0 0 0.4rem;
+  font-size: 1.05rem;
+}
+.cc-hold p {
+  margin: 0.3rem 0;
+}
+.cc-hold button,
+.cc-hold input {
+  min-height: 44px;
+  font-size: 16px;
+}
+.cc-hold__confirm {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+.cc-hold__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+.cc-hold__error {
+  color: #c53030;
+}
+.cc-hold--unknown {
+  border-style: dashed;
+}

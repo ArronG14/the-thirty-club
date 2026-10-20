@@ -26,6 +26,7 @@ import {
 import {
   commandMilestone,
   commandRoom,
+  ownerCommunications,
   ownerJourney,
   rescheduleMilestone,
   retryEvent,
@@ -78,8 +79,12 @@ export function JourneyOffice() {
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [wall, setWall] = useState('');
+  // The communication hold (ADR-021): actions that reach Alise wait for it.
+  const [held, setHeld] = useState(false);
 
   const load = useCallback(async () => {
+    const hold = await ownerCommunications();
+    if (hold.ok) setHeld(hold.data.active);
     const result = await ownerJourney();
     if (result.ok) {
       setData(result.data);
@@ -89,12 +94,16 @@ export function JourneyOffice() {
 
   useEffect(() => {
     let active = true;
-    const refresh = () =>
+    const refresh = () => {
+      void ownerCommunications().then((hold) => {
+        if (active && hold.ok) setHeld(hold.data.active);
+      });
       void ownerJourney().then((result) => {
         if (!active) return;
         if (result.ok) setData(result.data);
         else setError(failureText(result));
       });
+    };
     refresh();
     const timer = setInterval(refresh, 20_000);
     return () => {
@@ -194,6 +203,13 @@ export function JourneyOffice() {
         Server time {bothZones(data.now)}. Milestones fire from the server’s
         every-minute round; no browser needs to be open.
       </p>
+      {held && (
+        <p className="office-notice" role="note">
+          Communications to Alise are on hold (see the top of the Control
+          Centre). Milestones wait; triggering, introducing a room and retries
+          that would reach her are disabled until you release.
+        </p>
+      )}
       {!data.smsEnabled && (
         <p className="office-notice">
           SMS sending is off: the Butler’s letters are delivered in the club
@@ -282,7 +298,7 @@ export function JourneyOffice() {
             {m.state !== 'fired' && (
               <div className="office-actions">
                 <button
-                  disabled={busy}
+                  disabled={busy || held}
                   onClick={() => milestoneCommand(m, 'fire')}
                 >
                   Trigger now
@@ -304,7 +320,7 @@ export function JourneyOffice() {
                 )}
                 {m.state === 'failed' && (
                   <button
-                    disabled={busy}
+                    disabled={busy || held}
                     onClick={() => milestoneCommand(m, 'retry')}
                   >
                     Retry
@@ -361,7 +377,7 @@ export function JourneyOffice() {
             <div className="office-actions">
               {a.state === 'locked' && (
                 <button
-                  disabled={busy}
+                  disabled={busy || held}
                   onClick={() => roomCommand(a.roomId, 'invite')}
                 >
                   Introduce now
@@ -407,7 +423,7 @@ export function JourneyOffice() {
                 (l.sms.state === 'failed' || l.sms.state === 'cancelled') &&
                 !l.openedAt && (
                   <button
-                    disabled={busy}
+                    disabled={busy || held}
                     onClick={() =>
                       void run(
                         () => retrySms(l.sms!.id),
@@ -440,7 +456,7 @@ export function JourneyOffice() {
               </span>
               {e.state === 'failed' && (
                 <button
-                  disabled={busy}
+                  disabled={busy || held}
                   onClick={() =>
                     void run(() => retryEvent(e.id), 'The event was retried.')
                   }

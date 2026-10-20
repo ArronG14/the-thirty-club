@@ -306,3 +306,26 @@ export type MilestoneUpdate = Partial<Omit<MilestoneInput, 'key'>>;
 
 /** The journey's zone: every milestone is displayed in Jamaica time. */
 export const JOURNEY_TIME_ZONE = 'America/Jamaica';
+
+/* ------------------------------------------------------------------ */
+/* The communication hold (ADR-021)                                    */
+/* ------------------------------------------------------------------ */
+
+/** `GET /api/v1/owner/communications`. */
+export interface HoldState {
+  /** While true nothing new reaches Alise (enforced in the database). */
+  active: boolean;
+  heldSince: ISODateTime;
+  /** 21 October 2026 00:00 Jamaica: release is refused before this. */
+  releaseNotBefore: ISODateTime;
+  releasedAt: ISODateTime | null;
+  releaseNote: string | null;
+  now: ISODateTime;
+  waiting: {
+    lettersDue: number;
+    lettersScheduled: number;
+    milestonesDue: number;
+    eventsWaiting: number;
+    smsCancelledByHold: number;
+  };
+}

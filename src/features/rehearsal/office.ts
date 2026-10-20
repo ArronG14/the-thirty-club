@@ -99,7 +99,12 @@ export const PENDING_ADMISSIONS_KEY = `${OWNER_PREFIX}journey-admissions`;
  * opened. Called by the journey provider before its first read.
  */
 export async function applyPendingAdmissions() {
-  let pending: { admitted?: unknown; ceremony?: unknown } | null;
+  let pending: {
+    admitted?: unknown;
+    ceremony?: unknown;
+    fire?: unknown;
+    spins?: unknown;
+  } | null;
   try {
     pending = JSON.parse(
       sessionStorage.getItem(PENDING_ADMISSIONS_KEY) ?? 'null',
@@ -112,6 +117,49 @@ export async function applyPendingAdmissions() {
   const rooms = (value: unknown) =>
     Array.isArray(value) ? value.filter(isAdmissionRoom) : [];
   await rehearseAdmissions(rooms(pending.admitted), rooms(pending.ceremony));
+  if (Array.isArray(pending.fire))
+    for (const key of pending.fire)
+      if (typeof key === 'string') await fireRehearsalMilestone(key);
+  if (typeof pending.spins === 'number' && pending.spins > 0)
+    await issueRehearsalSpins(pending.spins);
+}
+
+const REHEARSAL_VOUCHER = 'Rehearsal voucher · two cocktails';
+
+/**
+ * A rehearsal batch of Casino spins, issued through the real owner action
+ * (the Casino engine decides positions and results), with one rehearsal
+ * voucher among them so the wallet, request and fulfilment can be rehearsed.
+ */
+export async function issueRehearsalSpins(quantity: number) {
+  const { prizes } = await simOwner<{
+    prizes: { id: string; title: string }[];
+  }>('/owner/casino/prizes');
+  let voucher = prizes.find((p) => p.title === REHEARSAL_VOUCHER)?.id;
+  if (!voucher) {
+    const created = await simOwner<{ prize: { id: string } }>(
+      '/owner/casino/prizes',
+      {
+        title: REHEARSAL_VOUCHER,
+        description: 'Rehearsal only. Nothing is ordered.',
+        presentation: 'A toast, in rehearsal.',
+        kind: 'VOUCHER',
+        imageUrl: null,
+        instructions: '',
+        validUntil: null,
+        active: true,
+        ownerNotes: 'Created by a rehearsal launch',
+        vaultId: null,
+      },
+    );
+    voucher = created.prize.id;
+  }
+  await simOwner('/owner/casino/batches', {
+    quantity,
+    prizeIds: [voucher],
+    idempotencyKey: `rehearsal-launch-${Date.now()}`,
+    announce: false,
+  });
 }
 
 /** Triggers a journey milestone now, as the owner would from TEST. */

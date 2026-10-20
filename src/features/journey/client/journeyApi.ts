@@ -5,6 +5,7 @@
  * office in the tab (ADR-018) and never reach the real server.
  */
 import type {
+  HoldState,
   AcceptAdmissionResult,
   AdmissionRoomId,
   MemberJourney,
@@ -59,3 +60,7 @@ export const retryEvent = (id: string) =>
     `/owner/journey/events/${id}/retry`,
     { body: {} },
   );
+
+/** The communication hold (ADR-021). */
+export const ownerCommunications = () =>
+  deskRequest<HoldState>('/owner/communications');

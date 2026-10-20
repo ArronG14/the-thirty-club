@@ -32,6 +32,7 @@ const ButlersOffice = lazy(() => import('../butlers-office/ButlersOffice'));
 const OwnerConsole = lazy(() => import('../concierge/owner/OwnerConsole'));
 const RehearsalDesk = lazy(() => import('./RehearsalDesk'));
 const CasinoRewardsDesk = lazy(() => import('./CasinoRewardsDesk'));
+const CommunicationHold = lazy(() => import('./CommunicationHold'));
 
 type Section = 'rehearsal' | 'office' | 'concierge' | 'casino';
 
@@ -166,6 +167,9 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
         </section>
       ) : (
         <>
+          <Suspense fallback={null}>
+            <CommunicationHold />
+          </Suspense>
           <nav className="cc-sections" aria-label="Control Centre sections">
             {sections.map((s) => (
               <button
