@@ -455,14 +455,23 @@ export default function CasinoRewardsDesk() {
               {b.status === 'active' && b.remaining === b.quantity && (
                 <button
                   disabled={busy}
-                  onClick={() =>
+                  onClick={() => {
+                    if (
+                      !window.confirm(
+                        `Cancel this unplayed batch of ${b.quantity} spins? An announcement not yet delivered to Alise is withdrawn; one already delivered stays in her letters.`,
+                      )
+                    )
+                      return;
                     void run(async () => {
-                      await officeRequest(
-                        `/owner/casino/batches/${b.id}/cancel`,
-                        {},
-                      );
-                    })
-                  }
+                      const result = await officeRequest<{
+                        announcementDelivered?: boolean;
+                      }>(`/owner/casino/batches/${b.id}/cancel`, {});
+                      if (result.announcementDelivered)
+                        setMessage(
+                          'Batch cancelled. Its announcement had already reached Alise: consider a letter explaining the change.',
+                        );
+                    });
+                  }}
                 >
                   Cancel unplayed batch
                 </button>

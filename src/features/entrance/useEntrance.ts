@@ -6,7 +6,16 @@ import {
   openingInstant,
   remainingUntil,
   timePhase,
+  type TimePhase,
 } from './domain/countdown';
+import {
+  earlyActive,
+  earlyView,
+  parseEntrance,
+  resumableStart,
+  shouldStartFinal,
+  type EarlyAdmission,
+} from './domain/earlyAdmission';
 import {
   ceremonyTimeline,
   entranceReducer,
@@ -17,9 +26,20 @@ import type { EntranceEnvironment } from './domain/environment';
 
 /** Lands each tick just after the displayed second changes. */
 const TICK_SLACK_MS = 8;
+/** How often the entrance asks the server about an early opening. */
+const ADMISSION_REFRESH_MS = 60_000;
+
+interface Timing {
+  phase: TimePhase;
+  /** A target such that `target - now` is what the clock shows. */
+  now: number;
+  target: number;
+  /** The doors may open without the physical card (early admission). */
+  admitted: boolean;
+}
 
 export function useEntrance(
-  { clock, storage, card }: EntranceEnvironment,
+  { clock, storage, card, admission: source }: EntranceEnvironment,
   { presentedNow = false }: { presentedNow?: boolean } = {},
 ) {
   const reducedMotion = useReducedMotion();
@@ -27,7 +47,42 @@ export function useEntrance(
   const recordRef = useRef(initialRecord);
   const [member, setMember] = useState(() => card.isPresented());
   const memberRef = useRef(member);
-  const [now, setNow] = useState(() => clock.now());
+
+  // Early admission (ADR-022): the server's schedule and this device's
+  // memory of the final ten seconds.
+  const [early, setEarly] = useState<EarlyAdmission | null>(null);
+  const earlyRef = useRef(early);
+  const finalRef = useRef<number | null>(null);
+
+  /** What the clock shows now, and whether the doors may open. */
+  const timing = useCallback((): Timing => {
+    const deviceNow = clock.now();
+    const birthday = openingInstant();
+    const e = earlyRef.current;
+    if (earlyActive(e, birthday) && deviceNow + e.offsetMs < birthday) {
+      const now = deviceNow + e.offsetMs;
+      const view = earlyView(now, e, finalRef.current);
+      return {
+        phase: view.phase,
+        now,
+        target: now + view.remainingMs,
+        admitted: e.eligible,
+      };
+    }
+    return {
+      phase: timePhase(deviceNow, birthday),
+      now: deviceNow,
+      target: birthday,
+      admitted: false,
+    };
+  }, [clock]);
+
+  // Before the server has answered, the birthday's own countdown.
+  const [view, setView] = useState<Timing>(() => {
+    const now = clock.now();
+    const target = openingInstant();
+    return { phase: timePhase(now, target), now, target, admitted: false };
+  });
   const [state, dispatch] = useReducer(entranceReducer, undefined, () =>
     initialEntranceState({
       phase: timePhase(clock.now(), openingInstant()),
@@ -38,23 +93,98 @@ export function useEntrance(
   );
   const counting = state.stage === 'locked' || state.stage === 'final-minute';
 
+  /** Re-evaluates the clock, and begins the final ten seconds if due. */
+  const evaluate = useCallback(() => {
+    const e = earlyRef.current;
+    if (e && source) {
+      const now = clock.now() + e.offsetMs;
+      if (
+        shouldStartFinal(
+          now,
+          e,
+          finalRef.current,
+          document.visibilityState !== 'hidden',
+        )
+      ) {
+        finalRef.current = now;
+        source.saveFinalStart(now);
+      }
+    }
+    const next = timing();
+    setView(next);
+    dispatch({
+      type: 'time',
+      phase: next.phase,
+      member: memberRef.current || next.admitted,
+    });
+    return next;
+  }, [clock, source, timing]);
+
+  // Ask the server about an early opening: now, every minute, on return to
+  // the page, and exactly when the doors are due (so a watcher sees the
+  // final ten seconds begin on time).
+  useEffect(() => {
+    if (!source || !counting) return;
+    let alive = true;
+    let due: ReturnType<typeof setTimeout> | undefined;
+    const read = async () => {
+      const data = await source.read();
+      if (!alive) return;
+      const deviceNow = clock.now();
+      // Unreachable: keep what the server last said (never invent eligibility).
+      if (data !== null) {
+        const next = parseEntrance(data, deviceNow);
+        earlyRef.current = next;
+        setEarly(next);
+      }
+      const current = earlyRef.current;
+      if (current && finalRef.current === null)
+        finalRef.current = resumableStart(
+          source.loadFinalStart(),
+          deviceNow + current.offsetMs,
+        );
+      clearTimeout(due);
+      if (current && !current.eligible) {
+        const wait = current.opensAt - (deviceNow + current.offsetMs);
+        if (wait > 0 && wait < 2 ** 31 - 1)
+          due = setTimeout(() => void read(), wait + 800);
+      }
+      evaluate();
+    };
+    void read();
+    const timer = setInterval(() => {
+      if (document.visibilityState !== 'hidden') void read();
+    }, ADMISSION_REFRESH_MS);
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        // Looking away during the final ten seconds: they begin again.
+        if (finalRef.current !== null) {
+          finalRef.current = null;
+          source.saveFinalStart(null);
+        }
+        return;
+      }
+      void read();
+    };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      alive = false;
+      clearInterval(timer);
+      clearTimeout(due);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
+  }, [clock, counting, evaluate, source]);
+
   // Recompute from the real clock every second, and immediately whenever the
   // page returns from the background, bfcache or device sleep.
   useEffect(() => {
     if (!counting) return;
     let timer: ReturnType<typeof setTimeout> | undefined;
     const tick = () => {
-      const current = clock.now();
-      const target = openingInstant();
-      setNow(current);
-      dispatch({
-        type: 'time',
-        phase: timePhase(current, target),
-        member: memberRef.current,
-      });
+      const next = evaluate();
       timer = setTimeout(
         tick,
-        msUntilNextTick(current, target) + TICK_SLACK_MS,
+        msUntilNextTick(next.now, next.target) + TICK_SLACK_MS,
       );
     };
     const resync = () => {
@@ -62,9 +192,10 @@ export function useEntrance(
       clearTimeout(timer);
       tick();
     };
+    const first = timing();
     timer = setTimeout(
       tick,
-      msUntilNextTick(clock.now(), openingInstant()) + TICK_SLACK_MS,
+      msUntilNextTick(first.now, first.target) + TICK_SLACK_MS,
     );
     document.addEventListener('visibilitychange', resync);
     window.addEventListener('pageshow', resync);
@@ -75,7 +206,14 @@ export function useEntrance(
       window.removeEventListener('pageshow', resync);
       window.removeEventListener('focus', resync);
     };
-  }, [clock, counting]);
+  }, [counting, evaluate, timing]);
+
+  // Once the doors have opened, the final ten seconds are spent.
+  useEffect(() => {
+    if (!source || counting || finalRef.current === null) return;
+    finalRef.current = null;
+    source.saveFinalStart(null);
+  }, [counting, source]);
 
   // Ceremony beats.
   useEffect(() => {
@@ -100,7 +238,6 @@ export function useEntrance(
     }
   }, [clock, state, storage]);
 
-  const target = openingInstant();
   const enter = useCallback(() => dispatch({ type: 'enter' }), []);
   /** The card has just been presented (by hand, or seen on another device). */
   const presentMembership = useCallback(() => {
@@ -109,6 +246,8 @@ export function useEntrance(
     dispatch({ type: 'credential' });
   }, []);
   const replay = useCallback(() => dispatch({ type: 'replay' }), []);
+  /** Already a member by the server's record: no second ceremony. */
+  const admitted = useCallback(() => dispatch({ type: 'admitted' }), []);
   const currentHour = useCallback(
     () => new Date(clock.now()).getHours(),
     [clock],
@@ -117,15 +256,18 @@ export function useEntrance(
   return {
     stage: state.stage,
     welcomed: state.welcomed,
-    remaining: remainingUntil(counting ? now : target, target),
-    anticipation: counting ? anticipation(now, target) : 1,
+    remaining: remainingUntil(counting ? view.now : view.target, view.target),
+    anticipation: counting ? anticipation(view.now, view.target) : 1,
     reducedMotion,
     member,
+    /** The doors open early by the owner's schedule (ADR-022). */
+    early: early !== null && earlyActive(early, openingInstant()),
     /** The entrance clock, refreshed every second while counting. */
-    now,
+    now: view.now,
     enter,
     replay,
     presentMembership,
+    admitted,
     currentHour,
   };
 }

@@ -203,6 +203,24 @@ export function JourneyOffice() {
         Server time {bothZones(data.now)}. Milestones fire from the server’s
         every-minute round; no browser needs to be open.
       </p>
+      {(() => {
+        const opening = data.milestones.find((m) => m.key === 'casino-opening');
+        const spins = data.milestones.find(
+          (m) => m.key === 'casino-opening-spins',
+        );
+        return opening &&
+          opening.state === 'pending' &&
+          spins &&
+          spins.state !== 'pending' &&
+          spins.state !== 'fired' ? (
+          <p className="office-notice" role="note">
+            The Grand Casino opens at {jamaica(opening.fireAt)} Jamaica but its
+            opening spins are {spins.state}. Her admission letter will not
+            promise spins, and the Casino will show none until you issue a batch
+            or resume “{spins.title}”.
+          </p>
+        ) : null;
+      })()}
       {held && (
         <p className="office-notice" role="note">
           Communications to Alise are on hold (see the top of the Control

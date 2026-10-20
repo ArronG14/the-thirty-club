@@ -63,6 +63,7 @@ function journeyWith(
     stateOf: (room) => all[room],
     accept,
     refresh: vi.fn(),
+    enter: vi.fn(async () => undefined),
     want: vi.fn(),
   };
 }

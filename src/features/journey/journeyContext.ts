@@ -26,6 +26,11 @@ export interface JourneyValue {
   accept(room: AdmissionRoomId): Promise<AcceptOutcome>;
   refresh(): void;
   /**
+   * Records her membership on the server once the doors have opened
+   * (ADR-022). Best effort: without a member session nothing is recorded.
+   */
+  enter(): Promise<void>;
+  /**
    * Asks the provider to start reading the journey. Stable. Called by
    * `useJourney`, so pages that never consult the journey (the locked
    * doors) make no request for it.

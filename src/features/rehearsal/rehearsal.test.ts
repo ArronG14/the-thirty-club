@@ -80,7 +80,9 @@ describe('the rehearsal timeline', () => {
     const times = TIMELINE.map((e) => e.at);
     expect(times).toEqual([...times].sort((a, b) => a - b));
     expect(SCENARIOS.map((s) => s.id)).toEqual([
-      'early-membership',
+      'early-admission-teaser',
+      'early-admission-doors',
+      'early-admission-late',
       'before-departure',
       'departure-opening',
       'casino-opening',

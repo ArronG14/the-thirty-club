@@ -79,6 +79,24 @@ export default function AuthoritativeCasino({
     };
   }, [refresh]);
 
+  // Spins issued while the page is open appear without a reload: on return
+  // to the page and every half minute while it is visible.
+  useEffect(() => {
+    if (standing !== 'member') return;
+    const again = () => {
+      if (document.visibilityState === 'visible' && !busy.current)
+        void refresh();
+    };
+    const timer = setInterval(again, 30_000);
+    document.addEventListener('visibilitychange', again);
+    window.addEventListener('focus', again);
+    return () => {
+      clearInterval(timer);
+      document.removeEventListener('visibilitychange', again);
+      window.removeEventListener('focus', again);
+    };
+  }, [standing, refresh]);
+
   const spin = async () => {
     if (busy.current || !status?.available) return;
     busy.current = true;

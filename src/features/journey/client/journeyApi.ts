@@ -17,6 +17,9 @@ import { deskRequest } from '../../correspondence/client/correspondenceApi';
 
 export const journeyState = () => deskRequest<MemberJourney>('/journey');
 
+export const enterClub = () =>
+  deskRequest<AcceptAdmissionResult>('/journey/enter', { body: {} });
+
 export const acceptAdmission = (room: AdmissionRoomId) =>
   deskRequest<AcceptAdmissionResult>(`/journey/admissions/${room}/accept`, {
     body: {},

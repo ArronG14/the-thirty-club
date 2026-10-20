@@ -5,7 +5,55 @@ import { browserMembershipStorage } from '../club/domain/membershipRecord';
 import { hasMembership } from '../concierge/client/membership';
 import { activeSession, realmKey } from '../concierge/client/sessionStore';
 import { browserEntranceStorage } from './domain/entranceRecord';
-import { systemClock, type EntranceEnvironment } from './domain/environment';
+import {
+  systemClock,
+  type EarlyAdmissionSource,
+  type EntranceEnvironment,
+} from './domain/environment';
+import { deviceStorage } from '../rehearsal/storage';
+
+const FINAL_KEY = 'thirty-club:early-admission';
+
+/**
+ * The server's early-admission schedule (ADR-022). On rehearsal pages the
+ * request is answered by the simulated office in the tab.
+ */
+const admissionSource: EarlyAdmissionSource = {
+  async read() {
+    try {
+      const response = await fetch('/api/v1/entrance', {
+        cache: 'no-store',
+        credentials: 'same-origin',
+        headers: { accept: 'application/json' },
+        signal: AbortSignal.timeout(10_000),
+      });
+      return response.ok ? await response.json() : null;
+    } catch {
+      return null;
+    }
+  },
+  loadFinalStart() {
+    try {
+      const raw = deviceStorage().getItem(FINAL_KEY);
+      const at = raw ? Number(JSON.parse(raw).finalStartedAt) : NaN;
+      return Number.isFinite(at) ? at : null;
+    } catch {
+      return null;
+    }
+  },
+  saveFinalStart(at) {
+    try {
+      if (at === null) deviceStorage().removeItem(FINAL_KEY);
+      else
+        deviceStorage().setItem(
+          FINAL_KEY,
+          JSON.stringify({ finalStartedAt: at }),
+        );
+    } catch {
+      // Without storage a reload simply begins the final ten seconds again.
+    }
+  },
+};
 import { resolveDevPreview } from './preview/devPreview';
 
 /**
@@ -28,6 +76,7 @@ export function createEntranceEnvironment(): EntranceEnvironment {
       membership: browserMembershipStorage(),
       card: { isPresented: () => hasMembership() },
       preview: null,
+      admission: admissionSource,
     };
   }
   if (import.meta.env.DEV) {
@@ -42,5 +91,6 @@ export function createEntranceEnvironment(): EntranceEnvironment {
     membership: browserMembershipStorage(realmKey('membership')),
     card: { isPresented: () => hasMembership() },
     preview: null,
+    admission: admissionSource,
   };
 }

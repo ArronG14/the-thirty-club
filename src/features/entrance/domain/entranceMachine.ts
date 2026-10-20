@@ -38,7 +38,9 @@ export type EntranceEvent =
   | { type: 'credential' }
   | { type: 'advance' }
   | { type: 'enter' }
-  | { type: 'replay' };
+  | { type: 'replay' }
+  /** The server says she is already a member (admitted on another device). */
+  | { type: 'admitted' };
 
 export interface EntranceStart {
   phase: TimePhase;
@@ -99,6 +101,13 @@ export function entranceReducer(
         : state;
     case 'replay':
       return state.stage === 'foyer' ? { ...state, stage: 'unlocking' } : state;
+    case 'admitted':
+      // Never interrupt a ceremony in progress; otherwise straight in.
+      return state.stage === 'unlocking' ||
+        state.stage === 'opening' ||
+        state.stage === 'foyer'
+        ? state
+        : { stage: 'foyer', welcomed: false };
   }
 }
 

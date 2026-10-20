@@ -58,10 +58,10 @@ export const CASINO_OPENS = jamaica('2026-10-24', '14:00');
 /** The journey's default Casino milestone (ADR-020). */
 export const CASINO_MILESTONE = jamaica('2026-10-23', '09:00');
 /**
- * Rehearsal assumption for the first invitation: 21 October, 10:00 Jamaica.
- * In LIVE the owner chooses the time and releases the hold (ADR-021).
+ * Early admission (ADR-022): the doors open at 19:00 UK on 21 October
+ * (13:00 Jamaica) once the owner arms the `early-membership` milestone.
  */
-export const EARLY_MEMBERSHIP = jamaica('2026-10-21', '10:00');
+export const EARLY_MEMBERSHIP = uk('2026-10-21', '19:00');
 export const PRIVILEGES_OPENS = jamaica('2026-10-24', '10:00');
 export const DEPARTURE_OPENS = instantOf(DEPARTURE_LOUNGE_OPENS);
 
@@ -171,6 +171,8 @@ export interface Scenario {
   admitted?: readonly AdmissionRoomId[];
   /** Milestones the owner triggers at this moment (in the simulation). */
   fire?: readonly string[];
+  /** Milestones the owner arms (resumes) at this moment. */
+  resume?: readonly string[];
   /** A rehearsal batch of server-issued Casino spins (with one voucher). */
   spins?: number;
   label: string;
@@ -188,13 +190,33 @@ const locked = (at: number, card = false) => {
 
 export const SCENARIOS: readonly Scenario[] = [
   {
-    id: 'early-membership',
-    label: 'Early membership (the first invitation)',
+    id: 'early-admission-teaser',
+    label: 'Early admission: after the 16:00 teaser',
     detail:
-      'Wednesday 21 Oct, 10:00 Jamaica (a rehearsal time; the owner chooses the real one): communications released, the owner triggers the held Lounge introduction and the Butler’s letter arrives at the locked doors with ENTER THE MEMBERS’ LOUNGE.',
-    at: EARLY_MEMBERSHIP,
+      'Wednesday 21 Oct, 16:01 UK, early admission armed: the locked doors count down to 19:00 UK and the Butler says the admission has been brought forward.',
+    at: uk('2026-10-21', '16:01'),
     go: '/',
-    fire: ['early-membership'],
+    resume: ['early-membership'],
+    apply: (at) => locked(at),
+  },
+  {
+    id: 'early-admission-doors',
+    label: 'Early admission: 19:00 UK, watching',
+    detail:
+      '18:59:40 UK: the clock holds at 00:00:10, the final ten seconds begin at 19:00 and the doors open by themselves into the membership ceremony.',
+    at: EARLY_MEMBERSHIP - 20_000,
+    go: '/',
+    resume: ['early-membership'],
+    apply: (at) => locked(at),
+  },
+  {
+    id: 'early-admission-late',
+    label: 'Early admission: arriving after 19:00 UK',
+    detail:
+      '20:15 UK: she opens the app later; the final ten seconds begin then, and the doors open.',
+    at: uk('2026-10-21', '20:15'),
+    go: '/',
+    resume: ['early-membership'],
     apply: (at) => locked(at),
   },
   {
@@ -344,6 +366,7 @@ export async function applyScenario(id: string, go = true) {
   await scenario.apply(scenario.at);
   await syncAdmissions(scenario.admitted ?? [], [], {
     fire: scenario.fire,
+    resume: scenario.resume,
     spins: scenario.spins,
   });
   remember(scenario.label);
@@ -392,6 +415,8 @@ export interface LaunchTarget {
   admitted?: readonly AdmissionRoomId[];
   /** A rehearsal batch of server-issued Casino spins (with one voucher). */
   spins?: number;
+  /** Milestones the owner arms (resumes) for this launch. */
+  resume?: readonly string[];
 }
 
 /**
@@ -405,6 +430,7 @@ async function syncAdmissions(
   ceremony: readonly AdmissionRoomId[] = [],
   also: {
     fire?: readonly string[] | undefined;
+    resume?: readonly string[] | undefined;
     spins?: number | undefined;
   } = {},
 ) {
@@ -423,11 +449,13 @@ async function syncAdmissions(
     (room) => !ceremony.includes(room),
   );
   const fire = also.fire ?? [];
+  const resume = also.resume ?? [];
   const spins = also.spins ?? 0;
   if (
     admitted.length === 0 &&
     ceremony.length === 0 &&
     fire.length === 0 &&
+    resume.length === 0 &&
     spins === 0
   )
     return;
@@ -436,7 +464,7 @@ async function syncAdmissions(
   // database flushing to IndexedDB before this page unloads.
   sessionStorage.setItem(
     PENDING_ADMISSIONS_KEY,
-    JSON.stringify({ admitted, ceremony, fire, spins }),
+    JSON.stringify({ admitted, ceremony, fire, resume, spins }),
   );
 }
 
@@ -586,15 +614,15 @@ export const LAUNCH_TARGETS: readonly LaunchTarget[] = [
   },
   {
     id: 'early-lounge',
-    label: 'Founding membership: the Lounge before the birthday',
+    label: 'Founding membership: the doors open at 19:00 UK',
     detail:
-      'Wednesday 21 Oct after 10:00 Jamaica (rehearsal time): the early-membership letter at the locked doors; ENTER THE MEMBERS’ LOUNGE accepts it and the founding-membership induction follows.',
+      'Wednesday 21 Oct just after 19:00 UK, early admission armed: the final ten seconds, the doors, the membership ceremony and the Lounge (no birthday rooms).',
     launch: async () => {
       const at = atLeast(EARLY_MEMBERSHIP + MINUTE);
       locked(at);
       return '/';
     },
-    ceremony: ['lounge'],
+    resume: ['early-membership'],
   },
   {
     id: 'casino-admission',
@@ -621,6 +649,7 @@ export async function launchRoom(id: string) {
   const path = await target.launch();
   await syncAdmissions(target.admitted ?? [], target.ceremony ?? [], {
     spins: target.spins,
+    resume: target.resume,
   });
   remember(target.label);
   window.location.assign(path);

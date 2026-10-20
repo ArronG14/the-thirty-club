@@ -420,3 +420,62 @@ describe('milestone creation (contract issue A)', () => {
     expect(await available()).toBe(3);
   });
 });
+
+describe('the Casino never promises spins that do not exist', () => {
+  const letterOfAdmission = async () =>
+    (
+      await call<{
+        admissions: { roomId: string; letter: { body: string } | null }[];
+      }>('/journey', undefined, 'member')
+    ).data.admissions.find((a) => a.roomId === 'casino')!.letter!.body;
+
+  it('opening with its spins milestone held: the letter promises none, and the Casino shows none', async () => {
+    await at('2026-10-23T14:00:30Z'); // 09:00:30 Jamaica
+    await runJourneyRound(db);
+    expect(await roomState('casino')).toBe('invited');
+    expect(await letterOfAdmission()).not.toContain('spins');
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    expect(await available()).toBe(0);
+  });
+
+  it('opening with its spins milestone armed: spins first, then a letter that promises them', async () => {
+    await at('2026-10-23T13:00:00Z'); // 08:00 Jamaica: the owner arms it in time
+    await call(
+      '/owner/journey/milestones/casino-opening-spins',
+      {
+        effects: [
+          {
+            type: 'hook',
+            name: 'casino.spins.issue',
+            params: { quantity: 4, announce: false },
+          },
+        ],
+      },
+      'owner',
+      'PATCH',
+    );
+    await call('/owner/journey/milestones/casino-opening-spins/resume', {});
+    await at('2026-10-23T14:00:30Z');
+    await runJourneyRound(db);
+    expect(await letterOfAdmission()).toContain(
+      'complimentary spins have been placed at your disposal',
+    );
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    expect(await available()).toBe(4);
+  });
+
+  it('cancelling a batch before its announcement is delivered withdraws the announcement', async () => {
+    await at('2026-10-23T13:30:00Z'); // before the opening
+    const batch = await issue(3, [], 'cancel-me-batch-1');
+    const cancelled = await call<{ announcementDelivered: boolean }>(
+      `/owner/casino/batches/${batch.data.batchId}/cancel`,
+      {},
+    );
+    expect(cancelled.data.announcementDelivered).toBe(false);
+    await admit('casino');
+    await runJourneyRound(db);
+    expect(
+      (await letters()).filter((l) => l.action?.kind === 'return'),
+    ).toEqual([]);
+  });
+});

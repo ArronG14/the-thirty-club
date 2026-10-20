@@ -22,7 +22,7 @@ import {
 } from '../correspondence/client/correspondenceApi';
 import { simulationActive } from '../rehearsal/mode';
 import { deviceStorage } from '../rehearsal/storage';
-import { acceptAdmission, journeyState } from './client/journeyApi';
+import { acceptAdmission, enterClub, journeyState } from './client/journeyApi';
 import {
   JourneyContext,
   type AcceptOutcome,
@@ -160,6 +160,17 @@ export function JourneyProvider({
     [],
   );
 
+  const enter = useCallback(async () => {
+    const result = await enterClub();
+    if (!result.ok) return;
+    generation.current++;
+    setSnapshot((current) => {
+      const next = admit(current, 'lounge');
+      writeCache(next);
+      return next;
+    });
+  }, []);
+
   const value = useMemo<JourneyValue>(
     () => ({
       status,
@@ -167,9 +178,10 @@ export function JourneyProvider({
       stateOf: (room) => snapshot.rooms[room],
       accept,
       refresh: () => void load(),
+      enter,
       want,
     }),
-    [status, snapshot, accept, load, want],
+    [status, snapshot, accept, load, want, enter],
   );
 
   return (

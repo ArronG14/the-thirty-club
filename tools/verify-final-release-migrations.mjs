@@ -18,6 +18,7 @@ const RELEASE = [
   '20261022090000_birthday_journey.sql',
   '20261022100000_casino_rewards.sql',
   '20261022110000_communication_hold.sql',
+  '20261022120000_sms_operations.sql',
 ];
 const dir = resolve('supabase/migrations');
 const all = readdirSync(dir)
@@ -31,10 +32,10 @@ const rows = async (sql, params) => (await pg.query(sql, params)).rows;
 
 try {
   assert(
-    JSON.stringify(all.slice(-3)) === JSON.stringify(RELEASE),
-    `release migrations must be the last three, in order: ${RELEASE.join(', ')}`,
+    JSON.stringify(all.slice(-RELEASE.length)) === JSON.stringify(RELEASE),
+    `release migrations must be the last ${RELEASE.length}, in order: ${RELEASE.join(', ')}`,
   );
-  const baseline = all.slice(0, -3);
+  const baseline = all.slice(0, -RELEASE.length);
   assert(baseline.length === 9, 'expected the nine hosted migrations first');
   await pg.exec(
     'create role anon; create role authenticated; create role service_role bypassrls;',
@@ -66,7 +67,7 @@ try {
       'select id,title,body,state,published_at,opened_at from public.ttc_letters order by id',
     ),
     messages: await rows(
-      "select id,label,state from public.ttc_messages where label <> 'Queued to Alise' order by id",
+      "select id,label,state from public.ttc_messages where label <> 'Queued to Alise' and seed_key is distinct from 'butler-teaser-2026-10-21' order by id",
     ),
   });
   const before = await snapshot();
@@ -99,8 +100,18 @@ try {
   );
   assert(
     early[0]?.state === 'held' &&
-      new Date(early[0].fire_at).toISOString() === '2026-10-21T05:00:00.000Z',
-    'the Lounge introduction is not held on 21 October',
+      new Date(early[0].fire_at).toISOString() === '2026-10-21T18:00:00.000Z',
+    'early admission is not held at 21 October 19:00 UK',
+  );
+  const sms = await rows('select mode from public.ttc_sms_operations');
+  assert(sms.length === 1 && sms[0].mode === 'off', 'SMS mode is not OFF');
+  const teaser = await rows(
+    "select state, send_at from public.ttc_messages where seed_key = 'butler-teaser-2026-10-21'",
+  );
+  assert(
+    teaser[0]?.state === 'draft' &&
+      new Date(teaser[0].send_at).toISOString() === '2026-10-21T15:00:00.000Z',
+    'the 21 October teaser is not an unapproved 16:00 UK draft',
   );
   const armed = (
     await rows(
@@ -134,6 +145,7 @@ try {
     'public.ttc_journey_hook(text,jsonb,text)',
     'public.ttc_casino_action(uuid,text,text,jsonb)',
     'public.ttc_hold_action(uuid,text,text,jsonb)',
+    'public.ttc_sms_action(uuid,text,text,jsonb)',
   ])
     assert(
       (await rows('select to_regprocedure($1) is not null as ok', [fn]))[0].ok,
@@ -145,11 +157,11 @@ try {
       has_table_privilege('authenticated',c.oid,'SELECT') as auth
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r' and (c.relname like 'ttc_journey%' or c.relname like 'ttc_room%'
-      or c.relname like 'ttc_casino%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
+      or c.relname like 'ttc_casino%' or c.relname like 'ttc_sms%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
       'ttc_voucher_requests','ttc_communication_hold'))`);
   assert(
-    tables.length === 10,
-    `expected 10 release tables, found ${tables.length}`,
+    tables.length === 12,
+    `expected 12 release tables, found ${tables.length}`,
   );
   for (const t of tables)
     assert(
@@ -161,7 +173,8 @@ try {
       has_function_privilege('authenticated',p.oid,'EXECUTE') as auth
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and (p.proname like 'ttc_journey%' or p.proname like 'ttc_room%'
-      or p.proname like 'ttc_casino%' or p.proname like 'ttc_hold%' or p.proname like 'ttc_letter%')`);
+      or p.proname like 'ttc_casino%' or p.proname like 'ttc_hold%' or p.proname like 'ttc_letter%'
+      or p.proname like 'ttc_sms%')`);
   for (const f of functions)
     assert(!f.anon && !f.auth, `browser roles can execute ${f.proname}`);
 
@@ -173,7 +186,9 @@ try {
         existingRecordsUnchanged: true,
         unsentAliseSmsHeld: true,
         holdActiveUntil: '2026-10-21T00:00 America/Jamaica',
-        earlyMembership: 'held, 21 October, time not chosen',
+        earlyAdmission: 'held, 21 October 19:00 UK (13:00 Jamaica)',
+        smsMode: 'off',
+        teaser: 'draft, 21 October 16:00 UK, unapproved',
         armed,
         releaseTables: tables.length,
         releaseFunctionsClosedToBrowserRoles: functions.length,

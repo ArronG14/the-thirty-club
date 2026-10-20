@@ -1,0 +1,68 @@
+/* SMS operations (ADR-022): plain, legible, iPhone-width first. */
+.sms-ops {
+  display: grid;
+  gap: 0.75rem;
+}
+.sms-ops__status {
+  display: grid;
+  gap: 0.75rem;
+}
+@media (min-width: 720px) {
+  .sms-ops__status {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+.sms-ops__status article,
+.sms-ops__list li {
+  padding: 0.75rem;
+  border: 1px solid rgb(196 164 106 / 0.35);
+  border-radius: 6px;
+}
+.sms-ops__status h3 {
+  margin: 0 0 0.3rem;
+}
+.sms-ops__mode[data-mode='live'] {
+  color: #c05621;
+  font-weight: 600;
+}
+.sms-ops__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.4rem;
+}
+.sms-ops button,
+.sms-ops input {
+  min-height: 44px;
+  font-size: 16px;
+}
+.sms-ops__confirm {
+  display: grid;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+.sms-ops__list {
+  display: grid;
+  gap: 0.6rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.sms-ops__label {
+  margin: 0 0 0.3rem;
+}
+.sms-ops__body {
+  margin: 0.4rem 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 0.95rem;
+}
+.sms-ops__error {
+  color: #c53030;
+}
+.sms-ops__hint,
+.sms-ops__note {
+  opacity: 0.8;
+  font-size: 0.92rem;
+}

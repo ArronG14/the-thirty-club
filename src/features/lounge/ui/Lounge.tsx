@@ -98,6 +98,14 @@ export function Lounge({
   const { welcomed, replay, reducedMotion, currentHour } = model;
   const journey = useJourney();
   const club = useClub(environment, journey?.snapshot.rooms);
+  // A member by the server's record who did not come through the doors on
+  // this device just now: no second induction (ADR-022).
+  const knownMember =
+    !welcomed && journey?.stateOf('lounge') === 'admitted' && !club.inducted;
+  const { induct: inductQuietly } = club;
+  useEffect(() => {
+    if (knownMember) inductQuietly();
+  }, [knownMember, inductQuietly]);
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState<RenderMode>(() =>
@@ -228,6 +236,8 @@ export function Lounge({
   }, []);
 
   function accept() {
+    // Her membership, recorded on the server for every device (ADR-022).
+    void journey?.enter();
     const now = environment.clock.now();
     const record = inductMember(club.record, now);
     club.induct();

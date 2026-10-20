@@ -1,4 +1,4 @@
-import { useState, type CSSProperties } from 'react';
+import { useEffect, useState, type CSSProperties } from 'react';
 import { useLocation } from 'react-router';
 import type { EntranceStage } from '../domain/entranceMachine';
 import type { EntranceEnvironment } from '../domain/environment';
@@ -8,6 +8,7 @@ import { useEntrance } from '../useEntrance';
 import { ClubDefs } from './ClubDefs';
 import { Facade } from './Facade';
 import { Lounge } from '../../lounge/ui/Lounge';
+import { useJourney } from '../../journey/journeyContext';
 import './entrance.css';
 
 const ANNOUNCEMENTS: Partial<Record<EntranceStage, string>> = {
@@ -33,7 +34,12 @@ export function Entrance({
       'membership',
   );
   const model = useEntrance(env, { presentedNow });
-  const { stage, anticipation, reducedMotion } = model;
+  const { stage, anticipation, reducedMotion, admitted } = model;
+  // Admitted on another device (ADR-022): straight into the Lounge.
+  const knownMember = useJourney()?.stateOf('lounge') === 'admitted';
+  useEffect(() => {
+    if (knownMember) admitted();
+  }, [knownMember, admitted]);
 
   return (
     <div

@@ -19,6 +19,7 @@ const ControlCentre = lazy(
 );
 
 const LoungeRoute = lazy(() => import('../features/lounge/ui/LoungeRoute'));
+const RehearseLink = lazy(() => import('../features/rehearsal/RehearseLink'));
 
 const DepartureLounge = lazy(
   () => import('../features/concierge/ui/DepartureLounge'),
@@ -114,6 +115,14 @@ export function App() {
         )}
         <Routes>
           <Route path="/" element={<Entrance />} />
+          <Route
+            path="/rehearse"
+            element={
+              <Suspense fallback={<Arriving />}>
+                <RehearseLink />
+              </Suspense>
+            }
+          />
           <Route
             path="/lounge"
             element={

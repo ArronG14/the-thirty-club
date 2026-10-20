@@ -103,6 +103,7 @@ export async function applyPendingAdmissions() {
     admitted?: unknown;
     ceremony?: unknown;
     fire?: unknown;
+    resume?: unknown;
     spins?: unknown;
   } | null;
   try {
@@ -117,6 +118,13 @@ export async function applyPendingAdmissions() {
   const rooms = (value: unknown) =>
     Array.isArray(value) ? value.filter(isAdmissionRoom) : [];
   await rehearseAdmissions(rooms(pending.admitted), rooms(pending.ceremony));
+  if (Array.isArray(pending.resume))
+    for (const key of pending.resume)
+      if (typeof key === 'string')
+        // Already armed or fired in an earlier rehearsal: nothing to do.
+        await simOwner(`/owner/journey/milestones/${key}/resume`, {}).catch(
+          () => undefined,
+        );
   if (Array.isArray(pending.fire))
     for (const key of pending.fire)
       if (typeof key === 'string') await fireRehearsalMilestone(key);

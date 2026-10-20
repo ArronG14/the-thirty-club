@@ -50,6 +50,7 @@ export function Facade({ model }: { model: EntranceModel }) {
     member,
     presentMembership,
     now,
+    early,
   } = model;
   const [secretTap] = useState(() =>
     fiveTapGesture(() =>
@@ -149,9 +150,13 @@ export function Facade({ model }: { model: EntranceModel }) {
           {awaitingCard
             ? 'Happy birthday, Alise. Your membership card, if you please.'
             : prepared
-              ? member
-                ? 'Alise, your card is in order. Your table is being prepared.'
-                : 'Alise, your table is being prepared.'
+              ? early
+                ? remaining.totalMs <= 10_000
+                  ? 'Alise, the club is ready to receive you.'
+                  : 'Alise, your admission has been brought forward.'
+                : member
+                  ? 'Alise, your card is in order. Your table is being prepared.'
+                  : 'Alise, your table is being prepared.'
               : 'Alise, your table is ready.'}
         </p>
         {locked && (
