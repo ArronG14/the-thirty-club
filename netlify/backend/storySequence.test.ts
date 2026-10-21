@@ -8,6 +8,8 @@ import { STORY_COPY } from '../../src/shared/story/copy';
 
 let pg: PGlite;
 let member: string;
+let casinoOutboxBefore = 0;
+let casinoLettersBefore = 0;
 async function clock(at: string) {
   await pg.query('update public.ttc_sim_clock set offset_ms=$1', [
     Date.parse(at) - Date.now(),
@@ -262,6 +264,10 @@ describe('the recipient journey, in chronological server time', () => {
     expect((await milestone('jamaica-arrival')).state).toBe('held');
   });
   it('23 Oct: opening invitation follows three issued spins; CLAIM persists and grants once', async () => {
+    casinoOutboxBefore = await scalar(
+      'select count(*)::int n from public.ttc_messages where public.ttc_alise_category(category)',
+    );
+    casinoLettersBefore = await count('ttc_letters');
     await clock('2026-10-23T13:59:59Z');
     await approve('casino-opening', {
       storySms: 'TEST Casino invitation https://30.ag14.co/lounge',
@@ -449,6 +455,120 @@ describe('the recipient journey, in chronological server time', () => {
       (await action('vault-open', { codeHash: 'breakfast-code' }, 'member'))
         .alreadyOpened,
     ).toBe(true);
+  });
+  it('all NINE planned spins: three exact batches, outcomes, notifications and retry invariants', async () => {
+    const batches = (
+      await pg.query<{
+        quantity: number;
+        state: string;
+        key: string;
+        fire_at: string;
+        slug: string;
+        position: number;
+      }>(`
+      select b.quantity,b.status state,m.key,m.fire_at,a.snapshot->>'slug' slug,a.position
+      from public.ttc_casino_batches b
+      join public.ttc_journey_milestones m on b.idempotency_key='milestone:'||m.key||':0'
+      join public.ttc_casino_allocations a on a.batch_id=b.id
+      order by m.fire_at
+    `)
+    ).rows;
+    expect(
+      batches.map((b) => ({
+        key: b.key,
+        quantity: b.quantity,
+        slug: b.slug,
+        position: b.position,
+        state: b.state,
+      })),
+    ).toEqual([
+      {
+        key: 'casino-opening-spins',
+        quantity: 3,
+        slug: 'jamaica-drinks',
+        position: 3,
+        state: 'completed',
+      },
+      {
+        key: 'casino-afternoon-spins',
+        quantity: 3,
+        slug: 'nyla-film',
+        position: 3,
+        state: 'completed',
+      },
+      {
+        key: 'casino-evening-spins',
+        quantity: 3,
+        slug: 'evening-jackpot',
+        position: 3,
+        state: 'completed',
+      },
+    ]);
+    expect(batches.map((b) => new Date(b.fire_at).toISOString())).toEqual([
+      '2026-10-23T14:00:00.000Z',
+      '2026-10-23T19:30:00.000Z',
+      '2026-10-24T01:30:00.000Z',
+    ]);
+    expect(await count('ttc_casino_batches')).toBe(3);
+    expect(batches.reduce((n, b) => n + b.quantity, 0)).toBe(9);
+    expect(await count('ttc_casino_spins')).toBe(9);
+    expect(await count('ttc_reward_entitlements')).toBe(3);
+    for (const key of [
+      'casino-opening-spins',
+      'casino-afternoon-spins',
+      'casino-evening-spins',
+    ])
+      await fire(key);
+    await round();
+    await round();
+    expect(
+      (
+        await action(
+          'casino-spin',
+          { idempotencyKey: 'evening-spin-0002' },
+          'member',
+        )
+      ).duplicate,
+    ).toBe(true);
+    await expect(
+      action(
+        'casino-spin',
+        { idempotencyKey: 'forbidden-tenth-spin' },
+        'member',
+      ),
+    ).rejects.toThrow('not-open');
+    const first = await action('voucher-list', {}, 'member');
+    expect(await action('voucher-list', {}, 'member')).toEqual(first);
+    expect(await count('ttc_casino_spins')).toBe(9);
+    expect(await count('ttc_casino_batches')).toBe(3);
+    expect(
+      (await scalar(
+        'select count(*)::int n from public.ttc_messages where public.ttc_alise_category(category)',
+      )) - casinoOutboxBefore,
+    ).toBe(3);
+    expect((await count('ttc_letters')) - casinoLettersBefore).toBe(2);
+    const suppressed = (
+      await pg.query<{ state: string; last_error: string }>(
+        "select state,last_error from public.ttc_messages where body='TEST Casino invitation https://30.ag14.co/lounge'",
+      )
+    ).rows[0]!;
+    expect(suppressed.state).toBe('cancelled');
+    expect(suppressed.last_error).toContain(
+      'accepted her admission before the invitation was sent',
+    );
+    for (const body of [
+      'TEST Casino invitation https://30.ag14.co/lounge',
+      'TEST: return to Casino https://30.ag14.co/rooms/casino',
+      'TEST evening return https://30.ag14.co/rooms/casino',
+    ]) {
+      const rows = (
+        await pg.query<{ n: number }>(
+          'select count(*)::int n from public.ttc_messages where body=$1',
+          [body],
+        )
+      ).rows;
+      expect(rows[0]!.n).toBe(1);
+    }
   });
   it('24 Oct: UK midnight reveals nothing; Jamaica midnight leaves a persistent optional invitation', async () => {
     await clock('2026-10-23T23:00:00Z');

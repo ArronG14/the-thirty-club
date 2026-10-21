@@ -53,6 +53,24 @@ Implemented correction: only a successful explicit NFC/code activation issues a 
 
 **None of 22, 23 or 24 October is certified production-ready while the listed conditions remain.** Persistent club access on 25 October is exercised locally; the farewell stays held. No unbooked 26 October excursion is created or promised. Chanel's drawer/tag/location are not specified in the supplied authoritative material, so no mapping or reveal was invented.
 
+## Nine-spin reconciliation and full release criterion
+
+The authoritative working DOCX explicitly states **“23 OCTOBER — THREE FIXED CASINO SESSIONS”**. The recovered original afternoon/evening narratives and locked morning CLAIM clarification agree. All nine are Machine spins; the 1,000 fictional roulette tokens are separate.
+
+| 23 October, Jamaica | UTC           | Global spins | Fixed outcomes and action                                                                                                                                                                                       |
+| ------------------- | ------------- | ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 09:00               | 23 Oct 14:00Z | 1–3          | First two: no prize. Third: three Jamaica Bring Me a Drink delivery vouchers. Pending CLAIM survives refresh; only CLAIM credits that balance, once.                                                            |
+| 14:30               | 23 Oct 19:30Z | 4–6          | First two: no prize. Third: Nyla film. Persists for replay; replay consumes no spin.                                                                                                                            |
+| 20:30               | 24 Oct 01:30Z | 7–9          | First two: no prize. Third: mystery jackpot/riddle. Breakfast stays concealed until its distinct NFC/code opens the compartment. No breakfast-arrived SMS until the owner acts when food is physically present. |
+
+Verification of this correction: default gates **776/776 PASS**; cumulative nine-spin Chromium/WebKit journey **2/2 PASS**; real twice-replayed five-second TEST film **2/2 PASS**, with unchanged spin IDs and a single prize; PostgreSQL story suite **11/11 PASS**. The final birthday/Nyla assets are not certified by that fixture.
+
+The implementation at `3e410bb` already configured these three batches; this correction adds an explicit aggregate nine-spin acceptance check rather than creating or retiming a session. The continuous Chromium/WebKit test now checks zero spins before the first release, 3/6/9 committed spins in three distinct batches, each session’s first two prize-free results and third prize, correct timestamp windows, no future-session credits early, a durable pending CLAIM and exactly one credit, Nyla replay availability after refresh, duplicate spin retry returning the same result, no tenth spin, and all nine persisting through 25 October. The PostgreSQL test separately proves exactly nine issued and played spins, three completed batches, three prize allocations at position three, one return/invitation outbox record per session, and no duplicates after repeated scheduling/retries. If admission is accepted before its SMS is sent, the now-unnecessary morning SMS is cancelled, as asserted. The two return notifications remain queued under existing transport policy.
+
+**Read-only hosted recheck, 21 October:** morning/afternoon grant definitions are three each at 09:00/14:30. Hosted evening remains 20:00, corrected to the document’s 20:30 by the unapplied story migration. Jamaica drinks is active with quantity three; Nyla is inactive without a film reference; `evening-jackpot` is absent. Zero real Vault compartments and an empty personal-card message were also re-confirmed. These are production configuration blockers, not missing session specification. No hosted records were changed.
+
+**The release unit is the complete 22–25 October experience, ready before the flight on 22 October. A departure-only release does not satisfy the gate.** Local story tests do not certify the final media, real gift mappings, personal card message, hotel arrangements, approved communications or production deployment. All listed release conditions must close; keep the full release blocked until they do. The existing production-write/deployment restrictions and separate media boundary remain in force.
+
 ## Communications, claims and mobile operation
 
 Story milestones now expose exact SMS, prerequisite scenes, manual-only status, physical Vault mapping, preview and explicit editorial approval in the existing phone-sized journey desk. Editing text/configuration clears approval. Unreviewed scenes fail closed. Trigger failures show an error instead of a false success notice. Disabled and manual-only scenes cannot be resumed. Existing LIVE/TEST separation, hold, SMS modes, outbox and provider idempotency are retained.
@@ -69,7 +87,7 @@ Final local results:
 
 | Check                                                            | Result                                                                                    |
 | ---------------------------------------------------------------- | ----------------------------------------------------------------------------------------- |
-| `npm run check`                                                  | PASS: types, lint, formatting, 775 tests / 60 files, production build                     |
+| `npm run check`                                                  | PASS: types, lint, formatting, 776 tests / 60 files, production build                     |
 | Continuous 22–25 Oct recipient journey and mobile owner controls | 4/4 PASS, iPhone profiles in Chromium and WebKit                                          |
 | Release / integration browser regressions                        | Chromium 10/10 overall (7 initial + 3 corrected assertion reruns); WebKit 10/10 final run |
 | Production PWA / offline browser checks                          | 3/3 PASS                                                                                  |
@@ -94,7 +112,7 @@ The upgrade rehearsal starts from the fifteen currently hosted migrations with a
 
 ## Exact safe release and rollback
 
-1. Review the document-derived copy/variant notes and complete the real physical configuration listed above. Review this branch's concrete diff and final checks. Keep later scenes held until individually ready. Do not replay teaser or admission.
+1. Review the document-derived copy/variant notes and complete the real physical configuration listed above. Review this branch's concrete diff and final checks. Complete every 22–25 October release condition before treating this candidate as releasable; a departure-only release is not acceptable. Hold future scenes until their intended release, with all content and configuration verified in advance. Do not replay teaser or admission.
 2. Obtain owner approval for the **exact story commit**, the one new hosted migration and deployment. Media upload/deploy/configuration has its own approval and verification boundary. This branch does not merge or alter the media branch.
 3. Verify `origin/main` still equals the chosen reviewed release base. The observed base is `2b328722154279410dba66266fdc64559c2ce8cd`. Stop and reconcile if another branch has released. Lock Netlify auto-publishing before any main update. Record the current published deploy for rollback.
 4. In the clean story checkout run `npm run release:preflight`. It is local and makes no production changes. Confirm the hosted migration history still contains the original fifteen versions. Do **not** reapply those migrations.

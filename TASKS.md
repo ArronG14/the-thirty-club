@@ -391,3 +391,10 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 - IMPLEMENTED — One optional midnight screening invitation, exact post-film closing, private-card silence, dinner and excursion-free farewell closing.
 - VERIFIED — Local gates: 775 tests; type/lint/format/build; security/upgrade rehearsals; four Chromium/WebKit continuous recipient and phone-owner cases; ten release/integration regressions per browser; three PWA checks. Actual results and reruns in BUILD_LOG.
 - BLOCKED — Production readiness: copy/short SMS review and real setup pending; no real Vault mappings or birthday-card message hosted; Nyla inactive; final media branch requires separate approved upload/deploy/device validation. No production write/deploy/send performed.
+
+## Nine-spin correction — 21 October 2026
+
+- VERIFIED — Explicit all-nine browser ledger, source-backed 09:00 / 14:30 / 20:30 Jamaica allocation, pending CLAIM/replay/retry and no-tenth-spin assertions.
+- VERIFIED — PostgreSQL aggregate test: 11/11 story tests; nine issued/played, three batches/prizes, correct schedules, single notifications and duplicate suppression.
+- VERIFIED — Chromium/WebKit continuous nine-spin journey 2/2; actual TEST-film replay twice without extra spins/prizes 2/2; default gates 776/776 tests, type/lint/format/build.
+- BLOCKED — Full 22–25 October production release, never departure-only: real mappings/card/prize configuration, media, communications and previously recorded editorial/hotel checks remain required; no production writes authorized or performed.

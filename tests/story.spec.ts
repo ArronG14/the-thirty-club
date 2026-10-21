@@ -109,7 +109,68 @@ async function machine(page: Page) {
   await expect(page.locator('.house-prize')).toBeVisible({ timeout: 30000 });
 }
 
-test('22–25 October: physical actions, invitations, claims and persistence in order', async ({
+// Story Bible: “23 OCTOBER — THREE FIXED CASINO SESSIONS”. These
+// are the three documented sessions, not a fabricated quota-filling session.
+const casinoPlan = [
+  {
+    at: '2026-10-23T14:00:00Z',
+    next: '2026-10-23T19:30:00Z',
+    slug: 'jamaica-drinks',
+  },
+  {
+    at: '2026-10-23T19:30:00Z',
+    next: '2026-10-24T01:30:00Z',
+    slug: 'nyla-film',
+  },
+  {
+    at: '2026-10-24T01:30:00Z',
+    next: '2026-10-24T05:00:00Z',
+    slug: 'evening-jackpot',
+  },
+] as const;
+async function casinoLedger(page: Page, released: number) {
+  // Read the recipient API as the recipient, preserving any current prize
+  // presentation. TEST owner documents deliberately use a separate session.
+  if (page.url().includes(centre)) await page.goto('/lounge');
+  const status = await call(page, '/casino');
+  expect(status.spins).toHaveLength(released * 3);
+  expect(new Set(status.spins.map((s: { id: string }) => s.id)).size).toBe(
+    released * 3,
+  );
+  expect(status.available).toBe(0);
+  type PlayedSpin = {
+    id: string;
+    batchId: string;
+    position: number;
+    createdAt: string;
+    prize: { slug: string } | null;
+  };
+  const groups = new Map<string, PlayedSpin[]>();
+  for (const spin of status.spins as PlayedSpin[])
+    groups.set(spin.batchId, [...(groups.get(spin.batchId) ?? []), spin]);
+  const ordered = [...groups.values()]
+    .map((spins) => spins.sort((a, b) => a.position - b.position))
+    .sort((a, b) => Date.parse(a[0]!.createdAt) - Date.parse(b[0]!.createdAt));
+  expect(ordered).toHaveLength(released);
+  for (const [i, spins] of ordered.entries()) {
+    expect(spins).toHaveLength(3);
+    expect(spins.map((s) => s.position)).toEqual([1, 2, 3]);
+    expect(spins[0]!.prize).toBeNull();
+    expect(spins[1]!.prize).toBeNull();
+    expect(spins[2]!.prize?.slug).toBe(casinoPlan[i]!.slug);
+    for (const spin of spins) {
+      expect(Date.parse(spin.createdAt)).toBeGreaterThanOrEqual(
+        Date.parse(casinoPlan[i]!.at),
+      );
+      expect(Date.parse(spin.createdAt)).toBeLessThan(
+        Date.parse(casinoPlan[i]!.next),
+      );
+    }
+  }
+  return status;
+}
+
+test('22–25 October: all nine Casino spins, physical actions, invitations and persistence in order', async ({
   page,
   context,
 }) => {
@@ -238,6 +299,7 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
 
   console.log('TEST chronology: 23 Oct opening');
   await clock(page, '2026-10-23T08:59');
+  await casinoLedger(page, 0);
   await approve(page, 'casino-opening-spins');
   await call(page, '/owner/journey/milestones/casino-opening-spins/resume', {});
   await approve(page, 'casino-opening', {
@@ -264,6 +326,8 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
     timeout: 60000,
   });
   await machine(page);
+  const morning = await casinoLedger(page, 1);
+  expect((await call(page, '/drinks')).jamaica.available).toBe(0);
   await expect(
     page.getByRole('button', { name: 'Claim your 3 drinks' }),
   ).toBeVisible();
@@ -275,10 +339,16 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
   await expect(
     page.getByText('3 drinks are yours, Madam.', { exact: false }),
   ).toBeVisible();
+  await call(page, '/vouchers/claim', {
+    id: morning.spins.find((s: { prize: unknown }) => s.prize)?.entitlementId,
+  });
+  expect((await call(page, '/drinks')).jamaica.available).toBe(3);
+  await casinoLedger(page, 1);
   await screenshot(page, '23-claim');
 
   console.log('TEST chronology: 23 Oct Nyla');
   await clock(page, '2026-10-23T14:29');
+  await casinoLedger(page, 1);
   await ownerPage(page);
   const catalogue = await call(page, '/owner/casino/prizes');
   const film = catalogue.prizes.find(
@@ -310,11 +380,31 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
   await expect(
     page.getByRole('button', { name: 'Watch', exact: true }),
   ).toBeVisible();
+  await casinoLedger(page, 2);
   await screenshot(page, '23-nyla');
   await page.getByRole('button', { name: 'Return to the table' }).click();
+  await page.goto('/lounge');
+  await page
+    .getByRole('button', { name: 'Your Casino vouchers', exact: true })
+    .click();
+  await expect(
+    page
+      .getByRole('dialog', { name: 'Your vouchers' })
+      .getByRole('button', { name: 'Watch again' }),
+  ).toBeVisible();
+  // Replay remains available after re-entry without buying/consuming a spin.
+  await page.reload();
+  await page
+    .getByRole('button', { name: 'Your Casino vouchers', exact: true })
+    .click();
+  await expect(
+    page.getByRole('button', { name: 'Watch again', exact: true }),
+  ).toBeVisible();
+  await casinoLedger(page, 2);
 
   console.log('TEST chronology: 23 Oct jackpot');
   await clock(page, '2026-10-23T20:29');
+  await casinoLedger(page, 2);
   const breakfast = await gift(
     page,
     3,
@@ -345,6 +435,22 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
     'Some treasures travel far',
   );
   await expect(page.locator('.house-prize')).not.toContainText('Breakfast');
+  const nine = await casinoLedger(page, 3);
+  const last = nine.spins.find(
+    (s: { prize: { slug: string } | null }) =>
+      s.prize?.slug === 'evening-jackpot',
+  );
+  const retried = await call(page, '/casino/spins', {
+    idempotencyKey: last.idempotencyKey,
+  });
+  expect(retried.id).toBe(last.id);
+  expect(retried.duplicate).toBe(true);
+  await expect(
+    call(page, '/casino/spins', { idempotencyKey: 'TEST-no-tenth-spin' }),
+  ).rejects.toThrow('not-open');
+  await page.reload();
+  await casinoLedger(page, 3);
+
   await page.goto(`/v/${breakfast.nfcToken}`);
   await page.getByRole('button', { name: 'Turn the key' }).click();
   await expect(
@@ -382,6 +488,7 @@ test('22–25 October: physical actions, invitations, claims and persistence in 
       journey.milestones.find((m: { key: string }) => m.key === key).state,
     ).toBe('held');
   await expect(page.locator('body')).not.toContainText('Seven Mile Beach');
+  await casinoLedger(page, 3);
   expect(outbound).toEqual([]);
 });
 
@@ -470,4 +577,57 @@ test('owner can review physical setup on an iPhone without releasing a scene', a
   await expect(row).toContainText('Last error', { timeout: 60000 });
   await expect(page.locator('.office-error[role="alert"]')).toBeVisible();
   await expect(page.locator('body')).not.toContainText('has been triggered.');
+});
+
+test('Nyla replay starts a real TEST film twice without another spin or prize', async ({
+  page,
+  context,
+}) => {
+  await context.addInitScript(() => {
+    localStorage.setItem(
+      'thirty-club:first-visit-verified',
+      '2026-10-18T00:00:00Z',
+    );
+    Object.defineProperty(window, 'WebGL2RenderingContext', {
+      value: undefined,
+    });
+  });
+  await page.goto('/');
+  for (let i = 0; i < 5; i++) await page.locator('.timepiece').tap();
+  await page.getByLabel('Private access code').fill('1414');
+  await page.getByRole('button', { name: 'Unlock private office' }).click();
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Casino afternoon: Nyla’s film/ })
+    .first()
+    .click();
+  await page.waitForURL('**/rooms/casino');
+  await machine(page);
+  await page.getByRole('button', { name: 'Return to the table' }).click();
+  const before = await call(page, '/casino');
+  expect(before.spins).toHaveLength(3);
+  expect(before.available).toBe(0);
+  const ids = before.spins.map((s: { id: string }) => s.id).sort();
+  for (let replay = 0; replay < 2; replay++) {
+    await page.goto('/lounge');
+    await page
+      .getByRole('button', { name: 'Your Casino vouchers', exact: true })
+      .click();
+    await page
+      .getByRole('button', { name: 'Watch again', exact: true })
+      .click();
+    const video = page.locator('.voucher-wallet__film video');
+    await expect
+      .poll(() => video.evaluate((v: HTMLVideoElement) => v.currentTime), {
+        timeout: 15000,
+      })
+      .toBeGreaterThan(0);
+    await video.evaluate((v: HTMLVideoElement) => v.pause());
+    const after = await call(page, '/casino');
+    expect(after.spins.map((s: { id: string }) => s.id).sort()).toEqual(ids);
+    expect(after.available).toBe(0);
+    const prizes = await call(page, '/vouchers');
+    expect(prizes.entitlements).toHaveLength(1);
+    await page.reload();
+  }
 });
