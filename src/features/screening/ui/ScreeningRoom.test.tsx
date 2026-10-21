@@ -270,7 +270,11 @@ describe('the Private Screening Room', () => {
     expect(screen.getByRole('alert')).toHaveTextContent(
       'The film could not be loaded just now.',
     );
-    expect(watchButton()).toBeInTheDocument();
+    // Retry (ADR-026), and the way to carry on without the player.
+    expect(screen.getByRole('button', { name: 'Try again' })).toBeEnabled();
+    expect(
+      screen.getByRole('button', { name: 'Watch it another way' }),
+    ).toBeInTheDocument();
   });
 
   it('LIVE without a configured film: no Watch Movie, no video, honest words', () => {

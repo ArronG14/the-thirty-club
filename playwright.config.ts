@@ -7,6 +7,8 @@ export default defineConfig({
   testIgnore: [
     // iPhone-profile real-film journey: playwright.screening.config.ts.
     'screening-film.spec.ts',
+    // Real-print delivery via the local R2 stand-in: playwright.media.config.ts.
+    'media-delivery.spec.ts',
     'butlers-office.spec.ts',
     'gift-vault.spec.ts',
     'correspondence.spec.ts',

@@ -10,6 +10,7 @@ import {
   isAdmissionRoom,
   type AdmissionRoomId,
 } from '../../shared/journey/contract';
+import { mediaReference } from '../../shared/media/contract';
 import { OWNER_PREFIX } from '../owner/session';
 import { simulationActive } from './mode';
 
@@ -313,8 +314,12 @@ export async function issueRehearsalSpins(quantity: number) {
 }
 
 /**
- * The 23 October afternoon (ADR-024) in the TEST office: Nyla's film prize
- * gets the five-second test film and three spins put it on the third.
+ * The 23 October afternoon (ADR-024/026) in the TEST office, exactly as it
+ * will run: Nyla's film prize carries its protected reference (the TEST
+ * office answers it with the five-second test film), and the real
+ * `casino-afternoon-spins` milestone issues the second session's three
+ * spins with the film pinned to the third. A repeat launch, after that
+ * milestone has fired here, issues the same three spins directly.
  */
 export async function rehearseFilmSpins() {
   const { prizes } = await simOwner<{
@@ -343,10 +348,19 @@ export async function rehearseFilmSpins() {
       active: true,
       ownerNotes: film.ownerNotes,
       vaultId: null,
-      videoUrl: '/media/screening/screening-test-5s.mp4',
+      videoUrl: mediaReference('nyla-film'),
     },
     'PATCH',
   );
+  const { milestones } = await simOwner<OwnerJourney>('/owner/journey');
+  const afternoon = milestones.find((m) => m.key === 'casino-afternoon-spins');
+  if (afternoon && afternoon.state !== 'fired') {
+    const fired = await simOwner<{ milestone: { state: string } }>(
+      '/owner/journey/milestones/casino-afternoon-spins/fire',
+      {},
+    );
+    if (fired.milestone.state === 'fired') return;
+  }
   await simOwner('/owner/casino/batches', {
     quantity: 3,
     prizeIds: [film.id],

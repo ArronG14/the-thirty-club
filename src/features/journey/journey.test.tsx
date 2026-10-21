@@ -192,7 +192,9 @@ describe('the room gate', () => {
       <RoomGate />,
     );
     expect(
-      await screen.findByText('Your screening is being prepared.'),
+      await screen.findByRole('heading', {
+        name: 'The Private Screening Room',
+      }),
     ).toBeInTheDocument();
   });
 
@@ -217,7 +219,9 @@ describe('the room gate', () => {
     };
     withJourney(journey, '/rooms/screening-room', <RoomGate />);
     expect(
-      await screen.findByText('Your screening is being prepared.'),
+      await screen.findByRole('heading', {
+        name: 'The Private Screening Room',
+      }),
     ).toBeInTheDocument();
   });
 });

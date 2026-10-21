@@ -522,3 +522,37 @@ The first Departure Lounge visit records a genuine request through the existing 
 Standalone rehearsal scenarios fast-forward declared prerequisites; the new continuous browser rehearsal and chronological PGlite suite test the sequence across dates without doing that. Final film delivery, physical iPhone playback, review of document-referenced variants, actual gift/tag mappings and live SMS routing remain release conditions rather than inferred completion.
 
 **ADR-027 clarification — nine-spin/full-journey gate.** The source explicitly establishes three 23 October sessions at 09:00, 14:30 and 20:30 Jamaica, three spins each: nine total, third-session jackpot included. An aggregate recipient ledger assertion complements per-session checks; replay/retry cannot create extra spins or credits. The complete 22–25 October release must pass before the flight; departure-only readiness is insufficient. Existing production/media permissions are unchanged.
+
+## Protected films (ADR-026, 2026-10-21)
+
+Branch `feature/final-media-integration` from the deployed `2b32872`. Handover, specifications and release steps: `docs/MEDIA_DELIVERY.md`. No migration.
+
+**Decision.** The birthday film and Nyla's film are private objects in a new **private** Supabase Storage bucket, `ttc-media`, in the existing project. Pages hold only a reference, `/api/v1/media/<birthday-film|nyla-film>` (`src/shared/media/contract.ts`). `GET /api/v1/media/<id>` (`netlify/backend/media.ts`) returns a ticket: a URL signed by the service role (4 hours), plus a lighter print where one exists. Owner: always. Birthday film: her member session, the Screening Room ADMITTED, and the server clock at or after 00:00 Jamaica on 24 October (`2026-10-24T05:00Z`); UK midnight is refused. Nyla's film: her member session and an entitlement whose prize snapshot carries the reference. Considered and rejected: the build or a public bucket (premature exposure), Netlify Blobs through a function (no byte-range video delivery), GitHub (size, permanence), a new media/CDN service (new account and credentials on the day the owner flies).
+
+**The paths stay on the server.** `netlify/backend/mediaObjects.ts` (bucket, object names with unguessable folders) is imported only by `netlify/functions/api.ts` (injected as `ApiDeps.media`), the upload tool and tests. `media.ts` and `api.ts` are bundled into the browser's TEST office, so they must not import it (a test enforces this; the build was checked). The TEST office and the local development API set `MEDIA_SIMULATED=true` and receive the five-second test film through the same entitlement and time checks; a page shows a rehearsal label for a simulated ticket.
+
+**Client.** `useFilmSource` fetches the ticket as soon as a film is on screen (never inside the tap: iPhone needs `play()` synchronously to open its player), renews it before expiry, on return, `online` and `focus`, and after a failure; a renewed URL never replaces the source of a film that is playing. `FilmPlayer` (Nyla's film in the Casino reveal and the Lounge vouchers) and the Screening Room show loading, stop after 30 s without a picture or 45 s stalled (not counting her pause), keep her place, and offer Retry. The room adds the lighter print and the offline fallback.
+
+**Screening semantics (amends ADR-019).** Entering, starting, finishing and the offline fallback are distinct: the fallback records `elsewhereAt`/`elsewhere` in the screening record, never `completedAt`, and stamps the club's room completion so the Lounge's guidance moves on. Nothing server-side ever depended on the screening; later chapters are independent milestones.
+
+**Nyla's film.** No schema change: ADR-024 already pins prize slug `nyla-film` to the third spin of milestone `casino-afternoon-spins` (the second session) and freezes the prize snapshot at issue. The owner sets its Film URL to the reference and activates it after the deploy, before that milestone fires. The TEST scenario now fires that real milestone.
+
+**Open questions.** The Supabase plan's per-file limit (must allow 344 MB) and egress quota are for the owner to confirm in the dashboard. Byte-range behaviour and throughput of the real bucket are checked by `npm run media:verify` only after the approved upload. No physical iPhone has played the protected films yet. The fallback line and the Films desk wording are PROPOSED.
+
+## Protected films on Cloudflare R2 (ADR-027, 2026-10-21)
+
+Same branch (`feature/final-media-integration`). Supersedes ADR-026's **storage** only; its ticket endpoint, gates, object names and players stand. Handover and owner set-up: `docs/MEDIA_DELIVERY.md` §2.
+
+**Context.** The Supabase project is on the Free plan (50 MB per file); the birthday prints are 344 MB and 168 MB. Upgrading or chunking the film were excluded.
+
+**Decision.** The three prints live in a **private Cloudflare R2 bucket `ttc-media`** (location hint Eastern North America). `GET /api/v1/media/<id>`, after the unchanged ADR-026 checks, asks R2 whether the object exists (a 60-second presigned HEAD; 404 → "being prepared"; no answer → the ticket is still issued) and returns a **presigned GET URL valid for 4 hours** for that object (and the lighter print). Signing is AWS Signature Version 4 in Web Crypto (`netlify/backend/s3Presign.ts`), checked against AWS's published examples; no SDK, no new dependency. Configuration: `MEDIA_S3_ENDPOINT`, `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY` (Functions only; optional `MEDIA_S3_REGION`, default `auto`). Without them the ADR-026 Supabase signer remains the fallback. Tools: `npm run media:upload` / `media:verify` (`tools/media-r2.ts`, multipart, dry run unless `--confirm`); the Supabase tool stays as `npm run media:supabase`.
+
+**Rejected.** Netlify static files (GitHub's 100 MB limit and permanent history; a public address defeats the birthday gate), Netlify Blobs through a function (no streamed byte ranges), Backblaze B2 (works with this code, but the free account's 1 GB/day download cap), Supabase Pro (excluded).
+
+**Access model.** Bucket private (no r2.dev, no custom domain); every R2 request must be signed; the secret key exists only in the Netlify function's environment; a presigned URL is a 4-hour bearer link to one object and method (sufficient for this private experience; no DRM). The token is Object Read & Write scoped to `ttc-media` (a separate read-only token for Netlify would be stricter; optional). Revoking the token stops all playback at once.
+
+**Playback (amends ADR-026).** The stall watch in `FilmPlayer` and the Screening Room now counts **progress** (half a second of film re-arms it); `playing`/`waiting` events arm it only when nothing is armed. WebKit was found firing `waiting`/`playing` over a frozen picture during a storage outage, which used to clear the watch and leave her with no Retry.
+
+**Verification.** A local R2 stand-in (`tools/s3-standin.ts`: strict SigV4 and expiry, byte ranges, multipart, throttling, outages) carries the real upload rehearsal and `tests/media-delivery.spec.ts` (`npm run test:media`, Chromium and WebKit) with the real prints. Not verified: the real R2 bucket (awaits the owner's account), Netlify with the new variables, a physical iPhone, the hotel Wi-Fi.
+
+**Open questions.** Whether the owner prefers a separate read-only token for Netlify. Real R2 throughput to Jamaica (`npm run media:verify` from there).
