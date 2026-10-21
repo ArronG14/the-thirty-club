@@ -146,7 +146,9 @@ test('Dev Menu launches every room into a coherent rehearsal', async ({
 
   await page.goto('/');
   await launch(page, /^The Grand Casino/);
-  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60000,
+  });
   await shot(page, '13-casino', 1500);
 
   await page.goto('/');
@@ -270,7 +272,9 @@ test('A letter that mentions a Casino she has not been admitted to names nothing
   await page
     .getByRole('button', { name: /Rehearsal: launch The Grand Casino/ })
     .click();
-  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60000 });
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60000,
+  });
 });
 
 test('Scenario: the 19:00 card ceremony plays the doors into the induction', async ({

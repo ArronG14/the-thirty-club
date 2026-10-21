@@ -169,15 +169,17 @@ export const PRIVILEGES: readonly PrivilegeDefinition[] = [
     eyebrow: 'Arrival Correspondence',
     title: 'Welcome to Jamaica',
     subtitle: 'Left for you on arrival.',
+    // PROPOSED (ADR-024): the original promised the doors "tomorrow" and an
+    // unposted card, both superseded by the 21 October admission.
     letter: [
       'Madam,',
       'Welcome to Jamaica. The club trusts the journey was everything it ought to have been, and that your husband carried the heavier bags.',
-      'Tomorrow you turn thirty, and the doors of The Thirty Club will at last be opened to you. A word from the staff: a member is always asked to present her card at the door.',
-      'Yours has not been posted. It is already rather closer than you might expect.',
+      'Your membership has travelled with you: the Members’ Lounge, your letters and the Butler are exactly where you left them.',
+      'Do rest. I am told the croupier has been practising.',
     ],
     signOff: 'Until tomorrow, Madam.',
     lockedHint: 'Delivered on arrival',
-    opensAt: { date: '2026-10-23', time: '09:00', zone: JAMAICA_ZONE },
+    opensAt: { date: '2026-10-22', time: '18:00', zone: JAMAICA_ZONE },
     displayZone: JAMAICA_ZONE,
     opensAtEnv: 'PRIVILEGE_JAMAICA_ARRIVAL_OPENS_AT',
     provisional: true,

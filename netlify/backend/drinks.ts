@@ -75,5 +75,33 @@ export async function drinksRoute({ route, body, session, db }: Context) {
     });
     return { data, status: data.duplicate ? 200 : 201 };
   }
+  // The private birthday card (ADR-024): her session reads it from its
+  // opening time; the owner writes it.
+  if (route === 'GET /card') {
+    if (session.role !== 'member') throw new BackendError('forbidden');
+    return { data: await call('card-read') };
+  }
+  if (route === 'GET /owner/card') {
+    if (session.role !== 'owner') throw new BackendError('forbidden');
+    return { data: await call('owner-card') };
+  }
+  if (route === 'POST /owner/card') {
+    if (session.role !== 'owner') throw new BackendError('forbidden');
+    v.keys(body, ['message', 'signature', 'opensAt']);
+    if (typeof body.message !== 'string' || body.message.length > 6000)
+      v.invalid();
+    if (
+      body.signature !== undefined &&
+      (typeof body.signature !== 'string' || body.signature.length > 200)
+    )
+      v.invalid();
+    return {
+      data: await call('owner-card-save', {
+        message: body.message.replace(/\r\n?/g, '\n'),
+        signature: body.signature ?? '',
+        opensAt: v.instant(body.opensAt),
+      }),
+    };
+  }
   return undefined;
 }

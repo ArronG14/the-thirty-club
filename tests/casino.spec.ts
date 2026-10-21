@@ -11,6 +11,10 @@ test.describe('authoritative Casino presentation', () => {
   }) => {
     await page.clock.setFixedTime(EVENING);
     await page.addInitScript((seen) => {
+      // Poster room: software WebGL is too slow for timing checks.
+      Object.defineProperty(window, 'WebGL2RenderingContext', {
+        value: undefined,
+      });
       localStorage.setItem(
         'thirty-club:entrance',
         JSON.stringify({ version: 1, unlockedAt: seen, ceremonySeenAt: seen }),
@@ -84,27 +88,34 @@ test.describe('authoritative Casino presentation', () => {
     await expect(
       page.getByRole('heading', { name: 'The Grand Casino' }),
     ).toBeVisible();
-    await expect(page.getByText('1 spin at your pleasure')).toBeVisible();
+    // The real room (ADR-024): the Machine plays her complimentary spins.
+    await page.getByRole('button', { name: /The Machine/ }).click();
+    await expect(
+      page.getByText('One complimentary spin at your pleasure'),
+    ).toBeVisible();
     await expect(page.getByText('Two cocktails')).toHaveCount(0);
     const committed = page.waitForResponse((response) =>
       response.url().endsWith('/api/v1/casino/spins'),
     );
-    await page.getByRole('button', { name: 'Spin the wheel' }).click();
+    await page.getByRole('button', { name: /Pull the lever/ }).click();
     await committed;
-    // Close the page before the 1.6 s ceremony finishes: the pending key
-    // must recover this already committed result without another spin.
+    // Close the page before the reels finish: the pending key must recover
+    // this already committed result without another spin.
     await page.reload();
-    await expect(
-      page.getByRole('heading', { name: 'Two cocktails' }),
-    ).toBeVisible();
-    await expect(page.getByText('0 spins at your pleasure')).toBeVisible();
+    const reveal = page.getByRole('dialog', { name: 'Two cocktails' });
+    await expect(reveal).toBeVisible();
+    await expect(reveal).toContainText('A toast for Alise.');
     await page.screenshot({
       path: 'test-results/casino-authoritative-mobile.png',
       fullPage: true,
     });
-    await page.getByText('Your recent spins').click();
-    await expect(page.locator('.casino-live__history li')).toContainText(
-      'Two cocktails',
-    );
+    await reveal.getByRole('button', { name: 'Return to the table' }).click();
+    await page.getByRole('button', { name: /The Machine/ }).click();
+    await expect(
+      page.getByText('0 complimentary spins at your pleasure'),
+    ).toBeVisible();
+    await expect(
+      page.getByRole('button', { name: /Awaiting your next invitation/ }),
+    ).toBeDisabled();
   });
 });

@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+// PW_PORT lets a second checkout run the same suite alongside this one.
+const PORT = Number(process.env.PW_PORT ?? 4185);
 // The Owner Control Centre and the rehearsal engine (tests/rehearsal.spec.ts)
 // on an iPhone profile. LIVE checks use the local in-memory APIs with SMS
 // off; TEST runs the simulated office inside the browser. Nothing here can
@@ -14,14 +16,14 @@ export default defineConfig({
   workers: 1,
   timeout: 180000,
   use: {
-    baseURL: 'http://127.0.0.1:4185',
+    baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['iPhone 13'],
     deviceScaleFactor: 2,
     browserName: process.env.REHEARSAL_WEBKIT ? 'webkit' : 'chromium',
   },
   webServer: {
-    command: 'npm run preview -- --port 4185 --strictPort',
-    url: 'http://127.0.0.1:4185',
+    command: `npm run preview -- --port ${PORT} --strictPort`,
+    url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     env: { BUTLERS_OFFICE_LOCAL_API: '1', CONCIERGE_LOCAL_API: '1' },
   },

@@ -369,7 +369,7 @@ describe('privileges', () => {
     );
     const letter = await screen.findByRole('dialog');
     expect(
-      within(letter).getByText(/Tomorrow you turn thirty/),
+      within(letter).getByText(/Your membership has travelled with you/),
     ).toBeInTheDocument();
     expect(
       within(letter).queryByRole('button', { name: 'Inform Arron' }),

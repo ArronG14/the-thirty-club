@@ -20,6 +20,8 @@ const ControlCentre = lazy(
 
 const LoungeRoute = lazy(() => import('../features/lounge/ui/LoungeRoute'));
 const RehearseLink = lazy(() => import('../features/rehearsal/RehearseLink'));
+const DrinksPage = lazy(() => import('../features/drinks/DrinksPage'));
+const BirthdayCard = lazy(() => import('../features/card/BirthdayCard'));
 
 const DepartureLounge = lazy(
   () => import('../features/concierge/ui/DepartureLounge'),
@@ -173,6 +175,22 @@ export function App() {
             }
           />
           <Route path="/rooms/:roomId" element={<RoomGate />} />
+          <Route
+            path="/birthdaycard"
+            element={
+              <Suspense fallback={<Arriving />}>
+                <BirthdayCard />
+              </Suspense>
+            }
+          />
+          <Route
+            path="/drinks"
+            element={
+              <Suspense fallback={<Arriving />}>
+                <DrinksPage />
+              </Suspense>
+            }
+          />
           <Route
             path="/departure"
             element={

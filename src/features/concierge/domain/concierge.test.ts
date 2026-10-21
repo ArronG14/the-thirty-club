@@ -90,7 +90,7 @@ describe('the effective schedule', () => {
       Date.parse('2026-10-22T17:30:00Z'),
     );
     expect(schedule.privileges['jamaica-arrival']).toBe(
-      Date.parse('2026-10-23T14:00:00Z'),
+      Date.parse('2026-10-22T23:00:00Z'),
     );
     expect(schedule.messages['departure-ready']).toBe(OPENS);
     expect(schedule.messages['in-flight']).toBe(

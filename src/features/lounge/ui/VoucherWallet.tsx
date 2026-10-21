@@ -1,4 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link } from 'react-router';
 import { establishStanding, vaultRequest } from '../../vault/client/vaultApi';
 
 interface Entitlement {
@@ -10,7 +11,46 @@ interface Entitlement {
     description: string;
     instructions: string;
     validUntil: string | null;
+    /** ADR-024: claimed into Drinks rather than redeemed here. */
+    drinksKind?: 'airport' | 'jamaica' | null;
+    drinksQuantity?: number | null;
+    /** ADR-024: a film, watched here as often as she likes. */
+    videoUrl?: string | null;
   };
+}
+
+const safeMedia = (url: string | null | undefined): url is string =>
+  !!url && (url.startsWith('/') || url.startsWith('https://'));
+
+/** A won film, replayable; play() inside her tap (iPhone fullscreen). */
+function Film({ src, title }: { src: string; title: string }) {
+  const video = useRef<HTMLVideoElement>(null);
+  const [problem, setProblem] = useState('');
+  return (
+    <div className="voucher-wallet__film">
+      <video
+        ref={video}
+        src={src}
+        controls
+        preload="metadata"
+        aria-label={title}
+      />
+      <button
+        type="button"
+        onClick={() => {
+          setProblem('');
+          void video.current?.play().catch(() => {
+            setProblem(
+              'The film could not start. Please use the player’s own controls.',
+            );
+          });
+        }}
+      >
+        Watch again
+      </button>
+      {problem && <p role="alert">{problem}</p>}
+    </div>
+  );
 }
 interface Wallet {
   entitlements: Entitlement[];
@@ -86,22 +126,35 @@ export function VoucherWallet() {
                 })}
               </p>
             )}
-            <p>
-              {item.state === 'AVAILABLE'
-                ? 'Available'
-                : item.state === 'REQUESTED'
-                  ? 'Requested · awaiting arrangement'
-                  : 'Fulfilled'}
-            </p>
-            {item.state === 'AVAILABLE' && (
-              <button
-                type="button"
-                disabled={busy !== null}
-                onClick={() => void request(item.id)}
-              >
-                Ask the Butler to redeem this
-              </button>
+            {safeMedia(item.prize.videoUrl) ? (
+              <Film src={item.prize.videoUrl} title={item.prize.title} />
+            ) : item.prize.drinksKind ? (
+              <p>
+                {item.state === 'AVAILABLE'
+                  ? 'Waiting for you to claim it under '
+                  : 'Claimed — enjoy them under '}
+                <Link to="/drinks">Drinks</Link>.
+              </p>
+            ) : (
+              <p>
+                {item.state === 'AVAILABLE'
+                  ? 'Available'
+                  : item.state === 'REQUESTED'
+                    ? 'Requested · awaiting arrangement'
+                    : 'Fulfilled'}
+              </p>
             )}
+            {item.state === 'AVAILABLE' &&
+              !item.prize.drinksKind &&
+              !item.prize.videoUrl && (
+                <button
+                  type="button"
+                  disabled={busy !== null}
+                  onClick={() => void request(item.id)}
+                >
+                  Ask the Butler to redeem this
+                </button>
+              )}
           </li>
         ))}
       </ul>

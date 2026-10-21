@@ -246,8 +246,20 @@ async function rehearseCardHidden() {
  */
 export async function issueRehearsalSpins(quantity: number) {
   const { prizes } = await simOwner<{
-    prizes: { id: string; title: string }[];
+    prizes: { id: string; title: string; slug?: string | null }[];
   }>('/owner/casino/prizes');
+  // The story's opening (ADR-024): Bring Me a Drink on the last spin.
+  const drinks = prizes.find((p) => p.slug === 'jamaica-drinks')?.id;
+  if (drinks) {
+    await simOwner('/owner/casino/batches', {
+      quantity,
+      prizeIds: [drinks],
+      prizePositions: [quantity],
+      idempotencyKey: `rehearsal-launch-${Date.now()}`,
+      announce: false,
+    });
+    return;
+  }
   let voucher = prizes.find((p) => p.title === REHEARSAL_VOUCHER)?.id;
   if (!voucher) {
     const created = await simOwner<{ prize: { id: string } }>(
@@ -272,6 +284,60 @@ export async function issueRehearsalSpins(quantity: number) {
     prizeIds: [voucher],
     idempotencyKey: `rehearsal-launch-${Date.now()}`,
     announce: false,
+  });
+}
+
+/**
+ * The 23 October afternoon (ADR-024) in the TEST office: Nyla's film prize
+ * gets the five-second test film and three spins put it on the third.
+ */
+export async function rehearseFilmSpins() {
+  const { prizes } = await simOwner<{
+    prizes: {
+      id: string;
+      slug?: string | null;
+      title: string;
+      description: string;
+      presentation: string;
+      instructions: string;
+      ownerNotes: string;
+    }[];
+  }>('/owner/casino/prizes');
+  const film = prizes.find((p) => p.slug === 'nyla-film');
+  if (!film) return;
+  await simOwner(
+    `/owner/casino/prizes/${film.id}`,
+    {
+      title: film.title,
+      description: film.description,
+      presentation: film.presentation,
+      kind: 'VOUCHER',
+      imageUrl: null,
+      instructions: film.instructions,
+      validUntil: null,
+      active: true,
+      ownerNotes: film.ownerNotes,
+      vaultId: null,
+      videoUrl: '/media/screening/screening-test-5s.mp4',
+    },
+    'PATCH',
+  );
+  await simOwner('/owner/casino/batches', {
+    quantity: 3,
+    prizeIds: [film.id],
+    prizePositions: [3],
+    idempotencyKey: `rehearsal-film-${Date.now()}`,
+    announce: false,
+  });
+}
+
+/** A rehearsal message on the TEST office's birthday card (ADR-024). */
+export async function rehearseBirthdayCard() {
+  await simOwner('/owner/card', {
+    message:
+      'Rehearsal card.\n\nThe words you write in the Control Centre (Birthday card) appear here, exactly as she will read them.',
+    signature: 'Rehearsal',
+    opensAt: '2026-10-24T05:00:00.000Z',
   });
 }
 

@@ -956,3 +956,26 @@
     width: min(74vw, 18rem);
   }
 }
+
+.dock__badge {
+  display: inline-block;
+  width: 0.45rem;
+  height: 0.45rem;
+  margin-left: 0.35rem;
+  border-radius: 50%;
+  background: var(--champagne-bright);
+  box-shadow: 0 0 0.5rem rgb(233 211 155 / 0.7);
+  vertical-align: super;
+}
+
+.voucher-wallet__film {
+  display: grid;
+  gap: 0.5rem;
+  justify-items: start;
+}
+
+.voucher-wallet__film video {
+  width: 100%;
+  max-height: 40dvh;
+  background: #000;
+}

@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+// PW_PORT lets a second checkout run the same suite alongside this one.
+const PORT = Number(process.env.PW_PORT ?? 4173);
 
 export default defineConfig({
   testDir: './tests',
@@ -22,14 +24,14 @@ export default defineConfig({
   // workers can time out before the entrance finishes opening.
   workers: 1,
   use: {
-    baseURL: 'http://127.0.0.1:4173',
+    baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['Desktop Chrome'],
     // Existing suites test the entrance, not the first-visit verification.
     storageState: {
       cookies: [],
       origins: [
         {
-          origin: 'http://127.0.0.1:4173',
+          origin: `http://127.0.0.1:${PORT}`,
           localStorage: [
             { name: 'thirty-club:first-visit-verified', value: 'test' },
           ],
@@ -38,8 +40,8 @@ export default defineConfig({
     },
   },
   webServer: {
-    command: 'npm run preview -- --port 4173 --strictPort',
-    url: 'http://127.0.0.1:4173',
+    command: `npm run preview -- --port ${PORT} --strictPort`,
+    url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     // The concierge API with fake channels (build/conciergeLocalApi.ts):
     // no test can reach Telegram or Twilio.

@@ -1,4 +1,6 @@
 import { defineConfig, devices } from '@playwright/test';
+// PW_PORT lets a second checkout run the same suite alongside this one.
+const PORT = Number(process.env.PW_PORT ?? 4187);
 
 // The Private Screening Room's real-film journey (tests/screening-film.spec.ts)
 // against the production build on an iPhone 13 profile. Chromium by default;
@@ -11,14 +13,14 @@ export default defineConfig({
   workers: 1,
   timeout: 120_000,
   use: {
-    baseURL: 'http://127.0.0.1:4187',
+    baseURL: `http://127.0.0.1:${PORT}`,
     ...devices['iPhone 13'],
     deviceScaleFactor: 2,
     browserName: process.env.SCREENING_WEBKIT ? 'webkit' : 'chromium',
   },
   webServer: {
-    command: 'npm run preview -- --port 4187 --strictPort',
-    url: 'http://127.0.0.1:4187',
+    command: `npm run preview -- --port ${PORT} --strictPort`,
+    url: `http://127.0.0.1:${PORT}`,
     reuseExistingServer: false,
     env: { BUTLERS_OFFICE_LOCAL_API: '1', CONCIERGE_LOCAL_API: '1' },
   },

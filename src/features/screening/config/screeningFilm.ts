@@ -67,6 +67,24 @@ export const TEST_FILM: ScreeningFilm = {
  */
 export const BIRTHDAY_FILM: ScreeningFilm | null = null;
 
+/**
+ * OR the screening as separate reels, played in this order (ADR-024): each
+ * guest's message as its own MP4, no CapCut assembly needed. When at least
+ * one valid reel is listed it replaces BIRTHDAY_FILM. Between reels the
+ * room shows "Next — <title>"; her tap starts it (iPhone needs the tap).
+ * A reel with an invalid source is skipped; one that fails to load offers
+ * the next. Example:
+ *
+ *   export const BIRTHDAY_REELS: readonly ScreeningFilm[] = [
+ *     { id: 'reel-01-introduction', title: 'An introduction',
+ *       src: '/media/screening/01-introduction.mp4', type: 'video/mp4',
+ *       kind: 'birthday' },
+ *     { id: 'reel-02-mum', title: 'A message from Mum',
+ *       src: 'https://…/02-mum.mp4', type: 'video/mp4', kind: 'birthday' },
+ *   ];
+ */
+export const BIRTHDAY_REELS: readonly ScreeningFilm[] = [];
+
 /** Where a film may be served from. */
 export function filmSourceProblem(film: ScreeningFilm): string | null {
   for (const path of [film.src, film.poster, film.captions]) {
@@ -95,4 +113,21 @@ export function resolveFilm(
       : null;
   if (real) return real;
   return rehearsal ? TEST_FILM : null;
+}
+
+/**
+ * The programme this page may present, in order: the valid birthday reels,
+ * else the single birthday film, else (rehearsal only) the test film.
+ */
+export function resolveProgramme(
+  rehearsal: boolean,
+  reels: readonly ScreeningFilm[] = BIRTHDAY_REELS,
+  birthday: ScreeningFilm | null = BIRTHDAY_FILM,
+): ScreeningFilm[] {
+  const valid = reels.filter(
+    (reel) => reel.kind === 'birthday' && !filmSourceProblem(reel),
+  );
+  if (valid.length > 0) return valid;
+  const one = resolveFilm(rehearsal, birthday);
+  return one ? [one] : [];
 }

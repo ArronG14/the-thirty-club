@@ -21,13 +21,32 @@ Owner explicitly approves **this exact commit**, the six hosted migrations and t
 5. `20261022130000_membership_card_admission.sql`
 6. `20261022140000_journey_completion.sql` — held 22–25 October drinks, Casino and Vault work; no automatic release of those held moments.
 
-Use the linked Supabase CLI from this checkout, if available: `supabase migration list --linked`, `supabase db push --linked --dry-run` (must show exactly these six), then `supabase db push --linked`. The connected Supabase migration tool is an alternative if the CLI is unavailable. Stop at the first error; never mark a failed migration applied manually or replay a partially applied file without diagnosis. These migrations are additive, but the hold cancels approved, unsent Alise SQL messages. The previous Netlify deploy is the code rollback; database rows are not automatically rolled back. The existing Blobs Shopping record is outside these migrations. The owner has explicitly closed further backup investigation.
+Use the Supabase CLI from this checkout, if available (it is not installed in Codex's current shell). Check the linked project and dry run before applying:
+
+```sh
+supabase link --project-ref fzndcjzenodcixmuvfsb
+supabase migration list
+supabase db push --dry-run
+supabase db push
+supabase migration list
+```
+
+The dry run must show exactly these six. The connected Supabase migration tool is an alternative if the CLI is unavailable. Stop at the first error; never mark a failed migration applied manually or replay a partially applied file without diagnosis. These migrations are additive, but the hold cancels approved, unsent Alise SQL messages. The previous Netlify deploy is the code rollback; database rows are not automatically rolled back. The existing Blobs Shopping record is outside these migrations. The owner has explicitly closed further backup investigation.
 
 Immediately verify in hosted SQL: 15 migration versions; hold `active=true`; SMS mode `off`; teaser `draft` at `2026-10-21T15:00:00Z`; early milestone `held` at `2026-10-21T18:00:00Z` in `Europe/London`; the seeded letter has the Nyla clue and no `[[`; zero card presentations; no approved/sending Alise outbox rows. Run the Supabase security advisor. Do not proceed if any check differs.
 
 ## 3. Publish and smoke check
 
-Merge the approved release commit to GitHub `main` only after auto publishing is locked. Check the deploy preview's commit and build, then publish that deploy in Netlify. Rotate the Twilio auth token through the owner-controlled Twilio and Netlify credential screens; this credential change requires the owner. Confirm the published commit equals the approved release commit. Run `npm run release:smoke` for the public entrance and unauthenticated API. Verify in the LIVE Control Centre: **ON HOLD**, **SMS OFF**, and the existing £100 Shopping Privilege still fulfilled. Keep the previous deploy available for rollback.
+Push the approved release commit to GitHub `main` only after auto publishing is locked. GitHub `main` was `54b9cf21fd0cfd4adb8ce250588fb1c4c6873b5d` in the final read-only check; stop if it changed:
+
+```sh
+git fetch origin main
+test "$(git rev-parse origin/main)" = 54b9cf21fd0cfd4adb8ce250588fb1c4c6873b5d
+git merge-base --is-ancestor origin/main HEAD
+git push origin HEAD:main
+```
+
+Check the deploy preview's commit and build, then publish that deploy in Netlify. Rotate the Twilio auth token through the owner-controlled Twilio and Netlify credential screens; this credential change requires the owner. Confirm the published commit equals the approved release commit. Run `npm run release:smoke` for the public entrance and unauthenticated API. Verify in the LIVE Control Centre: **ON HOLD**, **SMS OFF**, and the existing £100 Shopping Privilege still fulfilled. Keep the previous deploy available for rollback.
 
 ## 4. Rehearse on the physical iPhone
 

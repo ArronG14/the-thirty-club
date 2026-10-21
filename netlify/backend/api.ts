@@ -98,7 +98,12 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
     const notifyOwnerNow = () =>
       processMessages(db, env, send, 'owner').then(
         () => undefined,
-        () => undefined,
+        (error: unknown) => {
+          console.error('Owner SMS immediate dispatch failed', {
+            requestId,
+            code: error instanceof BackendError ? error.code : 'unexpected',
+          });
+        },
       );
     try {
       if (path === '/twilio/status' && request.method === 'POST')

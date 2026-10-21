@@ -23,7 +23,7 @@ const oneOf = (lines: readonly string[]) =>
   );
 
 const OWNER_PASSWORD = 'thirty-club-local-rehearsal-only';
-const BASE = 'http://127.0.0.1:4181';
+const BASE = `http://127.0.0.1:${process.env.PW_PORT ?? 4181}`;
 const headers = {
   'content-type': 'application/json',
   'x-concierge-request': '1',

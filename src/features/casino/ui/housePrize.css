@@ -1,0 +1,169 @@
+.house-prize {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: var(--gutter-top) var(--gutter-right) var(--gutter-bottom)
+    var(--gutter-left);
+  background: rgb(5 4 6 / 0.78);
+  backdrop-filter: blur(6px);
+  animation: house-prize-in 600ms ease both;
+}
+
+.house-prize__card {
+  display: grid;
+  gap: 0.85rem;
+  width: min(100%, 26rem);
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
+  padding: 1.75rem 1.4rem 1.5rem;
+  border: 1px solid var(--champagne);
+  border-radius: 2px;
+  background:
+    radial-gradient(
+      ellipse at 50% 0%,
+      rgb(233 211 155 / 0.16),
+      transparent 60%
+    ),
+    linear-gradient(170deg, #2a0f18, #0b0b0d 70%);
+  box-shadow:
+    inset 0 0 0 5px rgb(11 11 13 / 0.7),
+    inset 0 0 0 6px rgb(196 164 106 / 0.3),
+    0 1.5rem 4rem rgb(0 0 0 / 0.6);
+  color: var(--ivory);
+  font-family: var(--font-text);
+  text-align: center;
+  animation: house-prize-card 900ms cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+
+.house-prize__card[data-jackpot='true'] {
+  border-color: var(--champagne-bright);
+  box-shadow:
+    inset 0 0 0 5px rgb(11 11 13 / 0.7),
+    inset 0 0 0 6px rgb(233 211 155 / 0.5),
+    0 0 4rem rgb(233 211 155 / 0.25);
+}
+
+.house-prize__eyebrow {
+  margin: 0;
+  color: var(--champagne);
+  font-family: var(--font-caps);
+  font-size: 0.7rem;
+  letter-spacing: 0.28em;
+  text-transform: uppercase;
+}
+
+.house-prize__card h2 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 7vw, 2.1rem);
+  font-weight: 400;
+  line-height: 1.12;
+}
+
+.house-prize__art {
+  width: 100%;
+  max-height: 14rem;
+  object-fit: cover;
+  border: 1px solid rgb(196 164 106 / 0.4);
+}
+
+.house-prize__words {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+  font-style: italic;
+  line-height: 1.45;
+}
+
+.house-prize__action,
+.house-prize__film {
+  display: grid;
+  gap: 0.6rem;
+  justify-items: center;
+}
+
+.house-prize__action p,
+.house-prize__film p {
+  margin: 0;
+}
+
+.house-prize__film video {
+  width: 100%;
+  max-height: 40dvh;
+  background: #000;
+  border: 1px solid rgb(196 164 106 / 0.35);
+}
+
+.house-prize__button {
+  display: inline-block;
+  min-height: 2.9rem;
+  padding: 0.8rem 1.5rem;
+  border: 1px solid var(--champagne-bright);
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgb(233 211 155 / 0.28),
+    rgb(196 164 106 / 0.12)
+  );
+  color: var(--champagne-bright);
+  font-family: var(--font-caps);
+  font-size: 0.76rem;
+  letter-spacing: 0.22em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.house-prize__button:disabled {
+  opacity: 0.55;
+  cursor: default;
+}
+
+.house-prize__fine {
+  margin: 0;
+  color: var(--ink-faint);
+  font-size: 1rem;
+}
+
+.house-prize__close {
+  justify-self: center;
+  min-height: 2.75rem;
+  margin-top: 0.3rem;
+  padding: 0.6rem 1rem;
+  border: 0;
+  background: none;
+  color: var(--champagne);
+  font-family: var(--font-caps);
+  font-size: 0.7rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.house-prize__button:focus-visible,
+.house-prize__close:focus-visible {
+  outline: 2px solid var(--champagne-bright);
+  outline-offset: 3px;
+}
+
+@keyframes house-prize-in {
+  from {
+    opacity: 0;
+  }
+}
+
+@keyframes house-prize-card {
+  from {
+    opacity: 0;
+    transform: translateY(1.5rem) scale(0.96);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .house-prize,
+  .house-prize__card {
+    animation: none;
+  }
+}

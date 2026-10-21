@@ -432,3 +432,13 @@
     animation-delay: 0s;
   }
 }
+
+/* A programme of reels (ADR-024): which reel, or the one offered next. */
+.cinema__reel {
+  margin: 0.4rem 0 0;
+  color: var(--champagne);
+  font-family: var(--font-caps);
+  font-size: 0.68rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}

@@ -54,7 +54,9 @@ export interface Opening {
 export type Sheet = 'clue' | 'code' | null;
 
 interface Source {
-  load(): Promise<VaultResult<{ open: boolean; vaults: MemberVault[] }>>;
+  load(): Promise<
+    VaultResult<{ open: boolean; vaults: MemberVault[]; early?: boolean }>
+  >;
   open(input: VaultOpenInput): Promise<VaultResult<VaultOpenResult>>;
 }
 
@@ -250,11 +252,14 @@ export function useGiftVault(mode: VaultMode) {
       settle(result, false);
       return;
     }
-    const fresh = listed.data.open
-      ? listed.data.vaults.filter(
-          (v) => v.state === 'ready' && !wasAnnounced(v.id),
-        )
-      : [];
+    // Before the birthday only compartments with their own earlier date
+    // read as they are (ADR-024); the server keeps the rest sealed.
+    const fresh =
+      listed.data.open || listed.data.early
+        ? listed.data.vaults.filter(
+            (v) => v.state === 'ready' && !wasAnnounced(v.id),
+          )
+        : [];
     if (fresh.length > 0) {
       fresh.forEach((v) => markAnnounced(v.id));
       speak(...ANNOUNCEMENT);
@@ -278,7 +283,7 @@ export function useGiftVault(mode: VaultMode) {
       setCodeError('');
       setOpening(null);
       setLetter(null);
-      if (!open || vault.state === 'locked') {
+      if (vault.state === 'locked') {
         setSheet(null);
         speak(open ? VAULT_LINES.locked(vault.number) : VAULT_LINES.timeLocked);
       } else if (vault.state === 'ready') {

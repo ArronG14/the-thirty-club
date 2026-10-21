@@ -58,68 +58,73 @@ async function launch(page: Page, name: RegExp) {
   await page.waitForLoadState('load');
 }
 
-test('Casino to voucher: server spins, a win, the Lounge wallet, owner fulfilment', async ({
+test('Casino: three server spins, Bring Me a Drink on the third, CLAIM, a drink request', async ({
   page,
 }) => {
   await unlock(page);
   const calls = apiCalls(page);
   await launch(page, /^The Grand Casino/);
-  const count = page.locator('.casino-live__count');
-  await expect(count).toHaveText('3 spins at your pleasure', {
+  // The real room: roulette on house tokens, the Machine plays her
+  // complimentary spins, each decided by the simulated server first.
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  const count = page.locator('.panel--slots .panel__fine');
+  await expect(count).toHaveText('3 complimentary spins at your pleasure', {
     timeout: 60_000,
   });
   await shot(page, '01-casino-three-spins');
-  const spinButton = page.getByRole('button', { name: 'Spin the wheel' });
-  const results: string[] = [];
-  for (const left of ['2 spins', '1 spin', '0 spins']) {
-    await spinButton.click();
+  const lever = page.getByRole('button', { name: /Pull the lever/ });
+  for (const left of ['2 complimentary spins', 'One complimentary spin']) {
+    await lever.click();
     await expect(count).toHaveText(`${left} at your pleasure`, {
       timeout: 30_000,
     });
-    const result = page.locator('.casino-live__result h2');
-    await expect(result).toBeVisible({ timeout: 30_000 });
-    results.push((await result.textContent()) ?? '');
+    await expect(page.locator('.house-prize')).toHaveCount(0);
   }
-  // The batch held exactly one prize, decided by the server.
-  expect(
-    results.filter((r) => r === 'Rehearsal voucher · two cocktails'),
-  ).toHaveLength(1);
+  // The third spin carries the story's prize, decided by the server.
+  await lever.click();
+  const prize = page.getByRole('dialog', {
+    name: 'Bring Me a Drink — three times',
+  });
+  await expect(prize).toBeVisible({ timeout: 30_000 });
+  await expect(count).toHaveText('0 complimentary spins at your pleasure');
+  await shot(page, '02-casino-third-spin-prize');
+  // Nothing is credited before her CLAIM; it survives a reload unclaimed.
+  await page.reload();
+  // Reloaded before dismissing it: the committed prize is presented again.
+  await expect(prize).toBeVisible({ timeout: 60_000 });
+  await prize.getByRole('button', { name: 'Return to the table' }).click();
+  // Dismissed but unclaimed: it waits in the room.
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  await page.getByRole('button', { name: 'A prize awaits your claim' }).click();
+  await prize.getByRole('button', { name: 'Claim your 3 drinks' }).click();
+  await expect(prize).toContainText('3 drinks are yours', {
+    timeout: 30_000,
+  });
+  await prize.getByRole('button', { name: 'Return to the table' }).click();
   await expect(
-    page.getByRole('button', { name: 'Awaiting your next invitation' }),
+    page.getByRole('button', { name: /Awaiting your next invitation/ }),
   ).toBeDisabled();
   await shot(page, '02-casino-spent');
 
-  // The voucher in the Lounge wallet; Alise asks the Butler to redeem it.
+  // Bring Me a Drink from the Lounge: one voucher, one SMS to the owner.
   await page.goto('/lounge');
-  await page.getByRole('button', { name: 'Your Casino vouchers' }).click();
-  const wallet = page.getByRole('dialog', { name: 'Your vouchers' });
-  await expect(wallet).toContainText('Rehearsal voucher · two cocktails', {
-    timeout: 30_000,
-  });
-  await wallet
-    .getByRole('button', { name: 'Ask the Butler to redeem this' })
-    .click();
-  await expect(wallet).toContainText('Requested · awaiting arrangement');
-  await shot(page, '03-wallet-requested');
-
-  // The owner sees the request and fulfils it.
-  await page.goto('/concierge/owner/test?section=casino');
-  await expect(page.getByText('Starting the simulated club office')).toBeHidden(
-    { timeout: 90_000 },
+  await page.getByRole('button', { name: /^Drinks/ }).click();
+  const drinks = page.getByRole('dialog', { name: 'Drinks' });
+  await expect(drinks).toContainText('Bring Me a Drink', { timeout: 30_000 });
+  await drinks
+    .getByLabel('What would you like brought to you?')
+    .fill('A rum punch by the pool');
+  await drinks.getByRole('button', { name: 'Bring me this drink' }).click();
+  await expect(drinks).toContainText('Consider it done', { timeout: 30_000 });
+  await expect(drinks.locator('.drinks__history')).toContainText(
+    'A rum punch by the pool',
   );
-  const fulfil = page.getByRole('button', { name: 'Mark fulfilled' });
-  await expect(fulfil).toBeVisible({ timeout: 30_000 });
-  await shot(page, '04-owner-request');
-  await fulfil.click();
-  await expect(fulfil).toHaveCount(0, { timeout: 15_000 });
-
-  // She sees it fulfilled.
-  await page.goto('/lounge');
-  await page.getByRole('button', { name: 'Your Casino vouchers' }).click();
-  await expect(
-    page.getByRole('dialog', { name: 'Your vouchers' }),
-  ).toContainText('Fulfilled', { timeout: 30_000 });
-  await shot(page, '05-wallet-fulfilled');
+  await expect(drinks.getByLabel('2 of 3 drinks remaining')).toBeVisible();
+  await shot(page, '03-bring-me-a-drink');
+  // Every call stayed in the tab's simulated office.
   expect(calls).toEqual([]);
 });
 
@@ -128,6 +133,12 @@ test('The communication hold: visible, enforced by the server, release not befor
 }) => {
   await unlock(page);
   const calls = apiCalls(page);
+  // This gate needs a fixed instant before the release floor; the actual
+  // calendar date must not change its expectation.
+  await page.goto('/concierge/owner/test?section=rehearsal');
+  await page.getByLabel('Date and time').fill('2026-10-20T23:00');
+  await page.getByLabel('Time zone').selectOption('America/Jamaica');
+  await page.getByRole('button', { name: 'Set the clock' }).click();
   await page.goto('/concierge/owner/test?section=office&tab=journey');
   await expect(page.getByText('Starting the simulated club office')).toBeHidden(
     { timeout: 90_000 },
@@ -186,5 +197,108 @@ test('The communication hold: visible, enforced by the server, release not befor
   });
   // The rehearsal clock is still 20 October: too early.
   expect(release).toBe(403);
+  expect(calls).toEqual([]);
+});
+
+test('Scenario: two airport drinks after security; a request reaches the owner’s desk', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Airport: two drinks after security/ })
+    .click();
+  await page.waitForURL('**/lounge');
+  const dock = page.getByRole('button', { name: /^Drinks/ });
+  await expect(dock).toBeVisible({ timeout: 60_000 });
+  await dock.click();
+  const sheet = page.getByRole('dialog', { name: 'Drinks' });
+  await expect(sheet).toContainText('Two drinks before the flight', {
+    timeout: 30_000,
+  });
+  await expect(sheet.getByLabel('2 of 2 drinks remaining')).toBeVisible();
+  await sheet.getByLabel('What may I bring you?').fill('A glass of Ruinart');
+  await sheet.getByRole('button', { name: 'Request this drink' }).click();
+  await expect(sheet).toContainText('Word has gone to your husband', {
+    timeout: 30_000,
+  });
+  await expect(sheet.getByLabel('1 of 2 drinks remaining')).toBeVisible();
+  await shot(page, '04-airport-drink-requested');
+  await page.goto('/concierge/owner/test?section=drinks');
+  await expect(page.getByText('Starting the simulated club office')).toBeHidden(
+    { timeout: 90_000 },
+  );
+  await expect(page.getByText('A glass of Ruinart')).toBeVisible({
+    timeout: 30_000,
+  });
+  await shot(page, '05-owner-drinks-desk');
+  expect(calls).toEqual([]);
+});
+
+test('Scenario: the private birthday card, sealed and unfolded', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Birthday: the private card/ })
+    .click();
+  await page.waitForURL('**/birthdaycard');
+  await page
+    .getByRole('button', { name: 'Break the seal' })
+    .click({ timeout: 60_000 });
+  await expect(page.getByRole('region', { name: 'The card' })).toContainText(
+    'Rehearsal card.',
+    { timeout: 10_000 },
+  );
+  await page.waitForTimeout(1600);
+  await shot(page, '06-birthday-card');
+  expect(calls).toEqual([]);
+});
+
+test('Scenario: Nyla’s film on the third spin, replayable from the Lounge', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Casino afternoon: Nyla’s film/ })
+    .click();
+  await page.waitForURL('**/rooms/casino');
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  const lever = page.getByRole('button', { name: /Pull the lever/ });
+  const count = page.locator('.panel--slots .panel__fine');
+  await expect(count).toHaveText('3 complimentary spins at your pleasure', {
+    timeout: 60_000,
+  });
+  await lever.click();
+  await expect(count).toHaveText('2 complimentary spins at your pleasure', {
+    timeout: 30_000,
+  });
+  await lever.click();
+  await expect(count).toHaveText('One complimentary spin at your pleasure', {
+    timeout: 30_000,
+  });
+  await lever.click();
+  const film = page.getByRole('dialog', { name: 'A message from Nyla' });
+  await expect(film).toBeVisible({ timeout: 30_000 });
+  await expect(film.locator('video')).toHaveAttribute(
+    'src',
+    '/media/screening/screening-test-5s.mp4',
+  );
+  await shot(page, '07-film-prize');
+  await film.getByRole('button', { name: 'Return to the table' }).click();
+  await page.goto('/lounge');
+  await page.getByRole('button', { name: 'Your Casino vouchers' }).click();
+  const wallet = page.getByRole('dialog', { name: 'Your vouchers' });
+  await expect(wallet.getByRole('button', { name: 'Watch again' })).toBeVisible(
+    { timeout: 30_000 },
+  );
   expect(calls).toEqual([]);
 });

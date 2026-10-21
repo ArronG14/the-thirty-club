@@ -7,7 +7,11 @@ import {
 } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { TEST_FILM, type ScreeningFilm } from '../config/screeningFilm';
+import {
+  resolveProgramme,
+  TEST_FILM,
+  type ScreeningFilm,
+} from '../config/screeningFilm';
 import { freshRecord, loadRecord, saveRecord } from '../domain/screeningRecord';
 import { SCREENING_LINES } from '../domain/screeningScript';
 import ScreeningRoom from './ScreeningRoom';
@@ -280,5 +284,111 @@ describe('the Private Screening Room', () => {
   it('a birthday film carries no rehearsal label', () => {
     mount({ ...TEST_FILM, id: 'final', kind: 'birthday' });
     expect(screen.queryByText(/test film/)).toBeNull();
+  });
+});
+
+describe('a programme of reels (ADR-024)', () => {
+  const reel = (n: number): ScreeningFilm => ({
+    id: `reel-${n}`,
+    title: `Reel ${n}`,
+    src: `/media/screening/reel-${n}.mp4`,
+    type: 'video/mp4',
+    kind: 'birthday',
+  });
+  const REELS = [reel(1), reel(2), reel(3)];
+  const mountProgramme = (complete = vi.fn()) => {
+    render(
+      <MemoryRouter>
+        <ScreeningRoom programme={REELS} onComplete={complete} />
+      </MemoryRouter>,
+    );
+    return complete;
+  };
+  const end = () => {
+    at(video(), { readyState: 4, duration: 10, currentTime: 10, ended: true });
+    fireEvent.ended(video());
+  };
+
+  it('plays the reels in order, each started by her tap; the end is counted once', () => {
+    const complete = mountProgramme();
+    expect(video()).toHaveAttribute('src', REELS[0]!.src);
+    expect(screen.getByText('1 of 3 · Reel 1')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'Watch Movie' }));
+    expect(phase()).toBe('film');
+    end();
+    // Between reels: back in her seat, the next reel offered.
+    expect(phase()).toBe('seated');
+    expect(screen.getByText('Next — Reel 2')).toBeInTheDocument();
+    expect(screen.getByText(SCREENING_LINES.nextReel)).toBeInTheDocument();
+    expect(complete).not.toHaveBeenCalled();
+    const plays = vi.mocked(HTMLMediaElement.prototype.play).mock.calls.length;
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Continue the screening' }),
+    );
+    // The source changed and play() ran inside that same tap.
+    expect(video()).toHaveAttribute('src', REELS[1]!.src);
+    expect(vi.mocked(HTMLMediaElement.prototype.play).mock.calls.length).toBe(
+      plays + 1,
+    );
+    end();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Continue the screening' }),
+    );
+    expect(video()).toHaveAttribute('src', REELS[2]!.src);
+    end();
+    expect(complete).toHaveBeenCalledTimes(1);
+    expect(loadRecord().completions).toBe(1);
+    expect(screen.getByText(SCREENING_LINES.closing)).toBeInTheDocument();
+    // Watch again starts from the first reel.
+    expect(screen.getByRole('button', { name: 'Watch Movie' })).toBeVisible();
+    expect(screen.getByText('1 of 3 · Reel 1')).toBeInTheDocument();
+  });
+
+  it('a reload between reels continues with the next one', () => {
+    mountProgramme();
+    fireEvent.click(screen.getByRole('button', { name: 'Watch Movie' }));
+    end();
+    cleanup();
+    mountProgramme();
+    expect(video()).toHaveAttribute('src', REELS[1]!.src);
+    expect(screen.getByText('2 of 3 · Reel 2')).toBeInTheDocument();
+    expect(
+      screen.getByRole('button', { name: 'Continue the screening' }),
+    ).toBeInTheDocument();
+  });
+
+  it('a reel that will not load offers the next instead of stopping', () => {
+    mountProgramme();
+    fireEvent.click(screen.getByRole('button', { name: 'Watch Movie' }));
+    fireEvent.error(video());
+    expect(phase()).toBe('seated');
+    expect(screen.getByText('Next — Reel 2')).toBeInTheDocument();
+    fireEvent.click(
+      screen.getByRole('button', { name: 'Continue the screening' }),
+    );
+    expect(video()).toHaveAttribute('src', REELS[1]!.src);
+    expect(phase()).toBe('film');
+  });
+});
+
+describe('resolveProgramme', () => {
+  const good: ScreeningFilm = {
+    id: 'r1',
+    title: 'One',
+    src: '/media/screening/one.mp4',
+    type: 'video/mp4',
+    kind: 'birthday',
+  };
+  it('keeps valid birthday reels in order and skips unsafe ones', () => {
+    const bad = { ...good, id: 'r2', src: 'http://insecure/two.mp4' };
+    const test = { ...good, id: 'r3', kind: 'test' as const };
+    expect(
+      resolveProgramme(false, [good, bad, test], null).map((r) => r.id),
+    ).toEqual(['r1']);
+  });
+  it('falls back to the single film, then (rehearsal only) the test film', () => {
+    expect(resolveProgramme(false, [], good)).toEqual([good]);
+    expect(resolveProgramme(true, [], null)).toEqual([TEST_FILM]);
+    expect(resolveProgramme(false, [], null)).toEqual([]);
   });
 });

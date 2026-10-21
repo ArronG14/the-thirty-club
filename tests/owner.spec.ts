@@ -65,15 +65,16 @@ test('mobile activation, incorrect PIN, room launches, test rewards, reset and e
   await launch(page, /^The Private Screening Room/);
   await expect(page.locator('.cinema').first()).toBeVisible();
   await launch(page, /^The Grand Casino/);
-  // The authoritative Casino (Casino/rewards engine): a rehearsal batch of
+  // The real room with the house's prizes (ADR-024): a rehearsal batch of
   // three spins issued by the simulated server, never by the browser.
-  const count = page.locator('.casino-live__count');
-  await expect(count).toHaveText('3 spins at your pleasure', {
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  const count = page.locator('.panel--slots .panel__fine');
+  await expect(count).toHaveText('3 complimentary spins at your pleasure', {
     timeout: 60_000,
   });
   const guestBefore = await page.evaluate(() => JSON.stringify(localStorage));
-  await page.getByRole('button', { name: 'Spin the wheel' }).click();
-  await expect(count).toHaveText('2 spins at your pleasure', {
+  await page.getByRole('button', { name: /Pull the lever/ }).click();
+  await expect(count).toHaveText('2 complimentary spins at your pleasure', {
     timeout: 30_000,
   });
   // The spin is the simulated server's record; Alise's real device records

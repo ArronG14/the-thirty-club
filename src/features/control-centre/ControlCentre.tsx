@@ -32,10 +32,13 @@ const ButlersOffice = lazy(() => import('../butlers-office/ButlersOffice'));
 const OwnerConsole = lazy(() => import('../concierge/owner/OwnerConsole'));
 const RehearsalDesk = lazy(() => import('./RehearsalDesk'));
 const CasinoRewardsDesk = lazy(() => import('./CasinoRewardsDesk'));
+const DrinksDesk = lazy(() => import('./DrinksDesk'));
+const CardDesk = lazy(() => import('./CardDesk'));
 const CommunicationHold = lazy(() => import('./CommunicationHold'));
 const SmsOperations = lazy(() => import('./SmsOperations'));
 
-type Section = 'rehearsal' | 'office' | 'concierge' | 'casino' | 'sms';
+type Section =
+  'rehearsal' | 'office' | 'concierge' | 'casino' | 'drinks' | 'card' | 'sms';
 
 const isOfficeTab = (value: string | null): value is OfficeTab =>
   OFFICE_TABS.includes(value as OfficeTab);
@@ -71,6 +74,8 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
     requested === 'office' ||
       requested === 'concierge' ||
       requested === 'casino' ||
+      requested === 'drinks' ||
+      requested === 'card' ||
       requested === 'sms' ||
       (requested === 'rehearsal' && world === 'test')
       ? requested
@@ -109,6 +114,8 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
     { id: 'office', label: 'Butler’s Office' },
     { id: 'concierge', label: 'Concierge & privileges' },
     { id: 'casino', label: 'Casino & rewards' },
+    { id: 'drinks', label: 'Drinks' },
+    { id: 'card', label: 'Birthday card' },
     { id: 'sms', label: 'SMS operations' },
   ];
 
@@ -201,6 +208,8 @@ export default function ControlCentre({ world }: { world: 'live' | 'test' }) {
             )}
             {section === 'concierge' && <OwnerConsole embedded />}
             {section === 'casino' && <CasinoRewardsDesk />}
+            {section === 'drinks' && <DrinksDesk />}
+            {section === 'card' && <CardDesk />}
             {section === 'sms' && <SmsOperations />}
           </Suspense>
         </>

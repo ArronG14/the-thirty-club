@@ -233,6 +233,9 @@ function VaultCard({
       : vault.trigger === 'casino'
         ? `Casino · ${VAULT_REWARDS.find((r) => r.id === vault.casinoRewardId)?.name ?? vault.casinoRewardId}`
         : 'Manual';
+  const early = vault.opensAt
+    ? ` · opens early ${bothZones(vault.opensAt)}`
+    : '';
   return (
     <article className="office-vault__card" data-state={vault.state}>
       <header className="office-vault__head">
@@ -243,7 +246,21 @@ function VaultCard({
         <dt>Vault ID</dt>
         <dd>{vault.slug}</dd>
         <dt>Unlock trigger</dt>
-        <dd>{trigger}</dd>
+        <dd>
+          {trigger}
+          {early}
+        </dd>
+        {vault.trigger === 'casino' && (
+          <>
+            <dt>ID for its Casino prize</dt>
+            <dd>
+              <code>{vault.id}</code>{' '}
+              <button type="button" onClick={() => void copy(vault.id, 'ID')}>
+                Copy
+              </button>
+            </dd>
+          </>
+        )}
         <dt>Ready since</dt>
         <dd>{bothZones(vault.readyAt)}</dd>
         <dt>Opened</dt>
@@ -390,14 +407,22 @@ function VaultForm({
     value?.trigger ?? 'manual',
   );
   const [zone, setZone] = useState('America/Jamaica');
+  const [early, setEarly] = useState(Boolean(value?.opensAt));
+  const [earlyZone, setEarlyZone] = useState('Europe/London');
   const [error, setError] = useState('');
   function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     const form = new FormData(event.currentTarget);
     let availableAt: string | null = null;
+    let opensAt: string | null = null;
     try {
       const local = String(form.get('availableAt') ?? '');
       if (trigger === 'scheduled') availableAt = wallTimeToInstant(local, zone);
+      if (early)
+        opensAt = wallTimeToInstant(
+          String(form.get('opensAt') ?? ''),
+          earlyZone,
+        );
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Choose a date and time.');
       return;
@@ -412,6 +437,7 @@ function VaultForm({
         availableAt,
         casinoRewardId:
           trigger === 'casino' ? String(form.get('casinoRewardId')) : null,
+        opensAt,
       },
       value?.id,
     );
@@ -496,6 +522,47 @@ function VaultForm({
           </label>
         </fieldset>
       )}
+      <fieldset className="office-vault__when">
+        <legend>Before the birthday</legend>
+        <label className="office-check">
+          <input
+            type="checkbox"
+            checked={early}
+            onChange={(e) => setEarly(e.target.checked)}
+          />{' '}
+          This compartment opens before 24 October (UGGs, AirPods, the
+          jackpot&rsquo;s breakfast)
+        </label>
+        {early && (
+          <>
+            <label>
+              Time zone
+              <select
+                value={earlyZone}
+                onChange={(e) => setEarlyZone(e.target.value)}
+              >
+                <option value="Europe/London">United Kingdom</option>
+                <option value="America/Jamaica">Jamaica</option>
+              </select>
+            </label>
+            <label>
+              May open from (
+              {earlyZone === 'America/Jamaica' ? 'Jamaica' : 'UK'})
+              <input
+                name="opensAt"
+                type="datetime-local"
+                required
+                defaultValue={instantToWall(value?.opensAt ?? null, earlyZone)}
+                key={earlyZone}
+              />
+            </label>
+            <span className="office-hint">
+              From this moment its key opens it (once it is ready). Without
+              this, every compartment waits for the birthday.
+            </span>
+          </>
+        )}
+      </fieldset>
       {trigger === 'casino' && (
         <label>
           Casino reward that releases it
@@ -510,10 +577,11 @@ function VaultForm({
             ))}
           </select>
           <span className="office-hint">
-            Released by the server when the slots jackpot is recorded through
-            the server play API. The casino screen does not use that API yet, so
-            this trigger cannot fire until it does; you can always make it ready
-            manually.
+            Readied by the server when she wins a Casino prize linked to this
+            compartment (Casino &amp; rewards → a Gift Vault prize with this
+            compartment&rsquo;s Vault ID; give it the slug evening-jackpot for
+            the 23 October evening spins). The Machine plays it as the 777
+            jackpot. You can always make it ready manually.
           </span>
         </label>
       )}

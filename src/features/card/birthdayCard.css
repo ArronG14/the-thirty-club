@@ -1,0 +1,362 @@
+.bcard {
+  --paper: #f6efe2;
+  --paper-shade: #e6dac3;
+  --ink: #2b1b17;
+  position: relative;
+  display: grid;
+  grid-template-rows: 1fr auto;
+  min-height: 100dvh;
+  overflow: hidden;
+  padding: var(--gutter-top) var(--gutter-right) var(--gutter-bottom)
+    var(--gutter-left);
+  background:
+    radial-gradient(
+      ellipse at 50% 35%,
+      rgb(233 211 155 / 0.16),
+      transparent 55%
+    ),
+    radial-gradient(ellipse at 50% 120%, rgb(74 20 36 / 0.8), transparent 60%),
+    var(--midnight);
+  color: var(--ivory);
+  font-family: var(--font-text);
+}
+
+.bcard--quiet {
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 1rem;
+  text-align: center;
+}
+
+.bcard--quiet h1 {
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 2rem;
+  font-weight: 400;
+}
+
+.bcard--quiet p {
+  max-width: 22rem;
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.15rem;
+}
+
+.bcard--quiet a,
+.bcard--quiet button,
+.bcard__home,
+.bcard__again {
+  min-height: 2.75rem;
+  padding: 0.6rem 1.1rem;
+  border: 1px solid var(--champagne);
+  border-radius: 2px;
+  background: none;
+  color: var(--champagne-bright);
+  font-family: var(--font-caps);
+  font-size: 0.72rem;
+  letter-spacing: 0.2em;
+  text-decoration: none;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.bcard__stage {
+  display: grid;
+  place-items: center;
+  perspective: 1600px;
+  perspective-origin: 50% 40%;
+}
+
+.bcard__envelope {
+  position: relative;
+  width: min(78vw, 21rem);
+  aspect-ratio: 0.74;
+  transform-style: preserve-3d;
+  transform: rotateX(8deg);
+  transition: transform 1200ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+/* The envelope's inside, behind the card. */
+.bcard__back {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: linear-gradient(170deg, #5a1a2c, #3a0f1c);
+  box-shadow: 0 2rem 4rem rgb(0 0 0 / 0.55);
+  transition:
+    opacity 900ms ease,
+    transform 1100ms ease;
+}
+
+/* The card, folded, inside the envelope. */
+.bcard__card {
+  position: absolute;
+  inset: 5% 6% 4%;
+  transform-style: preserve-3d;
+  transform: translateZ(1px);
+  transition: transform 1200ms cubic-bezier(0.25, 0.8, 0.25, 1);
+}
+
+.bcard__inside,
+.bcard__cover-front,
+.bcard__cover-back {
+  position: absolute;
+  inset: 0;
+  border-radius: 2px;
+  background:
+    repeating-linear-gradient(
+      0deg,
+      transparent 0 3px,
+      rgb(43 27 23 / 0.015) 3px 4px
+    ),
+    linear-gradient(160deg, var(--paper), var(--paper-shade));
+}
+
+.bcard__inside {
+  display: grid;
+  align-content: start;
+  gap: 1.1rem;
+  overflow-y: auto;
+  padding: 2.2rem 1.5rem 1.8rem;
+  color: var(--ink);
+  box-shadow:
+    inset 0 0 0 1px rgb(184 155 104 / 0.6),
+    inset 0 0 0 7px var(--paper),
+    inset 0 0 0 8px rgb(184 155 104 / 0.45);
+}
+
+.bcard__words {
+  margin: 0;
+  font-size: clamp(1.15rem, 4.6vw, 1.35rem);
+  font-style: italic;
+  line-height: 1.55;
+  white-space: pre-line;
+}
+
+.bcard__signature {
+  justify-self: end;
+  margin: 0;
+  font-family: var(--font-display);
+  font-size: 1.5rem;
+  font-style: italic;
+}
+
+.bcard__cover {
+  position: absolute;
+  inset: 0;
+  transform-origin: left center;
+  transform-style: preserve-3d;
+  transition:
+    transform 1300ms cubic-bezier(0.45, 0.05, 0.25, 1),
+    opacity 500ms ease 1100ms;
+}
+
+.bcard__cover-front {
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 0.35rem;
+  backface-visibility: hidden;
+  color: #7a5a2a;
+  box-shadow:
+    inset 0 0 0 1px rgb(184 155 104 / 0.7),
+    inset 0 0 0 9px var(--paper),
+    inset 0 0 0 10px rgb(184 155 104 / 0.55);
+}
+
+.bcard__monogram {
+  font-family: var(--font-display);
+  font-size: clamp(4rem, 22vw, 6rem);
+  line-height: 1;
+  background: linear-gradient(180deg, #d9bc7c, #8a6a35);
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.bcard__cover-line,
+.bcard__cover-date {
+  font-family: var(--font-caps);
+  font-size: 0.68rem;
+  letter-spacing: 0.4em;
+  text-transform: uppercase;
+}
+
+.bcard__cover-back {
+  transform: rotateY(180deg);
+  backface-visibility: hidden;
+}
+
+/* The envelope's front pocket, in front of the card. */
+.bcard__pocket {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  background: linear-gradient(175deg, #6a2034, #4a1424);
+  clip-path: polygon(0 34%, 50% 62%, 100% 34%, 100% 100%, 0 100%);
+  transform: translateZ(2px);
+  box-shadow: inset 0 -1px 0 rgb(0 0 0 / 0.3);
+  transition:
+    opacity 900ms ease,
+    transform 1100ms ease;
+}
+
+.bcard__flap {
+  position: absolute;
+  inset: 0 0 auto;
+  height: 58%;
+  transform-origin: top center;
+  transform: translateZ(3px);
+  transform-style: preserve-3d;
+  transition:
+    transform 900ms cubic-bezier(0.5, 0, 0.3, 1),
+    opacity 600ms ease;
+}
+
+.bcard__flap::before {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(180deg, #7a2840, #551a2c);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  content: '';
+}
+
+.bcard__seal {
+  position: absolute;
+  top: 78%;
+  left: 50%;
+  display: grid;
+  width: 4rem;
+  height: 4rem;
+  place-items: center;
+  border-radius: 50%;
+  background: radial-gradient(circle at 35% 30%, #d9bc7c, #a37b3c 55%, #6e4f20);
+  box-shadow:
+    0 0.35rem 0.8rem rgb(0 0 0 / 0.45),
+    inset 0 0 0 3px rgb(110 79 32 / 0.6);
+  color: #4a3313;
+  font-family: var(--font-display);
+  font-size: 1.4rem;
+  transform: translate(-50%, -50%);
+}
+
+/* ---------- The sequence ---------- */
+
+/* Sealed, the envelope shows only its own paper. */
+.bcard[data-stage='envelope'] .bcard__card {
+  visibility: hidden;
+}
+
+.bcard[data-stage='envelope'] .bcard__back {
+  background: linear-gradient(170deg, #6a2034, #4a1424);
+}
+
+.bcard[data-stage='flap'] .bcard__flap,
+.bcard[data-stage='rising'] .bcard__flap,
+.bcard[data-stage='closed-card'] .bcard__flap,
+.bcard[data-stage='unfolded'] .bcard__flap {
+  transform: translateZ(0) rotateX(178deg);
+}
+
+.bcard[data-stage='rising'] .bcard__flap,
+.bcard[data-stage='closed-card'] .bcard__flap,
+.bcard[data-stage='unfolded'] .bcard__flap {
+  z-index: -1;
+}
+
+.bcard[data-stage='rising'] .bcard__card {
+  z-index: 1;
+  transform: translateY(-62%) translateZ(4px);
+}
+
+.bcard[data-stage='closed-card'] .bcard__card,
+.bcard[data-stage='unfolded'] .bcard__card {
+  z-index: 5;
+  transform: translateY(-4%) translateZ(60px) scale(1.12);
+}
+
+.bcard[data-stage='closed-card'] .bcard__back,
+.bcard[data-stage='closed-card'] .bcard__pocket,
+.bcard[data-stage='closed-card'] .bcard__flap,
+.bcard[data-stage='unfolded'] .bcard__back,
+.bcard[data-stage='unfolded'] .bcard__pocket,
+.bcard[data-stage='unfolded'] .bcard__flap {
+  opacity: 0;
+  transform: translateY(40%);
+}
+
+.bcard[data-stage='unfolded'] .bcard__envelope {
+  transform: rotateX(0);
+}
+
+.bcard[data-stage='unfolded'] .bcard__cover {
+  opacity: 0;
+  transform: rotateY(-172deg);
+}
+
+/* ---------- Caption ---------- */
+
+.bcard__caption {
+  display: grid;
+  justify-items: center;
+  gap: 0.6rem;
+  min-height: 7rem;
+  padding: 1rem 0 0.5rem;
+  text-align: center;
+}
+
+.bcard__caption p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 1.1rem;
+}
+
+.bcard__eyebrow {
+  font-family: var(--font-caps);
+  font-size: 0.7rem !important;
+  letter-spacing: 0.26em;
+  text-transform: uppercase;
+}
+
+.bcard__when {
+  color: var(--ivory) !important;
+  font-family: var(--font-display);
+  font-size: 1.5rem !important;
+}
+
+.bcard__open {
+  min-height: 3rem;
+  padding: 0.8rem 1.6rem;
+  border: 1px solid var(--champagne-bright);
+  border-radius: 2px;
+  background: linear-gradient(
+    180deg,
+    rgb(233 211 155 / 0.25),
+    rgb(196 164 106 / 0.1)
+  );
+  color: var(--champagne-bright);
+  font-family: var(--font-caps);
+  font-size: 0.78rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.bcard__open:focus-visible,
+.bcard__again:focus-visible,
+.bcard__home:focus-visible {
+  outline: 2px solid var(--champagne-bright);
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bcard__envelope,
+  .bcard__back,
+  .bcard__card,
+  .bcard__cover,
+  .bcard__pocket,
+  .bcard__flap {
+    transition: opacity 300ms ease;
+  }
+}
