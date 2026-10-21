@@ -441,9 +441,11 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 
 ## Vault, jackpot and Nyla setup (docs/release/VAULT_JACKPOT_SETUP_2026-10-21.md)
 
-| ID   | Priority | Status      | Task / acceptance                                                                                                                |
-| ---- | -------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
-| VJ01 | P0       | VERIFIED    | Plan validated through the real owner routes in a disposable database (`vaultJackpotSetup.test.ts` 10/10); no code change needed |
-| VJ02 | P0       | BLOCKED     | Owner decisions: drawer numbers, UGG/AirPods clues, AirPods and breakfast reveal wording, earliest-opening times                 |
-| VJ03 | P0       | BLOCKED     | LIVE Console steps A–F; require the story migration and deploy first                                                             |
-| VJ04 | P0       | NOT STARTED | Read-only `configuration-readiness.sql` CFG01–03, CFG08 true on the hosted database                                              |
+| ID   | Priority | Status      | Task / acceptance                                                                                                                                                                                         |
+| ---- | -------- | ----------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| VJ01 | P0       | VERIFIED    | Plan validated through the real owner routes in a disposable database (`vaultJackpotSetup.test.ts` 10/10); no code change needed                                                                          |
+| VJ02 | P0       | BLOCKED     | Owner decisions: drawer numbers, UGG/AirPods clues, AirPods and breakfast reveal wording, earliest-opening times                                                                                          |
+| VJ03 | P0       | BLOCKED     | LIVE Console steps A–F; require the story migration and deploy first                                                                                                                                      |
+| VJ04 | P0       | NOT STARTED | Read-only `configuration-readiness.sql` CFG01–03, CFG08 true on the hosted database                                                                                                                       |
+| VJ05 | P0       | VERIFIED    | Numbers display zero-padded; early-opening time cannot bypass key, Ready state or story approval; 096 stays Locked and linked to `casino.evening-jackpot` (`vaultJackpotSetup.test.ts` 15/15)             |
+| VJ06 | P0       | VERIFIED    | Final candidate `release/vault-jackpot-2026-10-21` (Codex `cb0aad6` + setup; `d2cdaee` kept as ancestor); two defects in `cb0aad6` fixed (Playwright collecting Vitest files; stale owner scenario label) |

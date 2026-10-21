@@ -9,14 +9,14 @@
     "reapplyOldMigrations": false
   },
   "requiredOwnerInputs": [
-    "Actual UGG/AirPods/breakfast drawer numbers and final physical tag placements",
-    "UGG and AirPods earliest-opening timestamps (UTC; manual chapter triggers remain manual)",
-    "Approved AirPods post-key handover copy",
-    "Confirmed breakfast arrangement for 24 October 10:30 Jamaica and exact reveal copy",
+    "UGG clue (non-spoiler; Story Bible: the key is by her pillow)",
+    "AirPods clue (non-spoiler; Story Bible: Albert and the key are in Arron's bag)",
+    "Approved AirPods post-key handover copy (exact text was never saved)",
+    "Confirmed breakfast arrangement for 24 October 10:30 Jamaica and exact reveal copy; where the breakfast key is hidden, consistent with the riddle",
     "Private birthday-card message and signature",
     "Reviewed short summons for Departure, airport, Albert, three Casino sessions and farewell",
     "Review of document-referenced shortened/revised variants",
-    "R2 account/bucket and credentials entered privately; confirmation of suite/dinner arrangements"
+    "Confirmation of suite/dinner arrangements"
   ],
   "operations": [
     {
@@ -30,13 +30,13 @@
       "method": "POST",
       "path": "/api/v1/owner/vaults",
       "body": {
-        "displayNumber": "<OWNER_UGG_NUMBER>",
+        "displayNumber": 24,
         "clue": "<NON_SPOILER_CLUE>",
-        "giftLocation": "<EXACT_RECOVERED_UGG_REVEAL>",
+        "giftLocation": "<EXACT_RECOVERED_UGG_REVEAL: STORY_COPY.uggReveal, see VAULT_JACKPOT_SETUP>",
         "trigger": "manual",
         "availableAt": null,
         "casinoRewardId": null,
-        "opensAt": "<OWNER_UGG_EARLIEST_UTC>"
+        "opensAt": "2026-10-22T00:00:00Z"
       },
       "result": "Keep vault.id, nfcUrl and backupCode privately. Server mints credentials."
     },
@@ -45,13 +45,13 @@
       "method": "POST",
       "path": "/api/v1/owner/vaults",
       "body": {
-        "displayNumber": "<OWNER_AIRPODS_NUMBER>",
+        "displayNumber": 10,
         "clue": "<NON_SPOILER_CLUE>",
         "giftLocation": "<APPROVED_HUSBAND_HAS_PRESENT_COPY>",
         "trigger": "manual",
         "availableAt": null,
         "casinoRewardId": null,
-        "opensAt": "<OWNER_AIRPODS_EARLIEST_UTC>"
+        "opensAt": "2026-10-22T00:00:00Z"
       }
     },
     {
@@ -59,8 +59,8 @@
       "method": "POST",
       "path": "/api/v1/owner/vaults",
       "body": {
-        "displayNumber": "<OWNER_BREAKFAST_NUMBER>",
-        "clue": "<APPROVED_RIDDLE_COMPATIBLE_CLUE>",
+        "displayNumber": 96,
+        "clue": "Some treasures travel far without ever leaving your side. Seek where the little things you carry like to hide.",
         "giftLocation": "<APPROVED_BREAKFAST_REVEAL_24_OCT_1030_JAMAICA>",
         "trigger": "casino",
         "availableAt": null,
@@ -206,5 +206,18 @@
       "Existing Supabase and concierge credentials",
       "Existing SMS transport variables, LIVE mode and released hold"
     ]
+  },
+  "ownerDecisions": {
+    "confirmed": "2026-10-21 (owner, in chat)",
+    "drawers": {
+      "024": "UGGs",
+      "010": "AirPods",
+      "096": "Breakfast jackpot prize (locked until the 23 Oct 20:30 Jamaica evening jackpot is won)",
+      "030": "RESERVED. Do not create or configure."
+    },
+    "earliestOpeningUgg": "2026-10-22T00:00:00Z",
+    "earliestOpeningAirpods": "2026-10-22T00:00:00Z",
+    "earliestOpeningRule": "Only a time-lock. Opening still needs the drawer's own NFC token or backup code, Alise's member session and the drawer to be Ready. It does not approve, fire or show any story scene.",
+    "numbers": "Stored as integers (24, 10, 96); every screen and the engraved plate zero-pad to three digits (024, 010, 096)."
   }
 }

@@ -26,17 +26,27 @@ Verified locally by `netlify/backend/vaultJackpotSetup.test.ts` (the exact reque
 | 2       | 23 Oct 14:30                    | 3     | `nyla-film`       |
 | 3       | 23 Oct 20:30 (24 Oct 01:30 UTC) | 3     | `evening-jackpot` |
 
-## Owner decisions needed first (not invented here)
+## Owner decisions
+
+**Confirmed (21 Oct):**
+
+| Decision                        | Value                                                                                      |
+| ------------------------------- | ------------------------------------------------------------------------------------------ |
+| UGG drawer                      | **024**                                                                                    |
+| AirPods drawer                  | **010**                                                                                    |
+| Breakfast (jackpot) drawer      | **096**, locked until the 23 Oct 20:30 Jamaica evening jackpot is won                      |
+| Drawer **030**                  | **Reserved. Do not create or configure it.**                                               |
+| UGG and AirPods "May open from" | `2026-10-22T00:00:00Z` (UK 01:00 BST on 22 Oct). All NFC/code and release conditions stay. |
+
+**Still needed (not invented here):**
 
 | #   | Decision                                                                                                                                          | Used in                   |
 | --- | ------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------- |
-| 1   | Drawer numbers (1–999, unique) for UGG, AirPods, breakfast                                                                                        | all three drawers         |
-| 2   | UGG clue: where the key is, **without naming the gift** (Story Bible: by her pillow)                                                              | UGG "NFC clue"            |
-| 3   | AirPods clue: where Albert and the key are, without naming the gift (Story Bible: Arron's bag)                                                    | AirPods "NFC clue"        |
-| 4   | **AirPods reveal wording** after the key: the Bible approves the idea (her husband holds the present; ask him) but the exact text was never saved | AirPods "Gift location"   |
-| 5   | **Breakfast reveal wording** (24 Oct, 10:30 Jamaica, Birthday Breakfast in Bed)                                                                   | breakfast "Gift location" |
-| 6   | Where the breakfast key is hidden, consistent with the riddle (examples in the Bible: makeup bag)                                                 | physical placement only   |
-| 7   | UGG and AirPods earliest-opening time (suggested: `2026-10-22T00:00:00Z`, so they can open as soon as you trigger them)                           | "May open from"           |
+| 1   | UGG clue: where the key is, **without naming the gift** (Story Bible: by her pillow)                                                              | UGG "NFC clue"            |
+| 2   | AirPods clue: where Albert and the key are, without naming the gift (Story Bible: Arron's bag)                                                    | AirPods "NFC clue"        |
+| 3   | **AirPods reveal wording** after the key: the Bible approves the idea (her husband holds the present; ask him) but the exact text was never saved | AirPods "Gift location"   |
+| 4   | **Breakfast reveal wording** (24 Oct, 10:30 Jamaica, Birthday Breakfast in Bed)                                                                   | breakfast "Gift location" |
+| 5   | Where the breakfast key is hidden, consistent with the riddle (examples in the Bible: makeup bag)                                                 | physical placement only   |
 
 ## Exact values, one drawer at a time
 
@@ -46,25 +56,25 @@ All three: **Owner Console → Butler's Office → Vault tab → Create a compar
 
 | Field               | Value                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Engraved number     | your number (decision 1)                                                                                                                                                                                                                                                                                                                                                                                                                                    |
-| NFC clue            | decision 2                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+| Engraved number     | **024** (type `24` or `024`: both are stored as 24 and engraved 024)                                                                                                                                                                                                                                                                                                                                                                                        |
+| NFC clue            | decision 1                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
 | Gift location       | the approved reveal, verbatim (317 characters, from the Story Bible and `STORY_COPY.uggReveal`):<br>`Excellent work, Madam. Your delivery has been successfully released from the Vault.` blank line `I am informed that the item itself has been placed in your shoe cupboard. Rather unimaginative on your husband's part, but I suppose we must be grateful he remembered where it was.` blank line `Do go and investigate. I shall await your verdict.` |
 | Unlock trigger      | **Manual (you make it ready)**                                                                                                                                                                                                                                                                                                                                                                                                                              |
-| Before the birthday | tick "This compartment opens before 24 October"; zone as you prefer; "May open from" = decision 7                                                                                                                                                                                                                                                                                                                                                           |
+| Before the birthday | tick "This compartment opens before 24 October"; zone **United Kingdom**; "May open from" **22 Oct 2026 01:00** (= `2026-10-22T00:00:00Z`)                                                                                                                                                                                                                                                                                                                  |
 
 Save. Copy the **NFC URL** and **Backup code** privately for the tag (never into chat). Then press **Make ready** only when the key is by the pillow and the gift is in the shoe cupboard.
 
 ### B. AirPods drawer
 
-Same form: **Manual**, tick "opens before 24 October" with decision 7. Number: decision 1. Clue: decision 3. Gift location: decision 4. Save; copy the NFC URL and backup code; **Make ready** only when Albert and the key are in the bag.
+Same form: **Manual**; tick "opens before 24 October", zone **United Kingdom**, "May open from" **22 Oct 2026 01:00** (= `2026-10-22T00:00:00Z`). Engraved number **010**. NFC clue: decision 2. Gift location: decision 3. Save; copy the NFC URL and backup code; **Make ready** only when Albert and the key are in the bag.
 
 ### C. Breakfast drawer (the jackpot's drawer)
 
 | Field                          | Value                                                                                                                                                                         |
 | ------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Engraved number                | decision 1                                                                                                                                                                    |
+| Engraved number                | **096**                                                                                                                                                                       |
 | NFC clue                       | `Some treasures travel far without ever leaving your side. Seek where the little things you carry like to hide.` (the owner's riddle, verbatim; your placement must match it) |
-| Gift location                  | decision 5                                                                                                                                                                    |
+| Gift location                  | decision 4                                                                                                                                                                    |
 | Unlock trigger                 | **Won in the Grand Casino**                                                                                                                                                   |
 | Casino reward that releases it | **Evening Mystery Jackpot — third session, 23 October** (`casino.evening-jackpot`)                                                                                            |
 | Before the birthday            | tick it; zone **Jamaica**; "May open from" **23 Oct 2026 20:30** (= `2026-10-24T01:30:00Z`)                                                                                   |
@@ -95,6 +105,15 @@ If the save is refused, the ID is wrong or the drawer is not a Locked "Won in th
 ### F. Nyla's film
 
 **Casino & rewards → "A message from Nyla" → Film URL `/api/v1/media/nyla-film`, Active on → Save.** Change nothing else (the form is pre-filled). Never paste a signed or `r2.cloudflarestorage.com` address.
+
+## What the numbers and the early opening do (verified by `vaultJackpotSetup.test.ts`, tests 10 to 14)
+
+- **Leading zeroes.** A drawer number is stored as a plain integer (24, 10, 96). Everywhere it is shown it is padded to three digits: the Vault desk plate, the Journey desk's "Physical gift compartment" list (`No. 024`) and the engraved plate Alise sees (`024`, `010`, `096`). Typing `24` or `024` is the same. The jackpot prize uses the drawer's long Vault ID, never the number.
+- **The early opening time is only a time-lock.** Before `2026-10-22T00:00:00Z` even the correct key is refused ("not open"). After it, a drawer still opens only if **all** of these hold: the key is that drawer's own NFC token or backup code; it is Alise's member session; and the drawer is **Ready** (made so by you). A wrong key is refused at any time; a genuine key on a drawer that is not Ready is refused ("locked"); the UGG key does not open the AirPods drawer.
+- **It does not release the story.** The time-lock is separate from the scenes. With the drawer Ready and the time passed, `departure-ugg` still does nothing while communications are held, and fails closed (no letter, no SMS) until you have reviewed and approved it and mapped the drawer.
+- **Breakfast (096) stays sealed.** It is "not open" until 20:30 Jamaica on 23 Oct, and after that stays Locked until the third evening spin readies it: both its key and its backup code are refused ("locked") and its clue and gift text are never sent while it is Locked. What someone in the Vault room can see of a sealed drawer is its engraved number and "Locked", the same as any other drawer.
+- **Still linked to the jackpot.** Drawer 096 carries `casino.evening-jackpot`, and the `evening-jackpot` prize points at it (re-checked after the early-opening tests, with the drawer still Locked).
+- **030** is never created by this plan.
 
 ## Check (read-only)
 

@@ -128,7 +128,11 @@ test('the 19:00 card scenario runs the ceremony; a reset returns to the locked d
   await unlock(page);
   await panel(page);
   await page
-    .getByRole('button', { name: /^Early admission: 19:00 UK, card already/ })
+    // Renamed with the NFC-before-door fix: the TEST card is presented
+    // explicitly after the invitation (a retained session cannot start it).
+    .getByRole('button', {
+      name: /^Early admission: 19:00 UK, card presented after invitation/,
+    })
     .click();
   await expect(page.locator('.club')).toHaveAttribute(
     'data-stage',

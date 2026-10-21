@@ -9,6 +9,9 @@ export default defineConfig({
     'screening-film.spec.ts',
     // Real-print delivery via the local R2 stand-in: playwright.media.config.ts.
     'media-delivery.spec.ts',
+    // Story Bible acceptance is a Vitest suite (npm run test:acceptance); the
+    // default Playwright run must not try to load it.
+    'acceptance/**',
     'butlers-office.spec.ts',
     'gift-vault.spec.ts',
     'correspondence.spec.ts',
