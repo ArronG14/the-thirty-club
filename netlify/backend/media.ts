@@ -9,10 +9,12 @@ import {
 import { BackendError, type Database } from './database.ts';
 import { withJourneyTemplates } from './journey.ts';
 import type { MediaObjects } from './mediaObjects.ts';
+import { objectUrl, presign, s3Config, type S3Config } from './s3Presign.ts';
 
 /**
- * Protected films (ADR-026): `GET /api/v1/media/<id>` returns a ticket, a
- * signed URL to a PRIVATE Supabase Storage object, only to a session that
+ * Protected films (ADR-026, ADR-027): `GET /api/v1/media/<id>` returns a
+ * ticket, a signed URL to a PRIVATE storage object (Cloudflare R2 when
+ * MEDIA_S3_* is configured, else Supabase Storage), only to a session that
  * may see the film now. The browser never holds a permanent address, the
  * bucket has no public access, and the object names carry an unguessable
  * folder as a second line of defence.
@@ -25,7 +27,7 @@ import type { MediaObjects } from './mediaObjects.ts';
  *   snapshot carries this film's reference (the third spin of the
  *   `casino-afternoon-spins` batch). Watching again costs nothing.
  *
- * Signed URLs serve HTTP byte ranges from Supabase's CDN, so seeking works
+ * Signed URLs serve HTTP byte ranges, so seeking works
  * and only what is watched is downloaded. A URL that expires during a long
  * pause is replaced by asking again; the page does that itself.
  */
@@ -128,6 +130,30 @@ async function sign(
   return `${base}/storage/v1${data.signedURL}`;
 }
 
+/**
+ * R2 (or any S3-compatible service): signing is local, so first ask the
+ * storage whether the object is there — a missing one reads "being
+ * prepared", never a broken URL. If that question cannot be answered (a
+ * slow or failing check), the ticket is still issued: she is entitled, and
+ * the player's own Retry covers a storage outage.
+ */
+async function signS3(
+  config: S3Config,
+  send: typeof fetch,
+  bucket: string,
+  object: string,
+  ttlSeconds: number,
+  at: Date,
+): Promise<string> {
+  const url = objectUrl(config, bucket, object);
+  const probe = await send(
+    await presign({ config, url, method: 'HEAD', expiresIn: 60, now: at }),
+    { method: 'HEAD', signal: AbortSignal.timeout(5000) },
+  ).catch(() => null);
+  if (probe?.status === 404) throw new BackendError('not-configured');
+  return presign({ config, url, expiresIn: ttlSeconds, now: at });
+}
+
 export async function mediaTicket({
   id,
   session,
@@ -164,12 +190,16 @@ export async function mediaTicket({
   }
   if (!storage) throw new BackendError('not-configured');
   const object = storage.objects[id];
+  const s3 = s3Config(env);
+  const at = new Date(now());
+  const signOne = (path: string) =>
+    s3
+      ? signS3(s3, send, storage.bucket, path, rule.ttlSeconds, at)
+      : sign(env, send, storage.bucket, path, rule.ttlSeconds);
   const [url, lighterUrl] = await Promise.all([
-    sign(env, send, storage.bucket, object.standard, rule.ttlSeconds),
+    signOne(object.standard),
     object.lighter
-      ? sign(env, send, storage.bucket, object.lighter, rule.ttlSeconds).catch(
-          () => null,
-        )
+      ? signOne(object.lighter).catch(() => null)
       : Promise.resolve(null),
   ]);
   return { id, url, lighterUrl, expiresAt, simulated: false };

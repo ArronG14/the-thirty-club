@@ -207,6 +207,31 @@ describe('the protected birthday film (ADR-026)', () => {
     expect(loadRecord().completedAt).toBeNull();
   });
 
+  it('a frozen picture that still reports "playing" (WebKit in an outage) ends with Retry; progress never does', async () => {
+    mount();
+    await settle();
+    fireEvent.click(primary());
+    fireEvent.playing(video());
+    Object.defineProperty(video(), 'readyState', { value: 4 });
+    Object.defineProperty(video(), 'duration', { value: 880 });
+    Object.defineProperty(video(), 'currentTime', { value: 0, writable: true });
+    for (let s = 1; s <= 120; s++) {
+      video().currentTime = s;
+      fireEvent.timeUpdate(video());
+      act(() => vi.advanceTimersByTime(1000));
+    }
+    expect(phase()).toBe('film');
+    fireEvent.waiting(video());
+    fireEvent.playing(video());
+    // 45 s from the last real progress (a second before these events).
+    act(() => vi.advanceTimersByTime(STALL_TIMEOUT_MS - 2000));
+    expect(phase()).toBe('film');
+    act(() => vi.advanceTimersByTime(1000));
+    expect(phase()).toBe('seated');
+    expect(screen.getByText(/Your place is kept at 2:00/)).toBeInTheDocument();
+    expect(loadRecord().completedAt).toBeNull();
+  });
+
   it('storage unreachable but the club reachable: one renewal per failure, never a loop', async () => {
     let n = 0;
     answer = () => Promise.resolve(json(ticket({ url: `${SIGNED}&n=${++n}` })));

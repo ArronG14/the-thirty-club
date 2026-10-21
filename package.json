@@ -32,8 +32,11 @@
     "verify:final-migrations": "node tools/verify-final-release-migrations.mjs",
     "release:preflight": "node tools/release-preflight.mjs && npm run verify:final-migrations",
     "release:smoke": "node tools/release-smoke.mjs",
-    "media:verify": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts verify",
-    "media:upload": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts upload"
+    "media:verify": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-r2.ts verify",
+    "media:upload": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-r2.ts upload",
+    "media:supabase": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts",
+    "media:standin": "node --experimental-strip-types --no-warnings=ExperimentalWarning tools/s3-standin.ts",
+    "test:media": "npm run build && playwright test -c playwright.media.config.ts && MEDIA_WEBKIT=1 playwright test -c playwright.media.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",

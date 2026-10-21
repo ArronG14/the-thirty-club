@@ -62,6 +62,14 @@ export function FilmPlayer({
   const [message, setMessage] = useState('');
   const resumeAt = useRef(0);
   const watchdog = useRef<number | null>(null);
+  /**
+   * Where the film was when the watch was last re-armed. The stall watch
+   * counts progress, not events: WebKit reports "playing" (and alternates
+   * "waiting"/"playing") over a frozen picture during an outage, and a
+   * trickle can move the clock by a frame. Only half a second of film
+   * re-arms it; an event only arms it when nothing is armed.
+   */
+  const mark = useRef(-1);
 
   const clearWatchdog = useCallback(() => {
     if (watchdog.current !== null) window.clearTimeout(watchdog.current);
@@ -149,19 +157,32 @@ export function FilmPlayer({
               Math.max(0, element.duration - 0.5),
             );
         }}
-        onPlaying={() => {
-          clearWatchdog();
+        onPlaying={(event) => {
           setPhase('playing');
+          if (watchdog.current === null) {
+            mark.current = event.currentTarget.currentTime;
+            arm(STALL_TIMEOUT_MS, SLOW);
+          }
         }}
-        onWaiting={() => {
+        onWaiting={(event) => {
           if (phaseRef.current === 'idle' || phaseRef.current === 'failed')
             return;
           setPhase('buffering');
-          arm(STALL_TIMEOUT_MS, SLOW);
+          if (watchdog.current === null) {
+            mark.current = event.currentTarget.currentTime;
+            arm(STALL_TIMEOUT_MS, SLOW);
+          }
         }}
         onTimeUpdate={(event) => {
           const t = event.currentTarget.currentTime;
           if (t > 0) resumeAt.current = t;
+          if (
+            Math.abs(t - mark.current) >= 0.5 &&
+            (phaseRef.current === 'playing' || phaseRef.current === 'buffering')
+          ) {
+            mark.current = t;
+            arm(STALL_TIMEOUT_MS, SLOW);
+          }
         }}
         onPause={(event) => {
           // Her own pause (or the native player closing) is not a failure.

@@ -199,6 +199,12 @@ export default function ScreeningRoom({
     print === 'lighter' && source.lighterUrl ? source.lighterUrl : source.url;
   const [buffering, setBuffering] = useState(false);
   const watchdog = useRef<number | null>(null);
+  /**
+   * Where the film was when the stall watch was last re-armed: it counts
+   * progress (half a second of film), not events, which WebKit reports
+   * over a frozen picture during an outage (ADR-027).
+   */
+  const mark = useRef(-1);
   const reducedMotion = useReducedMotion();
   const [record, dispatchRecord] = useReducer(
     screeningReducer,
@@ -551,7 +557,16 @@ export default function ScreeningRoom({
 
   function onTimeUpdate(event: SyntheticEvent<HTMLVideoElement>) {
     if (phaseRef.current !== 'film') return;
-    const tick = Math.floor(event.currentTarget.currentTime);
+    const t = event.currentTarget.currentTime;
+    if (
+      watchdog.current !== null &&
+      !settled.current &&
+      Math.abs(t - mark.current) >= 0.5
+    ) {
+      mark.current = t;
+      arm(STALL_TIMEOUT_MS);
+    }
+    const tick = Math.floor(t);
     if (tick !== lastSaved.current && tick % SAVE_EVERY_SECONDS === 0) {
       lastSaved.current = tick;
       savePosition();
@@ -740,14 +755,26 @@ export default function ScreeningRoom({
             aria-label={film.title}
             onLoadedMetadata={onLoadedMetadata}
             onTimeUpdate={onTimeUpdate}
-            onPlaying={() => {
-              clearWatchdog();
+            onPlaying={(event) => {
               setBuffering(false);
+              // "Playing" is not progress: an event only arms the watch
+              // when nothing is armed; progress re-arms it (onTimeUpdate).
+              if (
+                phaseRef.current === 'film' &&
+                !settled.current &&
+                watchdog.current === null
+              ) {
+                mark.current = event.currentTarget.currentTime;
+                arm(STALL_TIMEOUT_MS);
+              }
             }}
-            onWaiting={() => {
+            onWaiting={(event) => {
               if (phaseRef.current !== 'film' || settled.current) return;
               setBuffering(true);
-              arm(STALL_TIMEOUT_MS);
+              if (watchdog.current === null) {
+                mark.current = event.currentTarget.currentTime;
+                arm(STALL_TIMEOUT_MS);
+              }
             }}
             onPause={() => {
               if (phaseRef.current === 'film' && !settled.current) {

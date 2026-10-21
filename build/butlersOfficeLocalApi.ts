@@ -8,6 +8,10 @@ import { createBackendApi } from '../netlify/backend/api.ts';
 import { publishDueLetters } from '../netlify/backend/correspondence.ts';
 import { TEST_ENV } from '../netlify/concierge/testing.ts';
 import {
+  MEDIA_BUCKET,
+  MEDIA_OBJECTS,
+} from '../netlify/backend/mediaObjects.ts';
+import {
   BackendError,
   rpcFor,
   type Database,
@@ -63,9 +67,19 @@ async function initialize() {
       CONCIERGE_SESSION_SECRET: TEST_ENV.CONCIERGE_SESSION_SECRET,
       OWNER_PASSWORD_HASH: `scrypt$local-rehearsal$${scryptSync('thirty-club-local-rehearsal-only', 'local-rehearsal', 64).toString('hex')}`,
       SMS_SENDING_ENABLED: 'false',
-      // Protected films (ADR-026) answer with the five-second test film.
-      MEDIA_SIMULATED: 'true',
+      // Protected films (ADR-026) answer with the five-second test film,
+      // unless a browser test points them at the local R2 stand-in
+      // (tools/s3-standin.ts, ADR-027) to play the real prints.
+      ...(process.env.MEDIA_S3_ENDPOINT?.startsWith('http://127.0.0.1:')
+        ? {
+            MEDIA_S3_ENDPOINT: process.env.MEDIA_S3_ENDPOINT,
+            MEDIA_S3_ACCESS_KEY_ID: process.env.MEDIA_S3_ACCESS_KEY_ID ?? '',
+            MEDIA_S3_SECRET_ACCESS_KEY:
+              process.env.MEDIA_S3_SECRET_ACCESS_KEY ?? '',
+          }
+        : { MEDIA_SIMULATED: 'true' }),
     },
+    media: { bucket: MEDIA_BUCKET, objects: MEDIA_OBJECTS },
   });
   // LOCAL ONLY: brings every scheduled letter's moment forward and runs the
   // round's publication step, as the every-minute dispatch would.

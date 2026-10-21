@@ -1,6 +1,6 @@
 # Protected films: the birthday film and Nyla's film (ADR-026)
 
-Branch `feature/final-media-integration`, cut from the deployed release `2b32872` (`origin/main`). No migration. The two approval-gated steps are an upload to private storage and a Netlify deploy. Neither has been done.
+Branch `feature/final-media-integration`, cut from the deployed release `2b32872` (`origin/main`). No migration. Storage: Cloudflare R2 (ADR-027, §2). The approval-gated steps are the owner's Cloudflare set-up and upload, three Netlify environment variables, and the deploy of the integrated release. None has been done.
 
 ## 1. The films
 
@@ -28,21 +28,51 @@ xcrun swift tools/verify-streaming-film.swift <source.MOV> <print.mp4>
 
 A first encode dropped a quarter of the birthday film's frames (the compositor resampled CapCut's 29.97 fps); the tool now follows the source's own frame timing, and the verifier fails any print that loses frames.
 
-## 2. Hosting decision
+## 2. Hosting decision (ADR-027 supersedes ADR-026's storage choice)
 
-**Supabase Storage, the project's existing backend (`fzndcjzenodcixmuvfsb`), in a new PRIVATE bucket `ttc-media`.** Netlify serves only the application; the films never enter Git or the build.
+**Cloudflare R2, in a private bucket `ttc-media`, reached through R2's S3-compatible API with presigned URLs.** Netlify serves only the application; the films never enter Git or the build. The ticket endpoint, the gates, the players and the object names are unchanged from ADR-026; only the signer changed.
 
-- **Access.** The bucket has no public access. The page holds only a reference, `/api/v1/media/<id>`. `GET /api/v1/media/<id>` (Netlify Function) checks the session and returns a URL signed by the service role, valid for 4 hours, with a lighter print for the birthday film. The object names are in `netlify/backend/mediaObjects.ts`, which only the Netlify function imports (a test fails if anything the browser bundles imports it; the built `dist/` was checked to contain none of them). Unguessable folders are a second line of defence, not the protection.
-- **Who gets a ticket.**
-  - Owner session: both films at any time (Control Centre → **Films** plays each print, to check them on the iPhone and the hotel Wi-Fi).
-  - Birthday film: her member session, the Screening Room ADMITTED (`birthday-screening` milestone, `2026-10-24T05:00Z` = 00:00 Jamaica), and the server's clock at or after `2026-10-24T05:00:00Z`. UK midnight (`2026-10-23T23:00Z`) is refused (`not-open`) even if the room were admitted early.
-  - Nyla's film: her member session and a Casino entitlement whose prize snapshot carries `/api/v1/media/nyla-film`. Before the third spin of the afternoon session no such entitlement exists, so the ticket is refused.
-  - Anyone else: 401/403. An unknown id: 404. Not uploaded: 503, which the room shows as "being prepared".
-- **Delivery.** Signed URLs are served by Supabase's CDN with HTTP byte ranges, so the iPhone downloads only what it plays and seeking works. `preload="metadata"` with fast start fetches only the header until she presses play. No service-worker caching of video (unchanged, ADR-019).
-- **Expiry and renewal.** The page fetches a ticket as soon as the film is on screen (never inside her tap, which must call `play()` synchronously for the iPhone's player), renews it 15 minutes before expiry, on returning to the page, on `online` and `focus`, and after any playback failure. A renewed ticket never interrupts a film in progress; it is used from her seat.
-- **Why not elsewhere.** Netlify's build or Blobs (no byte-range video delivery through a function; the build would expose the film); GitHub (100 MB limit, permanent history); a new CDN/media service (a new account, credentials and owner set-up on the day he flies). Supabase is already configured in Netlify (`SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`), so **no new environment variable** is needed.
-- **Limits to check before upload (owner, in the Supabase dashboard, not verified by the engineer).** The plan's per-file upload limit must allow 344 MB: the Free plan cannot exceed 50 MB; on Pro the global limit is a project setting (Storage → Settings) that must be at least 400 MB. The bucket itself is created with a 600 MB per-file limit and `video/mp4` only. Expected egress: about 344 MB per full viewing of the standard print (168 MB lighter), 26 MB per Nyla viewing; owner checks plus a few viewings are well under 3 GB.
-- **Jamaica.** The CDN serves from its nearest edge after the first fetch. The standard print needs a sustained ~3.2 Mbit/s; the lighter one ~1.5 Mbit/s. `npm run media:verify` reports the measured throughput from wherever it is run; the decisive check is the Films desk on the iPhone on the hotel Wi-Fi.
+**Why not the ADR-026 plan.** The Supabase project is on the Free plan: 50 MB per file, so the 344 MB and 168 MB prints cannot be uploaded (an upgrade, or cutting the film into chunks, was ruled out).
+
+**Options checked (briefly):**
+
+| Option                       | Verdict                                                                                                                                                                                                                                                                                                             |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Netlify static files         | Rejected. Netlify builds from GitHub, which refuses files over 100 MB and would keep the film in history forever; a static file is a public address (no birthday gate); Netlify publishes no per-file limit and staff advise against large media.                                                                   |
+| Netlify Blobs via a function | Rejected. A function cannot stream 344 MB with byte ranges (response limits; no range reads), so iPhone seeking would break.                                                                                                                                                                                        |
+| Supabase Pro                 | Excluded by the brief (no upgrade).                                                                                                                                                                                                                                                                                 |
+| Backblaze B2                 | Works with the same code (S3-compatible), but the free account caps downloads at 1 GB a day until billing is added: two viewings and an owner check would hit it.                                                                                                                                                   |
+| **Cloudflare R2**            | **Chosen.** 5 GB single objects, multipart uploads, byte ranges, presigned URLs up to 7 days, **no egress charge**, 10 GB-month free. Private by default. Same ticket architecture; no SDK, no new dependency (SigV4 in Web Crypto, `netlify/backend/s3Presign.ts`, tested against AWS's own published signatures). |
+
+- **Access.** The bucket has no public access (no r2.dev address, no custom domain); R2's S3 API refuses any request without a valid signature. The page holds only `/api/v1/media/<id>`. `GET /api/v1/media/<id>` (Netlify Function) checks the session and the gate, asks R2 whether the object is there (a 60-second signed HEAD; a missing object reads "being prepared"; an unanswered check still issues the ticket), and returns a presigned GET URL valid for 4 hours for that one object, plus the lighter print. Signing happens inside the function with the secret key; the key never leaves it (tested; the built `dist/` contains no key, object path or film).
+- **Who gets a ticket.** Unchanged (ADR-026): owner at any time; the birthday film only to her member session with the Screening Room ADMITTED and the server clock at or after `2026-10-24T05:00:00Z` (UK midnight refused); Nyla's film only with her `nyla-film` entitlement. Before then nothing is signed and R2 is not even asked.
+- **Delivery.** Presigned URLs sign only the host, so the iPhone's own `Range` and playback headers pass untouched: 206 partial content, seeking, `video/mp4` (stored with each object at upload). `preload="metadata"` with fast start fetches only the header until she presses play (measured: Chromium 0.8–1.1 MB per print, WebKit ≤ 6.6 MB, against 26–344 MB films). No service-worker caching of video (ADR-019). Presigned URLs are served from the bucket's region (R2's S3 endpoint is not CDN-cached), so **create the bucket with the location hint Eastern North America** (closest to Jamaica).
+- **Expiry and renewal.** Unchanged client behaviour: ticket fetched as the film appears (never inside her tap), renewed 15 minutes before expiry, on return, `online` and `focus`, and after a failure; a renewal never interrupts a film in progress. R2 refuses an expired URL with 403; the player then offers Retry with a fresh ticket.
+- **Configuration.** Three Netlify environment variables (Functions): `MEDIA_S3_ENDPOINT` (`https://<account id>.r2.cloudflarestorage.com`), `MEDIA_S3_ACCESS_KEY_ID`, `MEDIA_S3_SECRET_ACCESS_KEY` (secret). Optional `MEDIA_S3_REGION` (default `auto`). Without them the function falls back to the ADR-026 Supabase signer, which on the Free plan can only ever hold Nyla's film.
+- **Cost and limits.** Stored: 538 MB (5 % of the free 10 GB-month). Reads are Class B operations (10 million a month free; a viewing is hundreds to a few thousand range requests). Egress free. Expected bill: £0. Cloudflare asks for a payment method when R2 is first enabled; charges arise only above the free tier.
+- **Bandwidth.** The standard print needs a sustained ~3.2 Mbit/s, the lighter ~1.5 Mbit/s. In WebKit at 2.5 Mbit/s the lighter print played steadily (≥ 9 s of film per 12 s). `npm run media:verify` reports throughput from wherever it runs; the decisive check is the Films desk on the iPhone on the hotel Wi-Fi.
+
+### Owner set-up (about 15 minutes, before the flight)
+
+**A. Cloudflare** (dash.cloudflare.com, sign in or create the account):
+
+1. **R2 Object Storage** → if asked, add a payment method / activate R2 (free tier).
+2. **Create bucket**: name `ttc-media`; Location: **Provide a location hint → Eastern North America (ENAM)**; storage class Standard. Leave **Public access off** (no r2.dev, no custom domain). No CORS rule is needed.
+3. **R2 → Overview → API Tokens → Manage → Create Account API token**: name `thirty-club-films`; Permissions **Object Read & Write**; **Apply to specific buckets only → `ttc-media`**; TTL Forever → Create. Copy the **Access Key ID**, the **Secret Access Key** (shown once) and the **S3 endpoint** `https://<account id>.r2.cloudflarestorage.com` (without `/ttc-media`).
+
+**B. Upload** (this checkout, on the Mac; 538 MB, resumable per 16 MiB part):
+
+```sh
+export MEDIA_S3_ENDPOINT=https://<account id>.r2.cloudflarestorage.com
+export MEDIA_S3_ACCESS_KEY_ID=<access key id>
+read -rs MEDIA_S3_SECRET_ACCESS_KEY && export MEDIA_S3_SECRET_ACCESS_KEY
+npm run media:upload -- ~/Desktop/thirty-club-streaming
+npm run media:upload -- ~/Desktop/thirty-club-streaming --confirm
+```
+
+The first is a dry run. The second uploads and runs every check; it must end **"All protected-media checks passed."** (Safari probe, 206 ranges at five points identical to the local prints, `video/mp4`, fast start, unsigned/forged/expired refused, throughput.)
+
+**C. Netlify** (Site configuration → Environment variables → Add a variable, each with scope including **Functions**, all deploy contexts): `MEDIA_S3_ENDPOINT`, `MEDIA_S3_ACCESS_KEY_ID`, and `MEDIA_S3_SECRET_ACCESS_KEY` with **"Contains secret values"** ticked. They take effect at the next deploy (the integrated release); nothing changes on the live site until then.
 
 ## 3. The Private Screening Room
 
@@ -52,7 +82,7 @@ Added around playback:
 
 - **Preparing.** While the ticket is on its way, the button reads "Preparing the projector…" and is disabled (it normally arrives during the Butler's introduction). Not uploaded: "Your screening is being prepared." and no button.
 - **Loading feedback.** "The film is loading…" on the theatre layout (the iPhone's own player shows its spinner).
-- **Nothing loads forever.** No picture 30 s after her tap, or no progress for 45 s mid-film (not counting her own pause): the film stops, her place is kept, and she is back in her seat with an honest notice.
+- **Nothing loads forever.** No picture 30 s after her tap, or no progress for 45 s mid-film (not counting her own pause): the film stops, her place is kept, and she is back in her seat with an honest notice. Progress means the film's clock moving by half a second; a `playing` event is not progress (WebKit fires `waiting`/`playing` over a frozen picture during an outage; found by the ADR-027 WebKit tests and fixed in both players).
 - **Recovery.** "Try again" (with a fresh ticket, from her place); "Try the lighter print" (720p, same place); "Watch it another way" (the offline fallback).
 - **Interrupted and returning.** Leaving, refreshing or backgrounding keeps her place (unchanged); a ticket that expired meanwhile is renewed before she can press play.
 
@@ -84,24 +114,25 @@ What she sees: spins one and two as before; the third spin's reveal (the existin
 
 ## 5. Approval boundaries (nothing below has been done)
 
-1. **Upload to live storage** — destination: Supabase project `fzndcjzenodcixmuvfsb`, new private bucket `ttc-media`, three objects (538 MB). Privacy: no public URL; signed 4-hour URLs only to the owner, to Alise's session when earned. Implication: storage and egress on the existing plan; the plan's file-size limit must allow 344 MB.
-2. **Netlify production deploy** of this branch's commit (application code only, no migration, no environment change).
-3. **Owner prize edit** (§4) after the deploy.
+1. **Cloudflare account / R2 activation** (owner only: payment method; free tier).
+2. **Upload to live storage**: Cloudflare R2, private bucket `ttc-media`, three objects (538 MB). Privacy: no public address; presigned 4-hour URLs only to the owner, and to Alise's session when earned.
+3. **Netlify environment variables** (three, above): owner only.
+4. **Netlify production deploy** of the integrated release that contains this branch (no migration from this branch).
+5. **Owner prize edit** (§4) after the deploy.
 
 ## 6. Shortest safe release
 
-Not before the 19:00 UK ceremony on 21 October has completed, and not during it. The upload is best done from the UK before the flight on 22 October.
+The media branch is **not** released on its own: it is merged into Codex's final story release and deployed once, from that verified release (§7).
 
-1. Supabase dashboard: confirm the per-file upload limit allows 344 MB (raise to 400 MB if needed).
-2. In this checkout, with `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` exported privately (never committed):
-   ```sh
-   npm run media:upload -- ~/Desktop/thirty-club-streaming
-   npm run media:upload -- ~/Desktop/thirty-club-streaming --confirm
-   ```
-   The first is a dry run. The second creates the private bucket, uploads (resumable), and runs every check; it must end "All protected-media checks passed."
-3. Netlify: lock auto publishing. Confirm `origin/main` is still `2b328722154279410dba66266fdc64559c2ce8cd`, then fast-forward it to this branch (it descends from it) and push. Publish that deploy once its preview builds; confirm the published commit.
-4. `npm run release:smoke`. On the iPhone (owner signed in): Control Centre → **Films** → play the standard print, seek, play the lighter print, play Nyla's film.
-5. Control Centre → Casino & rewards → "A message from Nyla": Film URL `/api/v1/media/nyla-film`, Active, Save. Check in the journey tab that `casino-afternoon-spins` still lists `nyla-film` on the third spin; leave it held until the moment you choose, then resume or trigger it.
-6. In Jamaica, on the hotel Wi-Fi, repeat step 4 (and `npm run media:verify` from the Mac). Keep the original `.MOV` on the iPhone as the fallback.
+1. Owner set-up A–C (§2), before the flight on 22 October; step B must end "All protected-media checks passed."
+2. After the integrated release is published: `npm run release:smoke`; on the iPhone (owner signed in) Control Centre → **Films** → play the standard print, seek, play the lighter print, play Nyla's film.
+3. Control Centre → Casino & rewards → "A message from Nyla": Film URL `/api/v1/media/nyla-film`, Active, Save — before `casino-afternoon-spins` (23 Oct 14:30 Jamaica) fires.
+4. In Jamaica, on the hotel Wi-Fi, repeat step 2 (and `npm run media:verify -- ~/Desktop/thirty-club-streaming` from the Mac). Keep the original `.MOV` on the iPhone as the fallback.
 
-Rollback: republish the previous Netlify deploy (`2b32872`). The bucket can stay; nothing public points at it.
+Rollback: republish the previous Netlify deploy. The bucket can stay; nothing public points at it. Revoking the R2 token (Cloudflare → API Tokens) stops every ticket at once.
+
+## 7. Integrating into the final story release
+
+- Branch `feature/final-media-integration` descends from the deployed `2b32872` (= `origin/main`). Merge it (do not cherry-pick) into the final release branch; commits `7e676d9` (ADR-026) and the ADR-027 commit.
+- Files most likely to meet story work: `BUILD_LOG.md`, `TASKS.md`, `ARCHITECTURE.md`, `PROJECT.md`, `.env.example`, `package.json` (scripts only, no dependency), `playwright.config.ts` (one `testIgnore` line), `netlify/backend/api.ts` (the `/media/<id>` route and `media` dependency), `netlify/functions/api.ts` (injects `media`), `build/butlersOfficeLocalApi.ts` (local stand-in switch), `src/features/screening/ui/ScreeningRoom.tsx` (player only), `src/features/casino/ui/HousePrizeReveal.tsx`, `src/features/lounge/ui/VoucherWallet.tsx`, `src/features/control-centre/ControlCentre.tsx` (Films tab), `src/features/rehearsal/office.ts` and `sim/env.ts` (TEST film). Story text, schedules, letters, SMS, prize allocation and migrations are untouched.
+- After merging: `npm run check`, `npm run test:screening`, `npm run test:media` (needs the prints in `~/Desktop/thirty-club-streaming`), and the release's own journey rehearsals.

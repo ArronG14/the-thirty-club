@@ -35,6 +35,15 @@ const ENV = {
   SMS_SENDING_ENABLED: 'false',
 };
 const NYLA = '/api/v1/media/nyla-film';
+/** Cloudflare R2 (ADR-027): the Netlify function's MEDIA_S3_* settings. */
+const R2_ENDPOINT = 'https://0123456789abcdef.r2.cloudflarestorage.com';
+const R2_SECRET = 'r2-secret-access-key-for-tests-only';
+const R2_ENV = {
+  ...ENV,
+  MEDIA_S3_ENDPOINT: R2_ENDPOINT,
+  MEDIA_S3_ACCESS_KEY_ID: 'r2-access-key-id',
+  MEDIA_S3_SECRET_ACCESS_KEY: R2_SECRET,
+};
 
 let pg: PGlite;
 let db: Database;
@@ -44,8 +53,19 @@ const memberToken = newToken();
 let signed: { url: string; body: unknown; auth: string | null }[] = [];
 /** Objects the fake storage holds (none: "not uploaded yet"). */
 let uploaded = new Set<string>();
+/** Requests that reached the fake R2 (the existence check before signing). */
+let probes: { url: string; method: string }[] = [];
+let r2Down = false;
 const fakeStorage = (async (url: unknown, init?: RequestInit) => {
   const address = String(url);
+  if (address.startsWith(R2_ENDPOINT)) {
+    probes.push({ url: address, method: init?.method ?? 'GET' });
+    if (r2Down) throw new TypeError('fetch failed');
+    const object = decodeURIComponent(
+      new URL(address).pathname.slice(`/${MEDIA_BUCKET}/`.length),
+    );
+    return new Response(null, { status: uploaded.has(object) ? 200 : 404 });
+  }
   signed.push({
     url: address,
     body: JSON.parse(String(init?.body ?? 'null')),
@@ -172,6 +192,8 @@ beforeAll(async () => {
 
 beforeEach(async () => {
   signed = [];
+  probes = [];
+  r2Down = false;
   uploaded = new Set(
     Object.values(MEDIA_OBJECTS).flatMap((o) =>
       o.lighter ? [o.standard, o.lighter] : [o.standard],
@@ -298,6 +320,78 @@ describe('the birthday film', () => {
     );
     expect(result.data.lighterUrl).toContain('&print=lighter');
     expect(signed).toHaveLength(0);
+  });
+});
+
+describe('on Cloudflare R2 (ADR-027)', () => {
+  const r2 = (id: string, role: 'owner' | 'member' | 'none' = 'member') =>
+    ticket(id, role, R2_ENV);
+
+  it('the birthday film: nothing is signed or probed before 00:00 Jamaica', async () => {
+    await admit('screening-room');
+    await at('2026-10-24T04:59:00Z');
+    const early = await r2('birthday-film');
+    expect(early.status).toBe(403);
+    expect(early.data.error).toBe('not-open');
+    await at('2026-10-24T06:00:00Z');
+    expect((await r2('birthday-film', 'none')).status).toBe(401);
+    expect(probes).toHaveLength(0);
+    expect(signed).toHaveLength(0);
+  });
+
+  it('at midnight: presigned, expiring R2 URLs for both prints, Supabase untouched', async () => {
+    await admit('screening-room');
+    await at('2026-10-24T05:00:00Z');
+    const result = await r2('birthday-film');
+    expect(result.status).toBe(200);
+    expect(result.headers.get('cache-control')).toBe('no-store');
+    const film = MEDIA_OBJECTS['birthday-film'];
+    for (const [address, object] of [
+      [result.data.url, film.standard],
+      [result.data.lighterUrl!, film.lighter!],
+    ] as const) {
+      const url = new URL(address);
+      expect(`${url.origin}${url.pathname}`).toBe(
+        `${R2_ENDPOINT}/${MEDIA_BUCKET}/${object}`,
+      );
+      expect(url.searchParams.get('X-Amz-Expires')).toBe(String(4 * 3600));
+      expect(url.searchParams.get('X-Amz-SignedHeaders')).toBe('host');
+      expect(url.searchParams.get('X-Amz-Signature')).toMatch(/^[0-9a-f]{64}$/);
+      expect(url.searchParams.get('X-Amz-Credential')).toMatch(
+        /^r2-access-key-id\/\d{8}\/auto\/s3\/aws4_request$/,
+      );
+    }
+    expect(probes.map((p) => p.method)).toEqual(['HEAD', 'HEAD']);
+    expect(signed).toHaveLength(0);
+    expect(JSON.stringify(result.data)).not.toContain(R2_SECRET);
+    expect(result.data.simulated).toBe(false);
+  });
+
+  it("Nyla's film and the owner's check sign the right object", async () => {
+    await at('2026-10-21T12:00:00Z');
+    const nyla = await r2('nyla-film', 'owner');
+    expect(nyla.status).toBe(200);
+    expect(new URL(nyla.data.url).pathname).toBe(
+      `/${MEDIA_BUCKET}/${MEDIA_OBJECTS['nyla-film'].standard}`,
+    );
+    expect(nyla.data.lighterUrl).toBeNull();
+    // Her session has won nothing yet.
+    expect((await r2('nyla-film')).status).toBe(403);
+  });
+
+  it('not uploaded: "being prepared"; storage unreachable: the ticket still issues', async () => {
+    uploaded = new Set();
+    const missing = await r2('birthday-film', 'owner');
+    expect(missing.status).toBe(503);
+    expect(missing.data.error).toBe('not-configured');
+    uploaded = new Set([MEDIA_OBJECTS['birthday-film'].standard]);
+    const partial = await r2('birthday-film', 'owner');
+    expect(partial.status).toBe(200);
+    expect(partial.data.lighterUrl).toBeNull();
+    r2Down = true;
+    const unchecked = await r2('birthday-film', 'owner');
+    expect(unchecked.status).toBe(200);
+    expect(unchecked.data.url).toContain('X-Amz-Signature=');
   });
 });
 
