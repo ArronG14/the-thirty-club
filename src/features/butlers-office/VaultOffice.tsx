@@ -43,7 +43,15 @@ const bothZones = (at: string | null) =>
     ? `${when(at, 'America/Jamaica')} Jamaica · ${when(at, 'Europe/London')} UK`
     : '—';
 
-const VAULT_REWARDS = CASINO_REWARDS.filter((r) => r.kind === 'vault-code');
+const VAULT_REWARDS = [
+  {
+    id: 'casino.evening-jackpot',
+    name: 'Evening Mystery Jackpot — third session, 23 October',
+  },
+  ...CASINO_REWARDS.filter((r) => r.kind === 'vault-code').map(
+    ({ id, name }) => ({ id, name }),
+  ),
+];
 const TRIGGERS: Record<VaultTrigger, string> = {
   manual: 'Manual (you make it ready)',
   scheduled: 'Scheduled date and time',

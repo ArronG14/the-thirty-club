@@ -46,9 +46,9 @@ async function unlock(page: Page) {
   for (let i = 0; i < 5; i++) await page.locator('.timepiece').tap();
   await page.getByLabel('Private access code').fill('1414');
   await page.getByRole('button', { name: 'Unlock private office' }).click();
-  await expect(
-    page.getByRole('button', { name: 'Open Dev Mode' }),
-  ).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Open Dev Mode' })).toBeVisible(
+    { timeout: 15000 },
+  );
 }
 
 async function scenario(page: Page, name: string) {

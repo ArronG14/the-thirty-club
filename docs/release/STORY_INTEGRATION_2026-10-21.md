@@ -1,5 +1,7 @@
 # Story integration — 21 October 2026
 
+**Combined release handover:** use [COMBINED_RELEASE_2026-10-21.md](COMBINED_RELEASE_2026-10-21.md) for the integrated candidate, current hosted state and ordered approval gates. This source-branch record is retained for history.
+
 This is the delivery record for `codex/story-integration-2026-10-21`, based on `2b328722154279410dba66266fdc64559c2ce8cd`. The exact delivered commit is `git rev-parse HEAD` in this checkout. This report does not authorize a hosted migration, deploy, real SMS or communication-hold change.
 
 ## Sources and observed state

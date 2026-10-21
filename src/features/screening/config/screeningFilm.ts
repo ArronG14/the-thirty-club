@@ -5,17 +5,17 @@
  * edit (cinematic introduction, the guests' messages, cinematic ending).
  * Replacing the film never touches the room's playback logic:
  *
- *   1. Export the MP4 (H.264 + AAC, fast start; see
- *      docs/SCREENING_ROOM_IMPLEMENTATION.md for the CapCut settings).
- *   2. Put it at public/media/screening/<file>.mp4, or host it elsewhere
- *      over HTTPS (needed above GitHub's 100 MB file limit).
- *   3. Fill in BIRTHDAY_FILM below, run the checks, commit and push.
+ *   1. Make the streaming prints and upload them privately
+ *      (docs/MEDIA_DELIVERY.md); never commit a film or put it in public/.
+ *   2. BIRTHDAY_FILM below refers to it by its protected reference.
  *
- * Until BIRTHDAY_FILM is set, Alise (LIVE) sees an honest "being prepared"
+ * Until the print is uploaded, Alise (LIVE) sees an honest "being prepared"
  * screen with no Watch Movie button. Rehearsals (Dev Mode / TEST) and the
  * local development server use the five-second TEST_FILM instead, clearly
  * labelled as a test.
  */
+
+import { mediaReference } from '../../../shared/media/contract';
 
 export interface ScreeningFilm {
   /** Stable id. Changing it starts resume positions afresh. */
@@ -54,18 +54,22 @@ export const TEST_FILM: ScreeningFilm = {
 };
 
 /**
- * The final birthday film. `null` until the owner supplies the CapCut
- * export. Example once it exists:
- *
- *   export const BIRTHDAY_FILM: ScreeningFilm | null = {
- *     id: 'thirty-years-of-alise-v1',
- *     title: 'Thirty Years of Alise',
- *     src: '/media/screening/thirty-years-of-alise-v1.mp4',
- *     type: 'video/mp4',
- *     kind: 'birthday',
- *   };
+ * The final birthday film (supplied 21 October 2026): 14 min 40 s, H.264 +
+ * AAC, fast start. It is PROTECTED (ADR-026): the page holds only this
+ * reference. The server answers it with a short-lived signed URL to a
+ * private Supabase Storage object, and only to Alise's session once the
+ * Screening Room has admitted her and it is 24 October in Jamaica (or to the
+ * owner). Rehearsals get the five-second test film from the TEST office.
+ * Upload and checks: docs/MEDIA_DELIVERY.md.
  */
-export const BIRTHDAY_FILM: ScreeningFilm | null = null;
+export const BIRTHDAY_FILM: ScreeningFilm | null = {
+  id: 'thirty-years-of-alise-2026-10-21',
+  title: 'Thirty Years of Alise',
+  src: mediaReference('birthday-film'),
+  type: 'video/mp4',
+  durationSeconds: 880,
+  kind: 'birthday',
+};
 
 /**
  * OR the screening as separate reels, played in this order (ADR-024): each

@@ -71,7 +71,7 @@ async function gift(
     giftLocation: location,
     trigger,
     availableAt: null,
-    casinoRewardId: trigger === 'casino' ? 'casino.test-breakfast' : null,
+    casinoRewardId: trigger === 'casino' ? 'casino.evening-jackpot' : null,
     opensAt: '2026-10-22T07:00:00Z',
   });
   if (trigger === 'manual')
@@ -85,7 +85,7 @@ async function screenshot(page: Page, name: string) {
     fullPage: true,
   });
 }
-async function machine(page: Page) {
+async function machine(page: Page, beforePrize?: () => Promise<void>) {
   if (!new URL(page.url()).pathname.includes('/rooms/casino'))
     await page.goto('/rooms/casino');
   await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
@@ -96,6 +96,7 @@ async function machine(page: Page) {
     '3 complimentary spins at your pleasure',
     { timeout: 60000 },
   );
+  await beforePrize?.();
   const lever = page.getByRole('button', { name: /Pull the lever/ });
   for (const remaining of ['2 complimentary spins', 'One complimentary spin']) {
     await lever.click();
@@ -104,6 +105,7 @@ async function machine(page: Page) {
       { timeout: 30000 },
     );
     await expect(page.locator('.house-prize')).toHaveCount(0);
+    await beforePrize?.();
   }
   await lever.click();
   await expect(page.locator('.house-prize')).toBeVisible({ timeout: 30000 });
@@ -362,7 +364,7 @@ test('22–25 October: all nine Casino spins, physical actions, invitations and 
         Object.entries(film).filter(([k]) => !['id'].includes(k)),
       ),
       active: true,
-      videoUrl: '/media/screening/screening-test-5s.mp4',
+      videoUrl: '/api/v1/media/nyla-film',
     },
     'PATCH',
   );
@@ -375,12 +377,15 @@ test('22–25 October: all nine Casino spins, physical actions, invitations and 
     {},
   );
   await clock(page, '2026-10-23T14:30');
-  await machine(page);
+  await machine(page, async () => {
+    await expect(call(page, '/media/nyla-film')).rejects.toThrow('forbidden');
+  });
   await expect(page.getByText(/Our Head of Security, Miss Nyla/)).toBeVisible();
   await expect(
     page.getByRole('button', { name: 'Watch', exact: true }),
   ).toBeVisible();
   await casinoLedger(page, 2);
+  expect((await call(page, '/media/nyla-film')).simulated).toBe(true);
   await screenshot(page, '23-nyla');
   await page.getByRole('button', { name: 'Return to the table' }).click();
   await page.goto('/lounge');
@@ -467,6 +472,7 @@ test('22–25 October: all nine Casino spins, physical actions, invitations and 
   await expect(
     page.getByRole('heading', { name: 'Not this way, Madam.' }),
   ).toBeVisible({ timeout: 60000 });
+  await expect(call(page, '/media/birthday-film')).rejects.toThrow('forbidden');
   await clock(page, '2026-10-24T00:00');
   await page.goto('/lounge');
   const screening = page
@@ -476,9 +482,10 @@ test('22–25 October: all nine Casino spins, physical actions, invitations and 
   await screening.getByRole('button', { name: 'Keep it for later' }).click();
   await page.reload();
   await expect(screening).toBeVisible({ timeout: 60000 });
+  await expect(call(page, '/media/birthday-film')).rejects.toThrow('forbidden');
   await screenshot(page, '24-pending-midnight-invitation');
-  // Media branch is deliberately not merged. This test proves admission ordering,
-  // not the final 14m40s film's physical-device playback.
+  // The protected-media route is integrated; the TEST ticket uses the five-second fixture.
+  // Actual prints and storage are checked separately by test:media.
   console.log('TEST chronology: 25 Oct persistence');
   await clock(page, '2026-10-25T18:00');
   await ownerPage(page);

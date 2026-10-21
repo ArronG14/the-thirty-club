@@ -289,19 +289,48 @@ test('Scenario: Nyla’s film on the third spin, replayable from the Lounge', as
     timeout: 30_000,
   });
   await lever.click();
-  const film = page.getByRole('dialog', { name: 'A message from Nyla' });
+  const film = page.getByRole('dialog', { name: 'A Rather Personal Delivery' });
   await expect(film).toBeVisible({ timeout: 30_000 });
+  // The prize holds only the protected reference (ADR-026); the TEST office
+  // grants the ticket because she won it, with the five-second test film.
   await expect(film.locator('video')).toHaveAttribute(
     'src',
-    '/media/screening/screening-test-5s.mp4',
+    /^\/media\/screening\/screening-test-5s\.mp4\?ticket=/,
+    { timeout: 15_000 },
   );
+  await expect(
+    film.getByText(
+      'Rehearsal · the five-second test film stands in for this film.',
+    ),
+  ).toBeVisible();
+  await film.getByRole('button', { name: 'Watch' }).click();
+  await expect
+    .poll(() =>
+      film.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime),
+    )
+    .toBeGreaterThan(0.5);
   await shot(page, '07-film-prize');
+  await page.evaluate(() => document.querySelector('video')?.pause());
   await film.getByRole('button', { name: 'Return to the table' }).click();
+  await expect(count).toHaveText(/No complimentary spins|0 complimentary/, {
+    timeout: 15_000,
+  });
   await page.goto('/lounge');
   await page.getByRole('button', { name: 'Your Casino vouchers' }).click();
   const wallet = page.getByRole('dialog', { name: 'Your vouchers' });
-  await expect(wallet.getByRole('button', { name: 'Watch again' })).toBeVisible(
-    { timeout: 30_000 },
-  );
+  const again = wallet.getByRole('button', { name: 'Watch again' });
+  await expect(again).toBeEnabled({ timeout: 30_000 });
+  await again.click();
+  await expect
+    .poll(() =>
+      wallet.locator('video').evaluate((v: HTMLVideoElement) => v.currentTime),
+    )
+    .toBeGreaterThan(0.5);
+  // Watching again spent nothing.
+  await page.goto('/rooms/casino');
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  await expect(count).toHaveText(/No complimentary spins|0 complimentary/, {
+    timeout: 30_000,
+  });
   expect(calls).toEqual([]);
 });

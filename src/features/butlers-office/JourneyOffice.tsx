@@ -315,7 +315,7 @@ export function JourneyOffice() {
             </div>
             <p>
               <time dateTime={m.fireAt}>{jamaica(m.fireAt)} Jamaica</time> ·{' '}
-              {when(m.fireAt, 'Europe/London')} UK
+              {when(m.fireAt, 'Europe/London')} UK · {when(m.fireAt, 'UTC')} UTC
             </p>
             {m.description && <p className="office-hint">{m.description}</p>}
             {m.storyManaged && (

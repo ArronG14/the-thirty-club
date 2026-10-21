@@ -24,6 +24,8 @@ import { requireCommunications } from './hold.ts';
 import { smsRoute } from './smsOperations.ts';
 import { serviceRoute } from './service.ts';
 import { casinoRoute } from './casino.ts';
+import { mediaTicket } from './media.ts';
+import type { MediaObjects } from './mediaObjects.ts';
 import {
   bridgeMemberSession,
   releaseCasinoVaults,
@@ -78,8 +80,21 @@ export interface ApiDeps {
   env: NodeJS.ProcessEnv;
   /** The provider transport; tests and the rehearsal office pass a fake. */
   send?: typeof fetch;
+  /** Supabase Storage (signed film URLs, ADR-026); tests pass a fake. */
+  storage?: typeof fetch;
+  /**
+   * Where the protected films are (server only: the Netlify function and
+   * tests). The browser's TEST office passes none and only simulates.
+   */
+  media?: { bucket: string; objects: MediaObjects };
 }
-export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
+export function createBackendApi({
+  db,
+  env,
+  send = fetch,
+  storage = fetch,
+  media,
+}: ApiDeps) {
   return async (request: Request, ip: string): Promise<Response> => {
     const requestId = crypto.randomUUID();
     const url = new URL(request.url);
@@ -236,6 +251,18 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
         headers.set('set-cookie', sessionCookie(url, '', 0));
         return respond({ ok: true });
       }
+      // A protected film's short-lived ticket (ADR-026); never cached.
+      if (request.method === 'GET' && /^\/media\/[^/]+$/.test(path))
+        return respond(
+          await mediaTicket({
+            id: path.slice('/media/'.length),
+            session,
+            db,
+            env,
+            storage: media,
+            send: storage,
+          }),
+        );
       if (path.startsWith('/owner/') && session.role !== 'owner')
         throw new BackendError('forbidden');
       const route = `${request.method} ${path}`;

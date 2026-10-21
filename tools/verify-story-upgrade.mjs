@@ -18,12 +18,13 @@ try {
     await pg.exec(readFileSync(`supabase/migrations/${f}`, 'utf8'));
   await pg.exec(`
  update public.ttc_communication_hold set active=false,released_at=now();
- update public.ttc_sms_operations set mode='off';
+ update public.ttc_sms_operations set mode='live',live_since='2026-10-21T00:00:00Z';
  update public.ttc_journey_milestones set state='fired',fired_at=now() where key='early-membership';
  insert into public.ttc_membership_card(member_id) select id from public.ttc_members where slug='alise';
  insert into public.ttc_room_admissions(member_id,room_id,state,invited_via,letter_title,letter_body,admitted_at)
- select id,'lounge','admitted','event','Existing membership','Already admitted',now() from public.ttc_members where slug='alise';
+ select id,'lounge','admitted','event','Existing membership','Already admitted','2026-10-21T18:04:27.352437Z'::timestamptz from public.ttc_members where slug='alise';
  insert into public.ttc_messages(label,body,category,timezone,state) values('Existing delivered teaser','Already sent','scheduled-alise','Europe/London','delivered');
+ insert into public.ttc_messages(label,body,category,timezone,state,send_at,approved_at) values('Existing approved message','Already approved','correspondence-alise','America/Jamaica','approved',now(),now());
  `);
   const protectedState = async () => ({
     admissions: (
@@ -46,12 +47,22 @@ try {
     hold: (await pg.query('select * from public.ttc_communication_hold')).rows,
     sms: (await pg.query('select * from public.ttc_sms_operations')).rows,
   });
+  const snapshotSql = readFileSync(
+    'docs/release/progress-snapshot.sql',
+    'utf8',
+  );
+  const releaseBefore = (await pg.query(snapshotSql)).rows;
   const before = await protectedState();
   await pg.exec(readFileSync(`supabase/migrations/${upgrade}`, 'utf8'));
   assert.deepEqual(
     await protectedState(),
     before,
     'Completed admission, card, sends or operational holds changed',
+  );
+  assert.deepEqual(
+    (await pg.query(snapshotSql)).rows,
+    releaseBefore,
+    'Operator progress snapshot changed across the upgrade',
   );
   const unsafe = (
     await pg.query(`select p.proname from pg_proc p join pg_namespace n on n.oid=p.pronamespace

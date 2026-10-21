@@ -353,7 +353,7 @@ describe('the recipient journey, in chronological server time', () => {
       /Nyla media/,
     );
     await pg.exec(
-      "update public.ttc_prize_catalogue set active=true,video_url='/media/screening/screening-test-5s.mp4' where slug='nyla-film'",
+      "update public.ttc_prize_catalogue set active=true,video_url='/api/v1/media/nyla-film' where slug='nyla-film'",
     );
     expect((await fire('casino-afternoon-spins')).milestone.state).toBe(
       'fired',
@@ -397,7 +397,7 @@ describe('the recipient journey, in chronological server time', () => {
           'TEST: Birthday Breakfast in Bed — 24 October, 10:30 Jamaica.',
         trigger: 'casino',
         availableAt: null,
-        casinoRewardId: 'casino.test-breakfast',
+        casinoRewardId: 'casino.evening-jackpot',
         nfcToken: 'C'.repeat(43),
         nfcTokenHash: 'breakfast-key',
         backupCode: 'CCCC-DDDD-EEEE',
@@ -430,6 +430,15 @@ describe('the recipient journey, in chronological server time', () => {
     await expect(
       action('vault-open', { credentialHash: 'breakfast-key' }, 'member'),
     ).rejects.toThrow('vault-locked');
+    // An old Casino outcome must not release this story compartment.
+    await action(
+      'system-vault-casino',
+      { rewardId: 'casino.vault-key-one' },
+      'system',
+    );
+    await expect(
+      action('vault-open', { credentialHash: 'breakfast-key' }, 'member'),
+    ).rejects.toThrow('vault-locked');
     const spins = [];
     for (let i = 0; i < 3; i++)
       spins.push(
@@ -442,7 +451,7 @@ describe('the recipient journey, in chronological server time', () => {
     expect(spins[0]!.prize).toBeNull();
     expect(spins[1]!.prize).toBeNull();
     expect(spins[2]!.prize).toMatchObject({
-      title: 'Mystery Prize',
+      title: 'A Most Extraordinary Victory!',
       presentation: STORY_COPY.jackpot,
     });
     expect(JSON.stringify(spins[2]!.prize)).not.toMatch(/breakfast/i);

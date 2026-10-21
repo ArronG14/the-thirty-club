@@ -402,8 +402,8 @@ Your devoted Butler
 https://30.ag14.co/lounge',
  description='16:00 Jamaica. Dinner 19:30; return 17:00; escort 19:00. Confirm actual dinner and suite arrangements. Send Now and scheduler share the same idempotent milestone.',updated_at=now()
  where key='birthday-dinner' and state<>'fired';
-update public.ttc_journey_milestones set title='25 Oct — Your devoted Butler',fire_at='2026-10-25T23:00:00Z'::timestamptz,
- effects='[{"type": "letter", "title": "Your devoted Butler", "body": "As for myself, I shall remain at your service.\n\nAlthough I do intend to submit a formal request for annual leave.\n\nI suspect Miss Nyla will reject it.\n\nHappy 30th Birthday, Madam.\n\nMay this next chapter of your life be your most wonderful yet.\n\nForever your devoted Butler\nThe Thirty Club"}]'::jsonb, state='held',story_managed=true,
+update public.ttc_journey_milestones set title='25 Oct — One Last Engagement, Madam',fire_at='2026-10-25T23:00:00Z'::timestamptz,
+ effects='[{"type": "letter", "title": "One Last Engagement, Madam", "body": "As for myself, I shall remain at your service.\n\nAlthough I do intend to submit a formal request for annual leave.\n\nI suspect Miss Nyla will reject it.\n\nHappy 30th Birthday, Madam.\n\nMay this next chapter of your life be your most wonderful yet.\n\nForever your devoted Butler\nThe Thirty Club"}]'::jsonb, state='held',story_managed=true,
  manual_only=true,story_approved=false,story_disabled=false,
  requires_keys=ARRAY['birthday-dinner']::text[],story_sms=null,
  description='Exact approved closing only. No excursion promise. Time was never approved: manual only. Full no-excursion introduction and short invitation SMS require editorial review.',updated_at=now()
@@ -447,7 +447,7 @@ language plpgsql stable set search_path='' as $$
 declare result jsonb;
 begin
  result:=public.ttc_casino_prize_snapshot_before_story(p);
- if p.slug='nyla-film' then result:=result||jsonb_build_object('presentation','Madam,
+ if p.slug='nyla-film' then result:=result||jsonb_build_object('title','A Rather Personal Delivery','presentation','Madam,
 
 Well, this is quite extraordinary.
 
@@ -475,7 +475,7 @@ I believe this one may be rather special, Madam.
 
 Your devoted Butler
 The Thirty Club'); end if;
- if p.slug='evening-jackpot' then result:=result||jsonb_build_object('title','Mystery Prize','description','777 Mystery Jackpot','presentation','MADAM!
+ if p.slug='evening-jackpot' then result:=result||jsonb_build_object('title','A Most Extraordinary Victory!','description','777 Mystery Jackpot','presentation','MADAM!
 
 GOOD HEAVENS!
 

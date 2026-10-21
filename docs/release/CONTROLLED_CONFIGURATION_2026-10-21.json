@@ -1,0 +1,210 @@
+{
+  "schema": 1,
+  "mode": "PLAN_ONLY — no production operation has run",
+  "scope": "Complete 22–25 October release; all nine spins",
+  "migration": {
+    "apply": ["20261022150000_story_sequence.sql"],
+    "alreadyHosted": 15,
+    "mediaMigrations": [],
+    "reapplyOldMigrations": false
+  },
+  "requiredOwnerInputs": [
+    "Actual UGG/AirPods/breakfast drawer numbers and final physical tag placements",
+    "UGG and AirPods earliest-opening timestamps (UTC; manual chapter triggers remain manual)",
+    "Approved AirPods post-key handover copy",
+    "Confirmed breakfast arrangement for 24 October 10:30 Jamaica and exact reveal copy",
+    "Private birthday-card message and signature",
+    "Reviewed short summons for Departure, airport, Albert, three Casino sessions and farewell",
+    "Review of document-referenced shortened/revised variants",
+    "R2 account/bucket and credentials entered privately; confirmation of suite/dinner arrangements"
+  ],
+  "operations": [
+    {
+      "step": "inventory",
+      "method": "GET",
+      "path": "/api/v1/owner/vaults",
+      "rule": "Read before create/update; after an uncertain response re-read by confirmed number. Never rotate credentials, choose another number or create a duplicate as a retry."
+    },
+    {
+      "step": "ugg",
+      "method": "POST",
+      "path": "/api/v1/owner/vaults",
+      "body": {
+        "displayNumber": "<OWNER_UGG_NUMBER>",
+        "clue": "<NON_SPOILER_CLUE>",
+        "giftLocation": "<EXACT_RECOVERED_UGG_REVEAL>",
+        "trigger": "manual",
+        "availableAt": null,
+        "casinoRewardId": null,
+        "opensAt": "<OWNER_UGG_EARLIEST_UTC>"
+      },
+      "result": "Keep vault.id, nfcUrl and backupCode privately. Server mints credentials."
+    },
+    {
+      "step": "airpods",
+      "method": "POST",
+      "path": "/api/v1/owner/vaults",
+      "body": {
+        "displayNumber": "<OWNER_AIRPODS_NUMBER>",
+        "clue": "<NON_SPOILER_CLUE>",
+        "giftLocation": "<APPROVED_HUSBAND_HAS_PRESENT_COPY>",
+        "trigger": "manual",
+        "availableAt": null,
+        "casinoRewardId": null,
+        "opensAt": "<OWNER_AIRPODS_EARLIEST_UTC>"
+      }
+    },
+    {
+      "step": "breakfast",
+      "method": "POST",
+      "path": "/api/v1/owner/vaults",
+      "body": {
+        "displayNumber": "<OWNER_BREAKFAST_NUMBER>",
+        "clue": "<APPROVED_RIDDLE_COMPATIBLE_CLUE>",
+        "giftLocation": "<APPROVED_BREAKFAST_REVEAL_24_OCT_1030_JAMAICA>",
+        "trigger": "casino",
+        "availableAt": null,
+        "casinoRewardId": "casino.evening-jackpot",
+        "opensAt": "2026-10-24T01:30:00Z"
+      },
+      "rule": "Leave LOCKED. Do not use casino.vault-key-one and do not press Ready/Open. The third evening spin readies exactly this linked drawer."
+    },
+    {
+      "step": "physical_ready",
+      "method": "POST",
+      "path": "/api/v1/owner/vaults/<UGG_OR_AIRPODS_ID>/ready",
+      "body": {},
+      "rule": "UGG and AirPods only, after real key/present arrangements are confirmed. This does not open them or send the story."
+    },
+    {
+      "step": "story_bindings",
+      "method": "PATCH",
+      "path": "/api/v1/owner/journey/milestones/<departure-ugg_OR_departure-airpods>",
+      "body": {
+        "storyVaultId": "<MATCHING_ACTUAL_VAULT_ID>"
+      },
+      "rule": "Clears approval; leaves held. No gift reveal."
+    },
+    {
+      "step": "card",
+      "method": "POST",
+      "path": "/api/v1/owner/card",
+      "body": {
+        "message": "<PRIVATE_OWNER_MESSAGE>",
+        "signature": "<PRIVATE_OWNER_SIGNATURE>",
+        "opensAt": "2026-10-24T05:00:00Z"
+      },
+      "tagUrl": "https://30.ag14.co/birthdaycard",
+      "rule": "No Vault compartment and no Butler letter/SMS. Never reset firstOpenedAt."
+    },
+    {
+      "step": "nyla_inventory",
+      "method": "GET",
+      "path": "/api/v1/owner/casino/prizes",
+      "rule": "Find existing slug nyla-film; retain its ID and existing short catalogue fields."
+    },
+    {
+      "step": "nyla_update",
+      "method": "PATCH",
+      "path": "/api/v1/owner/casino/prizes/<EXISTING_NYLA_ID>",
+      "body": {
+        "title": "<PRESERVE_READ_TITLE>",
+        "description": "<PRESERVE_READ_DESCRIPTION>",
+        "presentation": "<PRESERVE_READ_SHORT_PRESENTATION>",
+        "kind": "VOUCHER",
+        "active": true,
+        "slug": "nyla-film",
+        "videoUrl": "/api/v1/media/nyla-film",
+        "drinksKind": null,
+        "drinksQuantity": null,
+        "vaultId": null,
+        "imageUrl": "<PRESERVE_READ_IMAGE_OR_NULL>",
+        "instructions": "<PRESERVE_READ_INSTRUCTIONS>",
+        "validUntil": "<PRESERVE_READ_VALID_UNTIL_OR_NULL>",
+        "ownerNotes": "<PRESERVE_READ_OWNER_NOTES>"
+      },
+      "rule": "After protected media is verified, before issuing the batch. Never store a signed R2 URL. Exact long story presentation/title come from the reviewed migration snapshot."
+    },
+    {
+      "step": "jackpot",
+      "method": "POST",
+      "path": "/api/v1/owner/casino/prizes",
+      "body": {
+        "slug": "evening-jackpot",
+        "title": "A Most Extraordinary Victory!",
+        "description": "777 Mystery Jackpot",
+        "presentation": "<EXACT_RECOVERED_JACKPOT_COPY>",
+        "kind": "VAULT_GIFT",
+        "active": true,
+        "vaultId": "<ACTUAL_BREAKFAST_VAULT_ID>",
+        "imageUrl": null,
+        "instructions": "",
+        "validUntil": null,
+        "ownerNotes": "<PRIVATE_CONFIRMED_ARRANGEMENT_NOTES>"
+      },
+      "rule": "Create only if absent; otherwise PATCH existing ID with complete preserved fields. Re-read after timeout. Never pre-issue a batch."
+    },
+    {
+      "step": "copy_setup",
+      "method": "PATCH",
+      "path": "/api/v1/owner/journey/milestones/<SCENE_KEY>",
+      "body": {
+        "storySms": "<REVIEWED_EXACT_SMS>"
+      },
+      "rule": "For letters, use Edit wording or preserve the complete GET effects array and its hooks. All scenes remain held; edits clear approval."
+    },
+    {
+      "step": "editorial_approval",
+      "method": "PATCH",
+      "path": "/api/v1/owner/journey/milestones/<SCENE_KEY>",
+      "body": {
+        "storyApproved": true
+      },
+      "rule": "Only after exact copy, media, physical mapping, timestamps and prerequisites have been checked. Approval alone sends nothing."
+    }
+  ],
+  "arming": {
+    "scheduled": [
+      "flight-departure",
+      "jamaica-arrival",
+      "casino-opening-spins",
+      "casino-opening",
+      "casino-afternoon-spins",
+      "casino-evening-spins",
+      "birthday-screening",
+      "birthday-dinner"
+    ],
+    "manualOnly": [
+      "departure-ugg",
+      "departure-privileges",
+      "airport-drinks",
+      "departure-airpods",
+      "birthday-breakfast",
+      "farewell"
+    ],
+    "neverReplay": ["early-membership", "butler-teaser-2026-10-21"],
+    "keepDisabled": [
+      "birthday-vault",
+      "birthday-midnight-letter",
+      "birthday-card",
+      "casino-evening-mystery"
+    ],
+    "rule": "No arming/triggering performed. Resume only future scheduled scenes after explicit owner approval; an overdue resume may send immediately. Never manually issue a second Casino batch."
+  },
+  "environment": {
+    "requiredNewFunctionsVariables": [
+      "MEDIA_S3_ENDPOINT",
+      "MEDIA_S3_ACCESS_KEY_ID",
+      "MEDIA_S3_SECRET_ACCESS_KEY"
+    ],
+    "doNotSetInProduction": [
+      "MEDIA_SIMULATED",
+      "BUTLERS_OFFICE_LOCAL_API",
+      "CONCIERGE_LOCAL_API"
+    ],
+    "preserve": [
+      "Existing Supabase and concierge credentials",
+      "Existing SMS transport variables, LIVE mode and released hold"
+    ]
+  }
+}

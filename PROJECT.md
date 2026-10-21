@@ -89,7 +89,7 @@ One continuous birthday film, assembled by the owner in CapCut: an AI-generated 
 - **Escort:** accepting the Butler's invitation in the Lounge, the camera walks towards the doorway, fades to black and she arrives seated (about 3.5 s).
 - **Poster:** THE THIRTY CLUB PRESENTS · THIRTY YEARS OF ALISE · _A Private Birthday Screening_ · WATCH MOVIE. The Butler introduces the film on her first visit and welcomes her back on later ones.
 - **Film:** Watch Movie opens the MP4 in the iPhone's native fullscreen player. At its natural end the room returns and the Butler closes the screening. She may watch again as often as she likes; leaving early keeps her place.
-- **Content:** the final film is not yet supplied. LIVE says "Your screening is being prepared."; rehearsals use a clearly labelled five-second test film.
+- **Content:** the final film (14 min 40 s) was supplied on 21 October and is protected (ADR-026, `docs/MEDIA_DELIVERY.md`): a private, signed stream from 00:00 Jamaica on 24 October, with loading feedback, Retry, a lighter print, and an offline fallback for when the hotel Wi-Fi fails (the owner's own copy), which is never recorded as watched. Until it is uploaded, LIVE says "Your screening is being prepared."; rehearsals use a clearly labelled five-second test film.
 
 ## Explicit non-goals
 

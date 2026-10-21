@@ -10,18 +10,20 @@
  * See docs/SCREENING_ROOM_IMPLEMENTATION.md for the manual device steps.
  */
 import { mkdirSync } from 'node:fs';
-import { expect, test, type Page } from '@playwright/test';
+import { STORY_COPY } from '../src/shared/story/copy';
+import { expect, test, type BrowserContext, type Page } from '@playwright/test';
 
 const SHOTS = process.env.SCREENING_SHOTS ?? 'docs/screening/journey';
 mkdirSync(SHOTS, { recursive: true });
 
 const INTRODUCTION =
   'Madam, a number of distinguished guests have requested the opportunity to address you on this rather special occasion. I have taken the liberty of arranging a private screening.';
-const CLOSING =
-  'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.';
+const CLOSING = STORY_COPY.postFilm;
 const WELCOME_BACK =
   'Welcome back, Madam. Your private screening is ready whenever you wish.';
 const OWNER = 'thirty-club:owner:';
+/** The room's start limit (ScreeningRoom.tsx, ADR-026). */
+const START_TIMEOUT_MS = 30_000;
 
 async function shot(page: Page, name: string, settle = 600) {
   await page.waitForTimeout(settle);
@@ -44,7 +46,7 @@ function apiCalls(page: Page) {
   return calls;
 }
 
-test.beforeEach(async ({ context }) => {
+async function prepare(context: BrowserContext) {
   await context.addInitScript(() => {
     localStorage.setItem(
       'thirty-club:first-visit-verified',
@@ -55,7 +57,8 @@ test.beforeEach(async ({ context }) => {
       value: undefined,
     });
   });
-});
+}
+test.beforeEach(async ({ context }) => prepare(context));
 
 async function unlock(page: Page) {
   await page.goto('/');
@@ -255,6 +258,93 @@ test('leaving early keeps her place; refresh resumes; no false completion', asyn
   expect(await record(page)).toMatchObject({ completions: 1, resume: null });
 });
 
+test('hotel Wi-Fi fails: honest notice, Retry, the lighter print, the fallback, then the film after all (ADR-026)', async ({
+  playwright,
+  browserName,
+}, testInfo) => {
+  // Playwright's WebKit does not reliably cut media requests with
+  // page.route (21 Oct 2026: the first run was cut and the room behaved as
+  // in Chromium; later runs, even in a fresh browser, played the film).
+  // The logic is covered by unit tests and this Chromium run; the iPhone
+  // check is the Films desk on the hotel Wi-Fi (docs/MEDIA_DELIVERY.md).
+  test.skip(
+    browserName === 'webkit',
+    'WebKit media requests are not reliably routable in Playwright',
+  );
+  // Its own browser, so no earlier test's media cache can stand in for the
+  // network this test cuts.
+  const browser = await playwright[browserName].launch();
+  const { viewport, userAgent, deviceScaleFactor, isMobile, hasTouch } =
+    testInfo.project.use;
+  const context = await browser.newContext({
+    baseURL: testInfo.project.use.baseURL!,
+    ...(viewport ? { viewport } : {}),
+    ...(userAgent ? { userAgent } : {}),
+    ...(deviceScaleFactor ? { deviceScaleFactor } : {}),
+    ...(isMobile !== undefined ? { isMobile } : {}),
+    ...(hasTouch !== undefined ? { hasTouch } : {}),
+  });
+  await prepare(context);
+  const page = await context.newPage();
+  await unlock(page);
+  // The hotel Wi-Fi reaches the club but not the film itself (any media
+  // cache would hide a later drop, so the line is cut from the start).
+  const film = /screening-test-5s\.mp4/;
+  await page.route(film, (route) => route.abort('internetdisconnected'));
+  await launch(page, /^The Private Screening Room/);
+  await expect(page.locator('.cinema')).toBeVisible({ timeout: 30000 });
+  // The projector's ticket still comes from the (TEST) server first.
+  await expect(page.getByRole('button', { name: 'Watch Movie' })).toBeEnabled({
+    timeout: 15000,
+  });
+  await page.getByRole('button', { name: 'Watch Movie' }).click();
+  // Chromium reports the dropped request as an error at once; WebKit may
+  // simply wait, and the room's own limit ends that (never a permanent
+  // loading state). Either way: her seat, an honest notice, her choices.
+  const failed =
+    /The film could not be loaded just now|The film is arriving too slowly/;
+  await expect(page.getByRole('alert')).toContainText(failed, {
+    timeout: START_TIMEOUT_MS + 10000,
+  });
+  console.log(
+    `[${page.context().browser()?.browserType().name()}] ${await page.getByRole('alert').textContent()}`,
+  );
+  await expect(page.locator('.cinema')).toHaveAttribute('data-phase', 'seated');
+  await expect(page.getByRole('button', { name: 'Try again' })).toBeEnabled();
+  await shot(page, '08-network-failure');
+
+  // The lighter print is offered once; it too fails while the line is down.
+  await page.getByRole('button', { name: 'Try the lighter print' }).click();
+  await expect(page.getByRole('alert')).toContainText(failed, {
+    timeout: START_TIMEOUT_MS + 10000,
+  });
+  await expect(page.locator('.cinema')).toHaveAttribute('data-phase', 'seated');
+  await expect(
+    page.getByRole('button', { name: 'Try the lighter print' }),
+  ).toHaveCount(0);
+
+  // The owner plays his own copy: the evening goes on, nothing is claimed.
+  await page.getByRole('button', { name: 'Watch it another way' }).click();
+  await expect(
+    page.getByText(/The film shall be shown by other means this evening/),
+  ).toBeVisible();
+  const away = await record(page);
+  expect(away.elsewhere).toBe(1);
+  expect(away.elsewhereAt).not.toBeNull();
+  expect(away.completedAt).toBeNull();
+  expect(away.completions).toBe(0);
+
+  // The Wi-Fi returns: Retry plays it here after all, to the very end.
+  await page.unroute(film);
+  await page
+    .getByRole('button', { name: /^(Try again|Watch Movie|Resume Movie)$/ })
+    .click();
+  await expect(page.locator('.cinema')).toHaveAttribute('data-phase', 'film');
+  await expect(page.getByText(CLOSING)).toBeVisible({ timeout: 20000 });
+  expect(await record(page)).toMatchObject({ completions: 1, elsewhere: 1 });
+  await browser.close();
+});
+
 test('LIVE: no early unlock, no test film for Alise, rehearsal records stay apart', async ({
   page,
 }) => {
@@ -267,8 +357,9 @@ test('LIVE: no early unlock, no test film for Alise, rehearsal records stay apar
   ).toBeVisible();
   await expect(page.locator('video')).toHaveCount(0);
 
-  // After midnight, inducted: the room opens but the birthday film is not
-  // configured, so nothing pretends to be her screening.
+  // After midnight, admitted as the device remembers, but with no member
+  // session: the birthday film is protected (ADR-026), so the server refuses
+  // its ticket and nothing plays, and nothing pretends to be her screening.
   await page.clock.setFixedTime(new Date('2026-10-24T06:00:00Z'));
   await page.evaluate((stamp) => {
     // Admitted by the journey, as the device remembers it (the preview
@@ -286,12 +377,18 @@ test('LIVE: no early unlock, no test film for Alise, rehearsal records stay apar
       JSON.stringify({ version: 1, unlockedAt: stamp, ceremonySeenAt: stamp }),
     );
   }, '2026-10-24T05:05:00.000Z');
+  const tickets: number[] = [];
+  page.on('response', (response) => {
+    if (new URL(response.url()).pathname === '/api/v1/media/birthday-film')
+      tickets.push(response.status());
+  });
   await page.reload();
   await expect(
-    page.getByText('Your screening is being prepared.'),
+    page.getByText('Please present your membership card to watch this film.'),
   ).toBeVisible();
+  expect(tickets).toEqual([401]);
   await expect(page.getByRole('button', { name: /Movie/ })).toHaveCount(0);
-  await expect(page.locator('video')).toHaveCount(0);
+  await expect(page.locator('video')).not.toHaveAttribute('src');
   await expect(page.getByText(/test film/i)).toHaveCount(0);
   await shot(page, '06-live-unconfigured', 1400);
   const membership = await page.evaluate(() =>

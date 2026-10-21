@@ -32,8 +32,15 @@
     "verify:final-migrations": "node tools/verify-final-release-migrations.mjs",
     "release:preflight": "node tools/release-preflight.mjs && npm run verify:story-upgrade",
     "release:smoke": "node tools/release-smoke.mjs",
+    "media:verify": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-r2.ts verify",
+    "media:upload": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-r2.ts upload",
+    "media:supabase": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts",
+    "media:standin": "node --experimental-strip-types --no-warnings=ExperimentalWarning tools/s3-standin.ts",
+    "test:acceptance": "vitest run -c vitest.acceptance.config.ts",
+    "test:media": "npm run build && playwright test -c playwright.media.config.ts && MEDIA_WEBKIT=1 playwright test -c playwright.media.config.ts",
     "verify:story-upgrade": "node tools/verify-story-upgrade.mjs",
-    "test:story": "npm run build && playwright test -c playwright.story.config.ts"
+    "test:story": "npm run build && playwright test -c playwright.story.config.ts",
+    "test:acceptance:configured": "ACCEPT_CONFIGURED=1 vitest run -c vitest.acceptance.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",
