@@ -14,7 +14,11 @@ import { createEntranceEnvironment } from '../../entrance/entranceEnvironment';
 import { ROOMS } from '../../club/domain/rooms';
 import { useJourney } from '../../journey/journeyContext';
 import { simulationActive } from '../../rehearsal/mode';
-import { MENTIONS, mentionedRooms } from '../domain/roomMentions';
+import {
+  MENTIONS,
+  mentionedPlaces,
+  mentionedRooms,
+} from '../domain/roomMentions';
 
 function opening(view: RoomView): string {
   if (!view.room.built) return 'It is still being prepared.';
@@ -45,9 +49,17 @@ export function RoomInvitations({ text }: { text: string }) {
     // A room not yet introduced is never named to her; a rehearsal still
     // offers the owner its launch (below).
     .filter((v) => !v.hidden || (simulationActive && v.room.built));
-  if (rooms.length === 0) return null;
+  const places = mentionedPlaces(text);
+  if (rooms.length === 0 && places.length === 0) return null;
   return (
     <aside className="cd-rooms" aria-label="Rooms mentioned in this letter">
+      {places.map((place) => (
+        <div key={place.id} className="cd-rooms__room">
+          <a className="cd-button" href={place.path}>
+            {place.label}
+          </a>
+        </div>
+      ))}
       {rooms.map((view) => {
         const verb = MENTIONS.find((m) => m.id === view.room.id)!.verb;
         return (

@@ -71,7 +71,7 @@ export function HousePrizeReveal({
       >
         <p className="house-prize__eyebrow">
           {jackpot
-            ? 'Seven · Seven · Seven'
+            ? 'The jackpot'
             : film
               ? 'A private screening'
               : 'Fortune favours you'}

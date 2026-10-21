@@ -24,3 +24,32 @@ export const MENTIONS: readonly {
 export function mentionedRooms(text: string): RoomId[] {
   return MENTIONS.filter((m) => m.pattern.test(text)).map((m) => m.id);
 }
+
+/**
+ * Places that are not rooms (ADR-024): the drinks privileges and the private
+ * birthday card. The card is matched only as "birthday card", never the
+ * membership card, so no letter before the birthday points at it.
+ */
+export const PLACES: readonly {
+  id: 'drinks' | 'birthday-card';
+  pattern: RegExp;
+  label: string;
+  path: string;
+}[] = [
+  {
+    id: 'drinks',
+    pattern: /\b(drinks|bring me a drink)\b/i,
+    label: 'Your drinks',
+    path: '/drinks',
+  },
+  {
+    id: 'birthday-card',
+    pattern: /\bbirthday ?card\b/i,
+    label: 'Open your card',
+    path: '/birthdaycard',
+  },
+];
+
+export function mentionedPlaces(text: string) {
+  return PLACES.filter((p) => p.pattern.test(text));
+}
