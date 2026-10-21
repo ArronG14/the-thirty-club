@@ -3,7 +3,7 @@
  * (docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md). Applies the nine migrations
  * the hosted project already has, seeds LIVE-like records (a redeemed
  * privilege, a published letter, outbox rows, a vault), then applies the
- * five release migrations in order and checks that nothing existing
+ * six release migrations in order and checks that nothing existing
  * changed, the communication hold is active, and every new table and
  * function is closed to browser roles. Run: node tools/verify-final-release-migrations.mjs
  * It never connects to a hosted database.
@@ -20,6 +20,7 @@ const RELEASE = [
   '20261022110000_communication_hold.sql',
   '20261022120000_sms_operations.sql',
   '20261022130000_membership_card_admission.sql',
+  '20261022140000_journey_completion.sql',
 ];
 const dir = resolve('supabase/migrations');
 const all = readdirSync(dir)
@@ -63,7 +64,13 @@ try {
   const snapshot = async () => ({
     redemptions: await rows('select * from public.ttc_redemptions order by id'),
     privileges: await rows('select * from public.ttc_privileges order by id'),
-    vaults: await rows('select * from public.ttc_vaults order by id'),
+    // The baseline columns: migration 6 adds a nullable opens_at (checked
+    // separately), which must not count as a change to existing rows.
+    vaults: await rows(
+      `select id,slug,display_number,clue,gift_location,trigger,available_at,casino_reward_id,
+        state,nfc_token,nfc_token_hash,backup_code,backup_code_hash,ready_at,opened_at,opened_via,
+        created_at,updated_at from public.ttc_vaults order by id`,
+    ),
     letters: await rows(
       'select id,title,body,state,published_at,opened_at from public.ttc_letters order by id',
     ),
@@ -188,6 +195,73 @@ try {
       ]),
     `unexpected armed milestones: ${armed.join(', ')}`,
   );
+  // Migration 6 (ADR-024) arms nothing, credits nothing and sends nothing.
+  const drinks = await rows(
+    'select (select count(*) from public.ttc_drink_grants)::int as grants, (select count(*) from public.ttc_drink_requests)::int as requests',
+  );
+  assert(
+    drinks[0].grants === 0 && drinks[0].requests === 0,
+    'drinks were credited or requested by the migration',
+  );
+  const seededPrizes = await rows(
+    'select slug, active, drinks_kind, drinks_quantity from public.ttc_prize_catalogue where slug is not null order by slug',
+  );
+  assert(
+    JSON.stringify(seededPrizes) ===
+      JSON.stringify([
+        {
+          slug: 'jamaica-drinks',
+          active: true,
+          drinks_kind: 'jamaica',
+          drinks_quantity: 3,
+        },
+        {
+          slug: 'nyla-film',
+          active: false,
+          drinks_kind: null,
+          drinks_quantity: null,
+        },
+      ]),
+    'unexpected seeded prizes',
+  );
+  const opening = await rows(
+    "select state, effects from public.ttc_journey_milestones where key = 'casino-opening-spins'",
+  );
+  assert(
+    opening[0].state === 'held' &&
+      JSON.stringify(opening[0].effects[0].params.prizePositions) === '[3]' &&
+      opening[0].effects[0].params.quantity === 3,
+    'the opening spins are not three, held, with the prize on the third',
+  );
+  for (const key of [
+    'airport-drinks',
+    'flight-departure',
+    'casino-afternoon-spins',
+    'casino-evening-spins',
+    'birthday-midnight-letter',
+    'birthday-card',
+    'farewell',
+  ]) {
+    const m = await rows(
+      'select state from public.ttc_journey_milestones where key = $1',
+      [key],
+    );
+    assert(m[0]?.state === 'held', `${key} is missing or not held`);
+  }
+  const card = await rows(
+    'select message, opens_at from public.ttc_birthday_card',
+  );
+  assert(
+    card.length === 1 &&
+      card[0].message === '' &&
+      new Date(card[0].opens_at).toISOString() === '2026-10-24T05:00:00.000Z',
+    'the birthday card is not empty and sealed until 24 Oct 00:00 Jamaica',
+  );
+  const earlyVaults = await rows(
+    'select count(*)::int as n from public.ttc_vaults where opens_at is not null',
+  );
+  assert(earlyVaults[0].n === 0, 'a Vault compartment was set to open early');
+
   // The hold is enforced in the database itself.
   let refused = false;
   try {
@@ -221,10 +295,11 @@ try {
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
     where n.nspname='public' and c.relkind='r' and (c.relname like 'ttc_journey%' or c.relname like 'ttc_room%'
       or c.relname like 'ttc_casino%' or c.relname like 'ttc_sms%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
-      'ttc_voucher_requests','ttc_communication_hold','ttc_membership_card'))`);
+      'ttc_voucher_requests','ttc_communication_hold','ttc_membership_card',
+      'ttc_drink_grants','ttc_drink_requests','ttc_birthday_card'))`);
   assert(
-    tables.length === 14,
-    `expected 14 release tables, found ${tables.length}`,
+    tables.length === 17,
+    `expected 17 release tables, found ${tables.length}`,
   );
   for (const t of tables)
     assert(
@@ -237,7 +312,8 @@ try {
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
     where n.nspname='public' and (p.proname like 'ttc_journey%' or p.proname like 'ttc_room%'
       or p.proname like 'ttc_casino%' or p.proname like 'ttc_hold%' or p.proname like 'ttc_letter%'
-      or p.proname like 'ttc_sms%')`);
+      or p.proname like 'ttc_sms%' or p.proname like 'ttc_drink%' or p.proname like 'ttc_card%'
+      or p.proname like 'ttc_vault%')`);
   for (const f of functions)
     assert(!f.anon && !f.auth, `browser roles can execute ${f.proname}`);
 

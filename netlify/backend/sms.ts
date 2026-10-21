@@ -57,12 +57,7 @@ export async function processMessages(
             null,
             'system',
             'system-sms-claim',
-          )) ??
-          (await db.action<ClaimedMessage | null>(
-            null,
-            'system',
-            'system-sms-claim-rehearsal',
-          )));
+          )) ?? (await rehearsalClaim(db)));
     if (!item) break;
     const audience = item.rehearsal
       ? item.category === 'correspondence-arron' ||
@@ -111,6 +106,25 @@ export async function processMessages(
     processed++;
   }
   return { processed };
+}
+
+/**
+ * REHEARSAL's claim of an owner notification. Before migration
+ * 20261022140000 the action does not exist: nothing to claim, and LIVE
+ * sending is unaffected by the deployment order.
+ */
+async function rehearsalClaim(db: Database): Promise<ClaimedMessage | null> {
+  try {
+    return await db.action<ClaimedMessage | null>(
+      null,
+      'system',
+      'system-sms-claim-rehearsal',
+    );
+  } catch (error) {
+    if (error instanceof BackendError && error.code === 'not-found')
+      return null;
+    throw error;
+  }
 }
 
 /** Which policy audience an outbox category belongs to. */
