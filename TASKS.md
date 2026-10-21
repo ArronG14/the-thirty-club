@@ -438,3 +438,12 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 - IMPLEMENTED — Distinct evening-jackpot binding and explicit owner UTC display.
 - BLOCKED — Full production readiness: actual Vault/card/Nyla/jackpot setup; real R2/upload/Netlify configuration; owner content review; B09 acknowledgement decision; physical phone/network and approved transport verification. No departure-only release.
 - BLOCKED — Hosted migration/publication/SMS operations pending explicit approval; none performed. Historical source-branch MD16/SA02 notes above are superseded by this combined entry.
+
+## Vault, jackpot and Nyla setup (docs/release/VAULT_JACKPOT_SETUP_2026-10-21.md)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                                                |
+| ---- | -------- | ----------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| VJ01 | P0       | VERIFIED    | Plan validated through the real owner routes in a disposable database (`vaultJackpotSetup.test.ts` 10/10); no code change needed |
+| VJ02 | P0       | BLOCKED     | Owner decisions: drawer numbers, UGG/AirPods clues, AirPods and breakfast reveal wording, earliest-opening times                 |
+| VJ03 | P0       | BLOCKED     | LIVE Console steps A–F; require the story migration and deploy first                                                             |
+| VJ04 | P0       | NOT STARTED | Read-only `configuration-readiness.sql` CFG01–03, CFG08 true on the hosted database                                              |
