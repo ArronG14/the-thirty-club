@@ -17,8 +17,9 @@ mkdirSync(SHOTS, { recursive: true });
 
 const INTRODUCTION =
   'Madam, a number of distinguished guests have requested the opportunity to address you on this rather special occasion. I have taken the liberty of arranging a private screening.';
-const CLOSING =
-  'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.';
+// The owner-approved post-film words (Story Bible; STORY_COPY.postFilm),
+// matched on their opening line so paragraph rendering does not matter.
+const CLOSING = 'I do hope you enjoyed your little surprise.';
 const WELCOME_BACK =
   'Welcome back, Madam. Your private screening is ready whenever you wish.';
 const OWNER = 'thirty-club:owner:';

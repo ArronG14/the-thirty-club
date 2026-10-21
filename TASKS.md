@@ -429,3 +429,13 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 | SA03 | P0       | BLOCKED     | Owner: approved text for Chapters 4/5/6/8/10 and the missing SMS copy (§9)                                |
 | SA04 | P0       | NOT STARTED | E2E rows on the candidate (entrance-with-card, nine-spin play, claim, owner SMS per request)              |
 | SA05 | P0       | NOT STARTED | Owner iPhone rehearsal (§10)                                                                              |
+
+## Combined release candidate (docs/release/COMBINED_RELEASE_2026-10-21.md)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                                 |
+| ---- | -------- | ----------- | ----------------------------------------------------------------------------------------------------------------- |
+| RC01 | P0       | VERIFIED    | Story + media merged on `release/story-media-2026-10-21`; all local gates and browser suites pass (see BUILD_LOG) |
+| RC02 | P0       | IMPLEMENTED | Story Bible machine checks 32/38; remaining 6 are owner configuration/copy decisions                              |
+| RC03 | P0       | BLOCKED     | Owner: `evening-jackpot` prize + Vault compartments/NFC, card message, Nyla Film URL + Active, scene approvals    |
+| RC04 | P0       | BLOCKED     | R2 upload/verify and Netlify `MEDIA_S3_*` (credentials not yet entered)                                           |
+| RC05 | P0       | NOT STARTED | Owner approval → one migration (`20261022150000_story_sequence.sql`) → one Netlify deploy of this branch          |

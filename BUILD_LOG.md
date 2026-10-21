@@ -937,3 +937,13 @@
 - **Known issues:** The harness checks seeds and copy, not device behaviour; E2E/PHONE rows remain. The approved revised copy for Chapters 4/5/6/8/10 is absent from the Bible.
 - **Remaining work:** Run against the combined candidate; E2E rows on the candidate; owner iPhone rehearsal.
 - **Commit:** see git log.
+
+## 2026-10-21 22:35 BST (Europe/London) — Claude (Opus 5.5) — Combined release candidate: story (Codex 3db4d08) + media/acceptance (0f11dda)
+
+- **Task:** Validate Codex's Story Bible implementation independently and prepare one combined candidate; no deploy, merge to main, migration or SMS.
+- **Summary:** Acceptance harness on Codex's checkout: 32/38 (base 16/38). New branch `release/story-media-2026-10-21` merges both; conflicts only in docs and package.json scripts. Four test-only integration fixes (media tests follow story approvals; screening spec uses the approved post-film words; owner spec uses the renamed NFC-after-invitation TEST scenario; Playwright ignores the Vitest acceptance folder). Record: `docs/release/COMBINED_RELEASE_2026-10-21.md`.
+- **Modified:** `netlify/backend/media.test.ts`, `tests/screening-film.spec.ts`, `tests/owner.spec.ts`, `playwright.config.ts`, `ARCHITECTURE.md`/`BUILD_LOG.md`/`TASKS.md`/`package.json` (merge), `docs/release/COMBINED_RELEASE_2026-10-21.md` (new).
+- **Checks and results:** `npm run check` PASS (814/814, 64 files, build). `verify:story-upgrade` PASS; `verify:final-migrations` PASS; `functions:build` PASS. `test:story` 6/6; `test:media` Chromium 7/7, WebKit 7/7; `test:screening` Chromium 5/5, WebKit 4 + 1 skipped; rehearsal release+integration Chromium 10/10, WebKit 10/10; default Playwright 34/34 (first run 33/34 → owner.spec fix). `test:acceptance` 32/38.
+- **Known issues:** `evening-jackpot` prize absent (owner configuration; 20:30 session fails without it); Nyla/jackpot letter titles; farewell letter decision; missing approved copy for Chapters 4/5/6/8/10 and several SMS. R2 not uploaded (credentials not yet entered); Netlify `MEDIA_S3_*` not set; no physical iPhone/NFC run.
+- **Remaining work:** Owner configuration and approvals; R2 upload + verify; Netlify variables; one migration + one deploy of this branch after approval; iPhone rehearsal.
+- **Commit:** see git log.
