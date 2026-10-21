@@ -257,6 +257,20 @@ describe('the 19:00 admission is the card’s', () => {
   it('before 19:00 the card is recorded but the doors stay shut', async () => {
     await armEarlyAdmission();
     const device = await scan();
+    // Even the owner's manual trigger cannot bring this fixed ceremony forward.
+    expect(
+      (await owner('/owner/journey/milestones/early-membership/fire', {}))
+        .status,
+    ).toBe(403);
+    expect(
+      (
+        await owner(
+          '/owner/journey/milestones/early-membership',
+          { fireAt: '2026-10-21T17:00:00Z' },
+          'PATCH',
+        )
+      ).status,
+    ).toBe(400);
     const entrance = await call<{ eligible: boolean; letter?: unknown }>(
       '/entrance',
     );
@@ -268,6 +282,19 @@ describe('the 19:00 admission is the card’s', () => {
     });
     expect(enter.status).toBe(403);
     expect(enter.data.error).toBe('not-open');
+
+    // The admission guard remains authoritative if an operator changes the
+    // milestone row outside the application.
+    await pg.exec(
+      "update public.ttc_journey_milestones set state='fired', fired_at=now() where key='early-membership'",
+    );
+    expect((await call<{ eligible: boolean }>('/entrance')).data.eligible).toBe(
+      false,
+    );
+    expect(
+      (await call('/journey/enter', { body: {}, cookie: device.cookie }))
+        .status,
+    ).toBe(403);
   });
 
   it('after 19:00 the time alone admits nobody; the card does, once, for every device', async () => {
@@ -346,7 +373,22 @@ describe('the 19:00 admission is the card’s', () => {
     ).toBe(403);
   });
 
-  it('an unedited clue fails the milestone: nothing published, doors stay shut', async () => {
+  it('a placeholder edit fails the milestone: nothing published, doors stay shut', async () => {
+    await owner(
+      '/owner/journey/milestones/early-membership',
+      {
+        effects: [
+          { type: 'open-entrance' },
+          {
+            type: 'letter',
+            title: 'A Most Unfortunate Delivery Incident',
+            body: 'Find the card in [[CLUE]].',
+            action: { kind: 'admission', room: 'lounge' },
+          },
+        ],
+      },
+      'PATCH',
+    );
     await owner('/owner/journey/milestones/early-membership/resume', {});
     await at('2026-10-21T18:00:02Z');
     await runJourneyRound(db);
@@ -482,6 +524,7 @@ describe('every scheduled item, read in its own named zone (ADR-023)', () => {
       },
       'PATCH',
     );
+    await at('2026-10-21T18:00:01Z');
     await owner('/owner/journey/milestones/early-membership/fire', {});
     await at('2026-10-21T18:00:30Z');
     await runJourneyRound(db);

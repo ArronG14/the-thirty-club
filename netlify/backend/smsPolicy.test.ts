@@ -465,9 +465,8 @@ describe('the Butler’s 21 October teaser', () => {
     expect(t.state).toBe('draft');
     expect(t.send_at.toISOString()).toBe('2026-10-21T15:00:00.000Z');
     expect(t.body).toContain('https://30.ag14.co');
-    expect(
-      t.body.startsWith('Madam, as the working day draws to a close'),
-    ).toBe(true);
+    expect(t.body).toMatch(/^Madam,\n\nI trust your afternoon/);
+    expect(t.body).toContain('The Butler 🎩');
     await setHold(false);
     await setMode('live');
     await at('2026-10-21T15:00:30Z');

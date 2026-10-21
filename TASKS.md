@@ -348,3 +348,15 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 | RV05 | P0       | VERIFIED    | Owner runbook for 21 Oct (`docs/release/RELEASE_RUNBOOK_2026-10-21.md`)                                                                                                                                                                                                                               |
 | RV06 | P0       | NOT STARTED | Codex independent audit of the revision-4 commit (supersedes NC08)                                                                                                                                                                                                                                    |
 | RV07 | P0       | NOT STARTED | Owner: runbook §0–§8 (freeze auto-publish, backup, five migrations, verification, Twilio rotation, variables, deploy, iPhone/NFC rehearsal, activation) (supersedes NC09–NC11)                                                                                                                        |
+
+## Release integration — 21 October (ADR-024)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                                                                                       |
+| ---- | -------- | ----------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| RI01 | P0       | VERIFIED    | Seed exact owner-approved 16:00 teaser and owner-recovered 19:00 Nyla letter; independently compare normalised text with the Story Bible; migration and SMS tests pass. |
+| RI02 | P0       | VERIFIED    | 19:00 server floor withstands early manual trigger, earlier owner edit and a prematurely fired row; targeted database/API tests pass.                                   |
+| RI03 | P0       | VERIFIED    | Five migration chain rehearsed over nine hosted-baseline migrations with existing rows preserved, hold ON, SMS OFF, permissions closed to browser roles.                |
+| RI04 | P0       | VERIFIED    | Netlify production credentials, phone routing and SMS switch narrowed to Production context; production transport remains false; no deploy.                             |
+| RI05 | P0       | VERIFIED    | Local type, lint, format, unit, production build, Functions build and iPhone-profile WebKit release journey pass; see BUILD_LOG.                                        |
+| RI06 | P0       | IN PROGRESS | Final clean release commit and reproducible local preflight; integrate any later stable Opus checkpoint and rerun relevant gates.                                       |
+| RI07 | P0       | BLOCKED     | Hosted migration/deploy, Twilio queue/rotation, physical card/iPhone rehearsal and LIVE sends require owner authorization or hands-on access.                           |

@@ -355,8 +355,7 @@ describe('release on 21 October', () => {
   });
 
   it('early admission opens only when the owner arms it; scheduling works again', async () => {
-    // Unedited, the 19:00 letter still holds the clue placeholder: firing it
-    // fails the milestone and nothing reaches her (ADR-023).
+    // The seeded 19:00 letter already contains the owner-recovered Nyla clue.
     const seeded = await call<{
       milestones: { key: string; effects: { type: string; body?: string }[] }[];
     }>('/owner/journey');
@@ -364,9 +363,9 @@ describe('release on 21 October', () => {
       (m) => m.key === 'early-membership',
     )!;
     expect(early.effects.find((e) => e.type === 'letter')?.body).toContain(
-      '[[CLUE',
+      'secured your membership card within her private quarters.',
     );
-    // The owner writes the clue and arms the 19:00 UK early admission.
+    // Owner edits remain possible before arming the 19:00 UK admission.
     await call(
       '/owner/journey/milestones/early-membership',
       {

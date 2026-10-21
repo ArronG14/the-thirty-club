@@ -29,7 +29,9 @@
     "owner:password": "node tools/owner-password.mjs",
     "test:rehearsal": "npm run build && playwright test -c playwright.rehearsal.config.ts",
     "test:screening": "npm run build && playwright test -c playwright.screening.config.ts && SCREENING_WEBKIT=1 playwright test -c playwright.screening.config.ts",
-    "verify:final-migrations": "node tools/verify-final-release-migrations.mjs"
+    "verify:final-migrations": "node tools/verify-final-release-migrations.mjs",
+    "release:preflight": "node tools/release-preflight.mjs && npm run verify:final-migrations",
+    "release:smoke": "node tools/release-smoke.mjs"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",

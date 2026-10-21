@@ -104,14 +104,20 @@ try {
       new Date(early[0].fire_at).toISOString() === '2026-10-21T18:00:00.000Z',
     'early admission is not held at 21 October 19:00 UK',
   );
-  // ADR-023: the 19:00 letter exists and still awaits the owner's clue, so
-  // it cannot be sent until written.
+  // The owner-recovered 19:00 letter is complete before the milestone is armed.
   const earlyLetter = early[0].effects.find((e) => e.type === 'letter');
   assert(
     early[0].effects.some((e) => e.type === 'open-entrance') &&
-      earlyLetter?.body.includes('[[CLUE') &&
+      earlyLetter?.title === 'A Most Unfortunate Delivery Incident' &&
+      earlyLetter.body.includes(
+        'A black lioness, answering to the name of Nyla.',
+      ) &&
+      earlyLetter.body.includes(
+        'secured your membership card within her private quarters.',
+      ) &&
+      !earlyLetter.body.includes('[[') &&
       earlyLetter.action?.kind === 'admission',
-    'the 19:00 letter is missing or no longer awaits the clue',
+    'the approved 19:00 Nyla letter is missing or incomplete',
   );
   const cards = await rows(
     'select count(*)::int as n from public.ttc_membership_card',
@@ -173,6 +179,15 @@ try {
     teaser[0]?.state === 'draft' &&
       new Date(teaser[0].send_at).toISOString() === '2026-10-21T15:00:00.000Z',
     'the 21 October teaser is not an unapproved 16:00 UK draft',
+  );
+  const teaserBody = await rows(
+    "select body from public.ttc_messages where seed_key = 'butler-teaser-2026-10-21'",
+  );
+  assert(
+    teaserBody[0]?.body.startsWith('Madam,\n\nI trust your afternoon') &&
+      teaserBody[0].body.includes('The Butler 🎩') &&
+      teaserBody[0].body.endsWith('https://30.ag14.co'),
+    'the 16:00 teaser does not contain the owner-approved copy',
   );
   const armed = (
     await rows(
@@ -250,7 +265,7 @@ try {
         unsentAliseSmsHeld: true,
         holdActiveUntil: '2026-10-21T00:00 America/Jamaica',
         earlyAdmission:
-          'held, 21 October 19:00 UK (13:00 Jamaica); letter awaits the clue; card required',
+          'held, 21 October 19:00 UK (13:00 Jamaica); approved Nyla letter seeded; card required',
         smsMode: 'off',
         teaser: 'draft, 21 October 16:00 UK, unapproved',
         armed,

@@ -233,13 +233,22 @@ end $$;
 
 insert into public.ttc_messages(seed_key, label, body, category, send_at, timezone, state)
 values ('butler-teaser-2026-10-21', 'Butler · early-access teaser',
-'Madam, as the working day draws to a close, I am pleased to report that I have managed to pull a few strings on your behalf.
-It would appear that your admission may take place rather sooner than originally anticipated.
-I shall forward your formal documentation this evening.
-In the meantime, you may wish to take another look at the entrance.
-https://30.ag14.co
-Until then, Madam.
-— The Butler',
+$teaser$Madam,
+
+I trust your afternoon has been proceeding pleasantly.
+
+I am delighted to inform you that I have managed to pull a few strings on your behalf. Quite a few, in fact. The committee was initially rather difficult, but I can be remarkably persuasive when the occasion demands it.
+
+You may notice that the countdown has undergone a rather unexpected adjustment. I assure you, this is entirely intentional.
+
+I anticipate having some rather exciting news for you this evening.
+
+Until then, I must ask for your patience. Certain formalities are still being attended to.
+
+At your service,
+The Butler 🎩
+
+https://30.ag14.co$teaser$,
 'scheduled-alise', '2026-10-21 16:00:00+01', 'Europe/London', 'draft')
 on conflict (seed_key) do nothing;
 

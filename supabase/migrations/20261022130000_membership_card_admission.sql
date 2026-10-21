@@ -8,8 +8,8 @@
 -- 1. The physical membership card (its existing /c/<token> link, verified by
 --    the concierge service) is recorded here when presented; early admission
 --    to the Lounge before the birthday requires it (`card-required`).
--- 2. The 19:00 UK early admission carries the Butler's letter (owner-editable
---    clue). Once fired, the public entrance shows that letter; its SMS links
+-- 2. The 19:00 UK early admission carries the owner-recovered Butler letter
+--    about Nyla. Once fired, the public entrance shows it; its SMS links
 --    to the entrance. A letter still holding a [[placeholder]] never publishes.
 -- 3. A delivered promise of spins sets a floor (played + available at that
 --    moment); a batch cancellation that would leave fewer is refused
@@ -198,14 +198,31 @@ begin
    return result;
  end if;
 
- if p_action = 'journey-enter' and p_role = 'member' then
+   if p_action = 'owner-journey-milestone-update' and p_role = 'owner'
+      and p_input->>'key' = 'early-membership' and p_input ? 'fireAt'
+      and (p_input->>'fireAt')::timestamptz < '2026-10-21 18:00:00+00'::timestamptz then
+     perform public.ttc_fail('invalid');
+   end if;
+
+   if p_action in ('owner-journey-milestone-fire','owner-journey-milestone-retry')
+      and p_role = 'owner' and p_input->>'key' = 'early-membership' then
+     select * into m from public.ttc_journey_milestones where key = 'early-membership';
+     if now() < greatest(m.fire_at, '2026-10-21 18:00:00+00'::timestamptz) then
+       perform public.ttc_fail('not-open');
+     end if;
+   end if;
+
+   if p_action = 'journey-enter' and p_role = 'member' then
    -- There is one entrance: 21 Oct 19:00 UK, with the card. The fired
    -- early admission and the card are both required, on the birthday too;
    -- no date alone ever admits her.
    select id into member from public.ttc_members where slug = 'alise' and enabled;
    if member is not null and p_actor = member then
      select * into m from public.ttc_journey_milestones where key = 'early-membership';
-     if coalesce(m.state, '') <> 'fired' then perform public.ttc_fail('not-open'); end if;
+     if coalesce(m.state, '') <> 'fired'
+        or now() < greatest(m.fire_at, '2026-10-21 18:00:00+00'::timestamptz) then
+       perform public.ttc_fail('not-open');
+     end if;
      if not exists(select 1 from public.ttc_membership_card where member_id = member) then
        perform public.ttc_fail('card-required');
      end if;
@@ -213,6 +230,13 @@ begin
  end if;
 
  result := public.ttc_journey_action_uncarded(p_actor, p_role, p_action, p_input);
+
+ if p_action = 'system-journey-entrance' then
+   select * into m from public.ttc_journey_milestones where key = 'early-membership';
+   if now() < greatest(m.fire_at, '2026-10-21 18:00:00+00'::timestamptz) then
+     result := result || jsonb_build_object('eligible',false);
+   end if;
+ end if;
 
  if p_action = 'system-journey-entrance' and (result->>'eligible')::boolean then
    -- Once 19:00 has fired, the Butler's letter waits at the doors for whoever
@@ -232,10 +256,37 @@ end $$;
 update public.ttc_journey_milestones
    set effects = effects || jsonb_build_array(jsonb_build_object(
          'type','letter',
-         'title','Your early admission',
-         'body','I am pleased to confirm that the committee has agreed to receive you this evening, rather sooner than the calendar intended. Your membership card has been delivered. I took the liberty of placing it somewhere I felt you would appreciate: [[CLUE — write the hiding place in the Owner Control Centre before 19:00]]. When you find it, hold your telephone to it. The doors will know.',
+         'title','A Most Unfortunate Delivery Incident',
+         'body',$letter$Madam,
+
+It gives me great pleasure to inform you that your application for early admission to The Thirty Club has been approved.
+
+Your official membership card was dispatched earlier this evening. Regrettably, its delivery has not gone entirely according to plan.
+
+It appears our courier was confronted upon arrival by an exceptionally fearsome creature. A black lioness, answering to the name of Nyla.
+
+According to his rather dramatic account, the beast let out a thunderous roar, whereupon the poor gentleman dropped your membership card and fled the premises.
+
+Matters have since taken a rather extraordinary turn.
+
+Miss Nyla has apparently declared herself Head of Security at The Thirty Club, and has informed our staff that she will personally be receiving and inspecting all future deliveries on your behalf.
+
+I must confess, Madam, I was unaware we were recruiting for the position.
+
+Nevertheless, I am told she takes her responsibilities extremely seriously and has secured your membership card within her private quarters.
+
+I would advise approaching with caution. Although I am reliably informed that this particular lioness can be bribed with a cuddle.
+
+Once you have recovered your membership card, simply present it using your telephone.
+
+The Club's doors shall open for you.
+
+I eagerly await your arrival.
+
+Your devoted Butler
+The Thirty Club$letter$,
          'action',jsonb_build_object('kind','admission','room','lounge'))),
-       description = 'The entrance counts down to this time once you resume it (and communications are released). At 19:00 UK / 13:00 Jamaica the Butler''s letter (with your clue) is published, its SMS links to the entrance, and the clock holds at 00:00:10 until she presents her membership card. Write the clue (replace [[…]]) before it fires, or the milestone fails and nothing is sent. Held until you approve.',
+       description = 'The entrance counts down to this time once you resume it (and communications are released). At 19:00 UK / 13:00 Jamaica the owner-recovered Butler letter about Nyla and the membership card is published, its SMS links to the entrance, and the clock holds at 00:00:10 until she presents her membership card. Held until you approve.',
        updated_at = now()
  where key = 'early-membership' and state <> 'fired'
    and not exists (select 1 from jsonb_array_elements(effects) e where e->>'type' = 'letter');
