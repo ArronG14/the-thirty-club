@@ -6,9 +6,11 @@ import { FirstVisitCinematic } from './features/verification/FirstVisitCinematic
 import './styles/global.css';
 import { simulationActive } from './features/rehearsal/mode';
 import { installRehearsalFetch } from './features/rehearsal/sim/interceptor';
+import DojaPage from './features/doja/DojaPage';
 
 // A rehearsal document answers its own API calls (ADR-018); nothing real.
-if (simulationActive) installRehearsalFetch();
+const isDojaLetter = window.location.pathname === '/fromdoja';
+if (simulationActive && !isDojaLetter) installRehearsalFetch();
 
 // DEV-MENU (remove with src/dev): statically false, so absent from production.
 const DevMenu = import.meta.env.DEV
@@ -21,9 +23,9 @@ if (!root) throw new Error('Application root is missing.');
 createRoot(root).render(
   <StrictMode>
     <BrowserRouter>
-      <App />
-      <FirstVisitCinematic />
-      {DevMenu && (
+      {isDojaLetter ? <DojaPage /> : <App />}
+      {!isDojaLetter && <FirstVisitCinematic />}
+      {!isDojaLetter && DevMenu && (
         <Suspense fallback={null}>
           <DevMenu />
         </Suspense>

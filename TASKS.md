@@ -449,3 +449,12 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 | VJ04 | P0       | NOT STARTED | Read-only `configuration-readiness.sql` CFG01–03, CFG08 true on the hosted database                                                                                                                       |
 | VJ05 | P0       | VERIFIED    | Numbers display zero-padded; early-opening time cannot bypass key, Ready state or story approval; 096 stays Locked and linked to `casino.evening-jackpot` (`vaultJackpotSetup.test.ts` 15/15)             |
 | VJ06 | P0       | VERIFIED    | Final candidate `release/vault-jackpot-2026-10-21` (Codex `cb0aad6` + setup; `d2cdaee` kept as ancestor); two defects in `cb0aad6` fixed (Playwright collecting Vitest files; stale owner scenario label) |
+
+## Doja's standalone letter — 22 October 2026 (ADR-030)
+
+| ID   | Priority | Status   | Task / acceptance                                                                                                                                                                      |
+| ---- | -------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| DJ01 | P0       | VERIFIED | Direct `/fromdoja` opens with one Butler introduction and See Note; reveal removes Butler interface; fresh reload starts again.                                                        |
+| DJ02 | P0       | VERIFIED | Responsive physical stationery, short/long message, empty state, editor and reduced motion reviewed in local Chromium/WebKit at 320–430 px and desktop.                                |
+| DJ03 | P0       | VERIFIED | Three-field validation, exact message/newline preservation, server password gate, fixed Blob key, unauthorized rejection and cross-handler read verified locally.                      |
+| DJ04 | P0       | BLOCKED  | Owner sets `DOJA_LETTER_PASSWORD` in Netlify and approves integration/deployment; hosted Blobs, real cross-device save and physical NFC/iPhone still require post-deploy verification. |

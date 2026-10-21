@@ -30,6 +30,7 @@ describe('Netlify navigation boundary', () => {
     '/favicon.svg',
     '/pwa-512.png',
     '/.well-known/missing',
+    '/.netlify/functions/fromdoja',
     '/nested/missing%2Epng',
   ])(
     'leaves %s to static serving / HTTP errors even for HTML requests',
@@ -67,6 +68,23 @@ describe('Netlify navigation boundary', () => {
       expect(response?.headers.get('Vary')).toContain('Accept');
     },
   );
+
+  it('serves the Doja direct link without treating its Function as a page', async () => {
+    const fetch = vi.fn().mockResolvedValue(
+      new Response('<html>Letter</html>', {
+        headers: { 'Content-Type': 'text/html' },
+      }),
+    );
+    vi.stubGlobal('fetch', fetch);
+    expect((await spa(navigation('/fromdoja')))?.status).toBe(200);
+    expect(fetch).toHaveBeenCalledWith(
+      new URL('/', origin),
+      expect.objectContaining({ method: 'GET' }),
+    );
+    expect(
+      await spa(navigation('/.netlify/functions/fromdoja')),
+    ).toBeUndefined();
+  });
 
   it('preserves a failed shell response rather than inventing success', async () => {
     vi.stubGlobal(
