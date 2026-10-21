@@ -1,5 +1,9 @@
 import { expect, test } from '@playwright/test';
-import { BIRTHDAY_MORNING, presentMembershipCard } from './concierge-helpers';
+import {
+  BIRTHDAY_MORNING,
+  presentMembershipCard,
+  unlockedEarlier,
+} from './concierge-helpers';
 
 // The SVG entrance: what a browser without WebGL gets, and the poster the
 // 3D scene dissolves from. It must keep its bell and never fetch the chunk.
@@ -39,6 +43,7 @@ test('reduced motion keeps the poster doors still and the ceremony brief', async
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await presentMembershipCard(page);
+  await unlockedEarlier(page);
   await page.clock.install({ time: BIRTHDAY_MORNING });
   await page.goto('/');
   const club = page.locator('.club');
@@ -58,6 +63,7 @@ test('reduced motion keeps the lounge still and its ceremony intact', async ({
 }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await presentMembershipCard(page);
+  await unlockedEarlier(page);
   // The Screening Room admission, as the device remembers it (ADR-020).
   await page.addInitScript(() =>
     localStorage.setItem(
@@ -91,24 +97,10 @@ test('reduced motion keeps the lounge still and its ceremony intact', async ({
 test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
   test.use({ timezoneId: 'America/Jamaica' });
 
-  test('unlocks at midnight for a member, welcomes Alise and remembers', async ({
+  test('Jamaica midnight on the birthday opens nothing: the one entrance is 21 Oct, 19:00 UK', async ({
     page,
   }) => {
     await presentMembershipCard(page);
-    // The journey has admitted the Screening Room and the Gift Vault (their
-    // birthday milestones); the preview server has no journey office, so the
-    // device's remembered admissions stand in (ADR-020). The Casino is not
-    // admitted, so it is never named.
-    await page.addInitScript(() =>
-      localStorage.setItem(
-        'thirty-club:journey',
-        JSON.stringify({
-          version: 1,
-          admitted: ['screening-room', 'gift-vault'],
-          pending: [],
-        }),
-      ),
-    );
     // 23:59:57 on 23 October in Kingston; already 05:59:57 on the 24th in London.
     await page.clock.install({ time: new Date('2026-10-24T04:59:57Z') });
     await page.goto('/');
@@ -117,66 +109,14 @@ test.describe('in Jamaica (UTC−5, no daylight saving)', () => {
     await expect(page.getByRole('timer')).toContainText(
       '0 days, 0 hours, 0 minutes, 3 seconds',
     );
-
-    await page.clock.runFor(3_500);
-    await expect(club).toHaveAttribute('data-stage', 'unlocking');
-    await page.clock.runFor(2_700);
-    await expect(club).toHaveAttribute('data-stage', 'opening');
-    await page.clock.runFor(4_700);
-    await expect(club).toHaveAttribute('data-stage', 'foyer');
-    // The doors give onto the Members' Lounge, drawn without WebGL.
+    // Midnight passes with the card on the device: no second ceremony, and
+    // no clock opens the doors (ADR-023).
+    await page.clock.runFor(60_000);
+    await expect(club).toHaveAttribute('data-stage', 'final-minute');
     await expect(
-      page.getByRole('heading', { name: 'The Members’ Lounge' }),
-    ).toBeVisible();
-    await expect(page.locator('.lounge')).toHaveAttribute(
-      'data-render',
-      'poster',
-    );
-    await expect(page.getByText('Ah, Alise. There you are.')).toBeVisible();
-    await expect(
-      page.getByText('We’ve been expecting you for thirty years.'),
-    ).toBeVisible();
-
-    // The membership ceremony.
-    for (let i = 0; i < 3; i += 1) {
-      await page.getByRole('button', { name: 'Continue', exact: true }).click();
-    }
-    await expect(page.getByText('No. 1 of 1')).toBeVisible();
-    await page.getByRole('button', { name: 'Accept your membership' }).click();
-    await expect(
-      page.getByText(/rather important people have requested an audience/),
-    ).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Continue your evening' }),
-    ).toBeVisible();
-
-    // A returning member skips the ceremony.
-    await page.reload();
-    await expect(page.getByText(/Alise\. Welcome back\./)).toBeVisible();
-    await expect(
-      page.getByRole('button', { name: 'Accept your membership' }),
+      page.getByRole('button', { name: 'Enter the club' }),
     ).toHaveCount(0);
-
-    // The directory lists only rooms she has been admitted to (ADR-020).
-    await page.getByRole('button', { name: 'Members’ Directory' }).click();
-    const directory = page.getByRole('dialog', { name: 'Members’ Directory' });
-    await expect(directory).not.toContainText('Grand Casino');
-    await expect(directory).not.toContainText('Privileges');
-    // The Gift Vault opens with the membership (ADR-015), so it has a way in;
-    // the pre-birthday Departure Lounge remains open to her afterwards.
-    await expect(directory.getByRole('button')).toHaveText([
-      'Revisit',
-      'Enter',
-      'Enter',
-      'Enter',
-      'Close',
-    ]);
-    await expect(
-      directory.getByRole('button', { name: 'Enter: The Departure Lounge' }),
-    ).toBeVisible();
-    await expect(
-      directory.getByRole('button', { name: 'Enter: The Gift Vault' }),
-    ).toBeVisible();
+    await expect(page.locator('.lounge')).toHaveCount(0);
   });
 });
 
@@ -206,17 +146,12 @@ test.describe('the membership card (ADR-012)', () => {
     await page.goto('/');
     const club = page.locator('.club');
     await page.clock.runFor(3_000);
-    await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
-    await expect(
-      page.getByText(
-        'Happy birthday, Alise. Your membership card, if you please.',
-      ),
-    ).toBeVisible();
+    await expect(club).toHaveAttribute('data-stage', 'final-minute');
     await expect(
       page.getByRole('button', { name: 'Enter the club' }),
     ).toHaveCount(0);
     await page.clock.runFor(60 * 60_000);
-    await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
+    await expect(club).toHaveAttribute('data-stage', 'final-minute');
     // A direct visit to a room is refused too, and names nothing (ADR-020).
     await page.goto('/rooms/screening-room');
     await expect(

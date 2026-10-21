@@ -203,7 +203,7 @@ export function JourneyOffice() {
   function saveTime(m: OwnerMilestone) {
     let instant: string;
     try {
-      instant = wallTimeToInstant(wall, JOURNEY_TIME_ZONE);
+      instant = wallTimeToInstant(wall, m.timezone ?? JOURNEY_TIME_ZONE);
     } catch (e) {
       setError((e as Error).message);
       return;
@@ -211,7 +211,7 @@ export function JourneyOffice() {
     setEditing(null);
     void run(
       () => rescheduleMilestone(m.key, instant),
-      `“${m.title}” moved to ${jamaica(instant)} Jamaica.`,
+      `“${m.title}” moved to ${jamaica(instant)} Jamaica (${when(instant, 'Europe/London')} UK).`,
     );
   }
 
@@ -372,7 +372,7 @@ export function JourneyOffice() {
             {m.state !== 'fired' && editing === m.key && (
               <div className="office-form-row">
                 <label>
-                  New time (Jamaica)
+                  New time ({m.timezone === 'Europe/London' ? 'UK' : 'Jamaica'})
                   <input
                     type="datetime-local"
                     value={wall}
@@ -424,7 +424,9 @@ export function JourneyOffice() {
                   disabled={busy}
                   onClick={() => {
                     setEditing(m.key);
-                    setWall(instantToWall(m.fireAt, JOURNEY_TIME_ZONE));
+                    setWall(
+                      instantToWall(m.fireAt, m.timezone ?? JOURNEY_TIME_ZONE),
+                    );
                   }}
                 >
                   Change time

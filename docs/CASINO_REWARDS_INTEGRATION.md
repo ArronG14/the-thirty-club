@@ -18,22 +18,22 @@
 
 All paths are under `/api/v1`, use the existing secure session cookie, mutation origin and `x-concierge-request` checks, and return the existing error envelope. Owner paths require the owner role, member paths the member role. IDs are UUIDs.
 
-| Role   | Method and path                                                             | Purpose                                                                                                               |
-| ------ | --------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
-| Member | `GET /casino`                                                               | Remaining spins and committed history; no future allocations                                                          |
-| Member | `POST /casino/spins` `{idempotencyKey}`                                     | Commit and return one spin                                                                                            |
-| Member | `GET /vouchers`                                                             | Casino entitlements and request history                                                                               |
-| Member | `POST /vouchers/request` `{id}`                                             | Request a voucher                                                                                                     |
-| Owner  | `GET /owner/casino/prizes`                                                  | Catalogue                                                                                                             |
-| Owner  | `POST /owner/casino/prizes`                                                 | Create prize                                                                                                          |
-| Owner  | `PATCH /owner/casino/prizes/:id`                                            | Edit/disable prize                                                                                                    |
-| Owner  | `POST /owner/casino/batches` `{quantity,prizeIds,idempotencyKey,announce?}` | Issue a batch                                                                                                         |
-| Owner  | `GET /owner/casino/batches`                                                 | Allocations, results, counts and status                                                                               |
-| Owner  | `POST /owner/casino/batches/:id/cancel`                                     | Cancel only an unplayed batch whose spins no delivered letter still promises (`spins-promised`); idempotent (ADR-023) |
-| Owner  | `GET /owner/vouchers`                                                       | All entitlements and redemption requests                                                                              |
-| Owner  | `POST /owner/vouchers/:id/fulfil`                                           | Record actual voucher fulfilment                                                                                      |
-| Owner  | `POST /owner/vouchers/:id/cancel`                                           | Return requested voucher to available                                                                                 |
-| Owner  | `POST /owner/casino/gifts/:id/fulfil`                                       | Record physical gift fulfilment after reveal                                                                          |
+| Role   | Method and path                                                             | Purpose                                                                                                                                                  |
+| ------ | --------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Member | `GET /casino`                                                               | Remaining spins and committed history; no future allocations                                                                                             |
+| Member | `POST /casino/spins` `{idempotencyKey}`                                     | Commit and return one spin                                                                                                                               |
+| Member | `GET /vouchers`                                                             | Casino entitlements and request history                                                                                                                  |
+| Member | `POST /vouchers/request` `{id}`                                             | Request a voucher                                                                                                                                        |
+| Owner  | `GET /owner/casino/prizes`                                                  | Catalogue                                                                                                                                                |
+| Owner  | `POST /owner/casino/prizes`                                                 | Create prize                                                                                                                                             |
+| Owner  | `PATCH /owner/casino/prizes/:id`                                            | Edit/disable prize                                                                                                                                       |
+| Owner  | `POST /owner/casino/batches` `{quantity,prizeIds,idempotencyKey,announce?}` | Issue a batch                                                                                                                                            |
+| Owner  | `GET /owner/casino/batches`                                                 | Allocations, results, counts and status                                                                                                                  |
+| Owner  | `POST /owner/casino/batches/:id/cancel`                                     | Cancel only an unplayed batch, and only if played + remaining spins stay at or above the promised floor (`spins-promised`); idempotent (ADR-023 amended) |
+| Owner  | `GET /owner/vouchers`                                                       | All entitlements and redemption requests                                                                                                                 |
+| Owner  | `POST /owner/vouchers/:id/fulfil`                                           | Record actual voucher fulfilment                                                                                                                         |
+| Owner  | `POST /owner/vouchers/:id/cancel`                                           | Return requested voucher to available                                                                                                                    |
+| Owner  | `POST /owner/casino/gifts/:id/fulfil`                                       | Record physical gift fulfilment after reveal                                                                                                             |
 
 ## Journey contract and dependency
 

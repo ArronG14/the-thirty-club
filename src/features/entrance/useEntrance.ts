@@ -52,6 +52,17 @@ export function useEntrance(
   // Early admission (ADR-022): the server's schedule and this device's
   // memory of the final ten seconds.
   const [early, setEarly] = useState<EarlyAdmission | null>(null);
+  /**
+   * The doors open only on the server's word (early admission + the card,
+   * or an admission already recorded). The device-clock birthday opening
+   * survives only where no server exists: development previews and unit
+   * tests of the stage machine. Production and TEST always have a source.
+   */
+  const neverOpens = useCallback(
+    (phase: TimePhase): TimePhase =>
+      source && phase === 'open' ? 'final-minute' : phase,
+    [source],
+  );
   const earlyRef = useRef(early);
   const finalRef = useRef<number | null>(null);
   // Server clock minus device clock, once the server has answered.
@@ -72,15 +83,17 @@ export function useEntrance(
         admitted: e.eligible && memberRef.current,
       };
     }
-    // The birthday's own countdown, by the server's clock once known.
+    // The birthday's own countdown, by the server's clock once known. There
+    // is one entrance ceremony (21 Oct, 19:00 UK, with the card): with a
+    // server to ask, no clock ever opens the doors by itself (ADR-023).
     const now = deviceNow + offsetRef.current;
     return {
-      phase: timePhase(now, birthday),
+      phase: neverOpens(timePhase(now, birthday)),
       now,
       target: birthday,
       admitted: false,
     };
-  }, [clock]);
+  }, [clock, neverOpens]);
 
   // Before the server has answered, the birthday's own countdown.
   const [view, setView] = useState<Timing>(() => {
@@ -90,7 +103,7 @@ export function useEntrance(
   });
   const [state, dispatch] = useReducer(entranceReducer, undefined, () =>
     initialEntranceState({
-      phase: timePhase(clock.now(), openingInstant()),
+      phase: neverOpens(timePhase(clock.now(), openingInstant())),
       record: initialRecord,
       member,
       presentedNow,

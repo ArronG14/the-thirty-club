@@ -167,7 +167,7 @@ beforeAll(async () => {
 }, 60000);
 
 beforeEach(async () => {
-  await pg.exec(`truncate public.ttc_voucher_requests, public.ttc_reward_entitlements, public.ttc_casino_spins,
+  await pg.exec(`truncate public.ttc_casino_promise_floor, public.ttc_voucher_requests, public.ttc_reward_entitlements, public.ttc_casino_spins,
       public.ttc_casino_allocations, public.ttc_casino_batches, public.ttc_prize_catalogue, public.ttc_vaults,
       public.ttc_journey_events, public.ttc_room_admissions, public.ttc_letter_replies, public.ttc_letters,
       public.ttc_sessions, public.ttc_messages, public.ttc_message_delivery_logs, public.ttc_activity_events cascade;
@@ -587,5 +587,83 @@ describe('cancelling spins never leaves a letter promising them (Codex P1)', () 
     expect((await cancel(batch.data.batchId)).status).toBe(200);
     await openCasino();
     expect(await letterOfAdmission()).not.toContain('spins');
+  });
+});
+
+/**
+ * Codex counterexample on 282c4ea: a delivered promise of three spins, a
+ * quiet one-spin "replacement", then the three-spin batch cancelled — the
+ * promise became one spin. A promise is a quantity (ADR-023 amended).
+ */
+describe('a promised quantity of spins is protected (Codex, 282c4ea)', () => {
+  const cancel = (id: string) =>
+    call<{ error?: string; status?: string }>(
+      `/owner/casino/batches/${id}/cancel`,
+      {},
+    );
+  const quiet = (quantity: number, key: string) =>
+    call<{ batchId: string }>('/owner/casino/batches', {
+      quantity,
+      prizeIds: [],
+      idempotencyKey: key,
+      announce: false,
+    });
+  const openWithPromise = async (quantity: number, key: string) => {
+    await at('2026-10-23T13:30:00Z');
+    const batch = await quiet(quantity, key);
+    await at('2026-10-23T14:00:30Z');
+    await runJourneyRound(db);
+    await call('/journey/admissions/casino/accept', {}, 'member');
+    return batch.data.batchId;
+  };
+
+  it('the exact counterexample: three promised, one quietly added, the three cannot be cancelled', async () => {
+    const three = await openWithPromise(3, 'promised-three-batch');
+    expect((await quiet(1, 'quiet-one-replacement')).status).toBe(201);
+    const refused = await cancel(three);
+    expect(refused.status).toBe(409);
+    expect(refused.data.error).toBe('spins-promised');
+    expect(await available()).toBe(4);
+  });
+
+  it('a partial replacement is refused; a full one is accepted, and then protected itself', async () => {
+    const three = await openWithPromise(3, 'promised-three-batch-b');
+    await quiet(2, 'partial-replacement-two');
+    expect((await cancel(three)).status).toBe(409);
+    const full = await quiet(3, 'full-replacement-three');
+    // 2 + 3 left after cancelling the original: at least the three promised.
+    expect((await cancel(three)).status).toBe(200);
+    expect(await available()).toBe(5);
+    // Now the two can go (three remain) but then the three cannot.
+    const two = (
+      await pg.query<{ id: string }>(
+        'select id from public.ttc_casino_batches where quantity = 2 and status = $1',
+        ['active'],
+      )
+    ).rows[0]!.id;
+    expect((await cancel(two)).status).toBe(200);
+    expect((await cancel(full.data.batchId)).status).toBe(409);
+    expect(await available()).toBe(3);
+  });
+
+  it('spins already played count towards the promise; the remaining balance is protected', async () => {
+    await openWithPromise(3, 'promised-three-batch-c');
+    expect((await spin('promised-spin-played-1')).status).toBe(201);
+    const extra = await quiet(2, 'extra-after-play');
+    // Played 1 + remaining 2 still meets the three promised without the extra.
+    expect((await cancel(extra.data.batchId)).status).toBe(200);
+    expect(await available()).toBe(2);
+  });
+
+  it('two cancellations that are each fine alone cannot both succeed', async () => {
+    const three = await openWithPromise(3, 'promised-three-batch-d');
+    const other = await quiet(3, 'second-three-batch');
+    // The member row lock serialises them: the second sees the first.
+    const [a, b] = await Promise.all([
+      cancel(three),
+      cancel(other.data.batchId),
+    ]);
+    expect([a.status, b.status].sort()).toEqual([200, 409]);
+    expect(await available()).toBe(3);
   });
 });

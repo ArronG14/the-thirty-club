@@ -252,49 +252,38 @@ test('the owner rehearses in isolation, at in-flight time', async ({
   await expect(page.getByLabel('Rehearsal')).toHaveCount(0);
 });
 
-test.describe('the birthday membership card', () => {
+test.describe('the membership card on the birthday', () => {
   test.use({ timezoneId: 'America/Jamaica' });
 
-  test('the doors wait for the card; scanning it plays the ceremony', async ({
+  // One entrance only (ADR-023, amended 21 Oct): 21 October at 19:00 UK,
+  // authorised by the server. That ceremony, the scan and the printed number
+  // are rehearsed end to end in tests/release.spec.ts.
+  test('the card is recognised, but on the birthday it opens nothing by itself', async ({
     page,
   }) => {
     await page.clock.install({ time: new Date('2026-10-24T06:00:00Z') });
     await page.goto('/');
     const club = page.locator('.club');
-    await expect(club).toHaveAttribute('data-stage', 'awaiting-credential');
-    await expect(
-      page.getByText(/A member’s card is never left lying about/),
-    ).toBeVisible();
+    await expect(club).not.toHaveAttribute(
+      'data-stage',
+      /unlocking|opening|foyer|awaiting/,
+    );
 
     await page.goto(MEMBERSHIP_LINK);
     await expect(page).toHaveURL(/\/$/);
-    await expect(club).toHaveAttribute('data-stage', /unlocking|opening/);
-    await page.clock.runFor(8_000);
-    await expect(club).toHaveAttribute('data-stage', 'foyer');
-    await expect(
-      page.getByRole('heading', { name: 'The Members’ Lounge' }),
-    ).toBeVisible();
-
-    // Remembered: a later visit goes straight to the lounge.
-    await page.reload();
-    await expect(club).toHaveAttribute('data-stage', 'foyer');
-  });
-
-  test('the number on the card is the recovery when NFC fails', async ({
-    page,
-  }) => {
-    await page.clock.install({ time: new Date('2026-10-24T13:00:00Z') });
-    await page.goto('/');
-    await page
-      .getByRole('button', { name: 'Present the card by hand' })
-      .click();
-    await page
-      .getByLabel('The number on your membership card')
-      .fill('TC 3010 2410');
-    await page.getByRole('button', { name: 'Present membership' }).click();
-    await expect(page.locator('.club')).toHaveAttribute(
+    // The concierge recognised it: this device now holds the card.
+    expect(
+      await page.evaluate(() =>
+        localStorage.getItem('thirty-club:concierge-session'),
+      ),
+    ).toBeTruthy();
+    await page.clock.runFor(15_000);
+    await expect(club).not.toHaveAttribute(
       'data-stage',
-      /unlocking|opening/,
+      /unlocking|opening|foyer/,
     );
+    await expect(
+      page.getByRole('button', { name: 'Enter the club' }),
+    ).toHaveCount(0);
   });
 });

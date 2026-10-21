@@ -6,7 +6,7 @@
  * reloads, looking away, the card arriving from another tab and a wrong
  * device clock.
  */
-import { act, render, screen } from '@testing-library/react';
+import { act, cleanup, render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { memoryMembershipStorage } from '../../club/domain/membershipRecord';
@@ -322,6 +322,34 @@ describe('at the entrance', () => {
     advance(20_000);
     expect(club.dataset.stage).toBe('locked');
     expect(timer()).toContain('2 days');
+  });
+
+  it('one entrance only: birthday midnight with the card opens nothing without the server', async () => {
+    server.authorised = false;
+    vi.setSystemTime(Date.parse('2026-10-24T05:00:05Z')); // 00:00:05 Jamaica
+    const club = open();
+    await settle();
+    advance(60_000);
+    expect(club.dataset.stage).not.toMatch(/unlocking|opening|foyer|awaiting/);
+    expect(screen.queryByRole('button', { name: 'Enter the club' })).toBeNull();
+  });
+
+  it('the phone moving from London to Jamaica time changes neither the clock nor the membership', async () => {
+    const previous = process.env.TZ;
+    try {
+      vi.setSystemTime(Date.parse('2026-10-21T15:01:00Z'));
+      process.env.TZ = 'Europe/London';
+      open();
+      await settle();
+      const before = timer();
+      cleanup();
+      process.env.TZ = 'America/Jamaica';
+      open();
+      await settle();
+      expect(timer()).toBe(before);
+    } finally {
+      process.env.TZ = previous;
+    }
   });
 
   it('a dropped connection never invents eligibility', async () => {

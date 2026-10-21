@@ -413,11 +413,13 @@ export default function RehearsalDesk() {
             type="button"
             disabled={busy !== ''}
             onClick={() =>
-              void act('Door ceremony', () => applyScenario('midnight'))
+              void act('Door ceremony', () =>
+                applyScenario('early-admission-doors'),
+              )
             }
           >
-            <strong>Play the midnight door ceremony</strong>
-            <small>Five seconds to midnight, card presented.</small>
+            <strong>Play the 19:00 door ceremony</strong>
+            <small>21 Oct, twenty seconds to 19:00 UK, card presented.</small>
           </button>
           <button
             type="button"

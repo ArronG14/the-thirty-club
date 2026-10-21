@@ -273,19 +273,21 @@ test('A letter that mentions a Casino she has not been admitted to names nothing
   await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60000 });
 });
 
-test('Scenario: birthday midnight plays the door ceremony into the induction', async ({
+test('Scenario: the 19:00 card ceremony plays the doors into the induction', async ({
   page,
 }) => {
   await unlock(page);
   await devMenu(page);
-  await page.getByRole('button', { name: /^Birthday midnight/ }).click();
+  await page
+    .getByRole('button', { name: /^Early admission: 19:00 UK, card already/ })
+    .click();
   await page.waitForURL('**/');
   await expect(page.locator('.club')).toHaveAttribute(
     'data-stage',
     /locked|final-minute/,
   );
   await shot(page, '40-midnight-before', 300);
-  await expect(page.locator('.lounge')).toBeVisible({ timeout: 30000 });
+  await expect(page.locator('.lounge')).toBeVisible({ timeout: 90000 });
   await shot(page, '41-midnight-lounge', 1500);
 });
 

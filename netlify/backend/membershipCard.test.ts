@@ -385,3 +385,112 @@ describe('the 19:00 admission is the card’s', () => {
     expect(await count("public.ttc_letters where state = 'published'")).toBe(1);
   });
 });
+
+describe('one entrance only (21 Oct 19:00 UK)', () => {
+  it('on the birthday, without the 19:00 admission, nobody is admitted — card or not', async () => {
+    const phone = await scan();
+    await at('2026-10-24T05:00:30Z'); // 00:00:30 Jamaica on the birthday
+    await runJourneyRound(db);
+    const refused = await call<{ error: string }>('/journey/enter', {
+      body: {},
+      cookie: phone.cookie,
+    });
+    expect(refused.status).toBe(403);
+    expect(refused.data.error).toBe('not-open');
+  });
+
+  it('admitted on 21 Oct, she stays admitted after the phone moves to Jamaica time', async () => {
+    await armEarlyAdmission();
+    const phone = await scan();
+    await at('2026-10-21T18:05:00Z');
+    await runJourneyRound(db);
+    expect(
+      (await call('/journey/enter', { body: {}, cookie: phone.cookie })).status,
+    ).toBe(201);
+    // Thursday evening in Kingston: the record is an instant, not a wall time.
+    await at('2026-10-23T01:00:00Z');
+    const state = await call<{
+      admissions: { roomId: string; state: string }[];
+    }>('/journey', { cookie: phone.cookie });
+    expect(state.data.admissions).toContainEqual(
+      expect.objectContaining({ roomId: 'lounge', state: 'admitted' }),
+    );
+  });
+});
+
+describe('every scheduled item, read in its own named zone (ADR-023)', () => {
+  const wall = (at: string, zone: string) =>
+    new Intl.DateTimeFormat('en-GB', {
+      timeZone: zone,
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      hourCycle: 'h23',
+    }).format(new Date(at));
+
+  it('milestones and the teaser fire at the intended local times', async () => {
+    const milestones = (
+      await pg.query<{ key: string; fire_at: string; timezone: string }>(
+        'select key, fire_at::text, timezone from public.ttc_journey_milestones',
+      )
+    ).rows;
+    const at = (key: string) => milestones.find((m) => m.key === key)!;
+    const expected: Record<string, [string, string]> = {
+      'early-membership': ['Europe/London', '21/10/2026, 19:00'],
+      'departure-ugg': ['Europe/London', '22/10/2026, 09:00'],
+      'departure-privileges': ['Europe/London', '22/10/2026, 14:00'],
+      'departure-airpods': ['Europe/London', '22/10/2026, 15:00'],
+      'casino-opening': ['America/Jamaica', '23/10/2026, 09:00'],
+      'casino-opening-spins': ['America/Jamaica', '23/10/2026, 09:00'],
+      'birthday-screening': ['America/Jamaica', '24/10/2026, 00:00'],
+      'birthday-vault': ['America/Jamaica', '24/10/2026, 00:00'],
+      'birthday-breakfast': ['America/Jamaica', '24/10/2026, 10:30'],
+      'birthday-dinner': ['America/Jamaica', '24/10/2026, 16:00'],
+    };
+    for (const [key, [zone, local]] of Object.entries(expected)) {
+      expect(at(key).timezone, key).toBe(zone);
+      expect(wall(at(key).fire_at, zone), key).toBe(local);
+    }
+    // Birthday midnight is Jamaica's, not the UK's (05:00 in London).
+    expect(wall(at('birthday-screening').fire_at, 'Europe/London')).toBe(
+      '24/10/2026, 06:00',
+    );
+    // Arrival has no time of its own: the owner triggers it; it is held.
+    const arrival = (
+      await pg.query<{ state: string }>(
+        "select state from public.ttc_journey_milestones where key = 'jamaica-arrival'",
+      )
+    ).rows[0]!;
+    expect(arrival.state).toBe('held');
+  });
+
+  it('a milestone triggered by hand never fires again on its schedule', async () => {
+    await owner(
+      '/owner/journey/milestones/early-membership',
+      {
+        effects: [
+          { type: 'open-entrance' },
+          {
+            type: 'letter',
+            title: 'Your early admission',
+            body: 'In the wardrobe.',
+            action: { kind: 'admission', room: 'lounge' },
+          },
+        ],
+      },
+      'PATCH',
+    );
+    await owner('/owner/journey/milestones/early-membership/fire', {});
+    await at('2026-10-21T18:00:30Z');
+    await runJourneyRound(db);
+    await runJourneyRound(db);
+    expect(await count("public.ttc_letters where state = 'published'")).toBe(1);
+    expect(
+      await count(
+        "public.ttc_messages where category = 'correspondence-alise'",
+      ),
+    ).toBe(1);
+  });
+});

@@ -120,6 +120,8 @@ export interface OwnerMilestone {
   title: string;
   description: string;
   fireAt: ISODateTime;
+  /** How the owner reads and edits it (ADR-023): UK for 21-22 Oct. */
+  timezone?: 'Europe/London' | 'America/Jamaica';
   state: MilestoneState;
   progress: MilestoneProgress;
   effects: MilestoneEffect[];

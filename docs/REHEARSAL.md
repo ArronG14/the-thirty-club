@@ -47,7 +47,7 @@ The PIN is still only a convenience gate (ADR-011). It grants nothing on the ser
 
 ## Scenarios and launches
 
-Scenarios: before departure; Departure Lounge opening (13:59:30 UK Thursday); birthday eve; one minute before midnight; birthday midnight (−5 s); midnight without the card; immediately after entering (induction); Casino opening (13:59:30 JM); Casino jackpot (next spin); Gift Vault unlock; all rooms open.
+Scenarios: before departure; Departure Lounge opening (13:59:30 UK Thursday); birthday eve; immediately after entering (induction); (the birthday-midnight door scenarios were removed on 21 Oct: the one entrance is the 19:00 UK card ceremony, ADR-023 amended); Casino opening (13:59:30 JM); Casino jackpot (next spin); Gift Vault unlock; all rooms open.
 
 **The Screening Room journey (first visit)** opens the Members' Lounge with this rehearsal's screening progress and the room's completion cleared, so the Butler's escort, introduction, the five-second test film, the closing words and encores can be rehearsed end to end, as often as wanted (ADR-019). **The Private Screening Room** goes straight to the seat and keeps progress (returning visitor).
 

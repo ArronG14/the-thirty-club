@@ -117,7 +117,7 @@ export const TIMELINE: readonly TimelineEvent[] = [
     at: BIRTHDAY,
     watch: '/',
     detail:
-      '00:00 in Jamaica. The time-lock withdraws; with the card presented the doors swing open and the membership card is presented in the lounge. The Screening Room and Gift Vault are introduced by their journey milestones (Letters of Admission in the Lounge).',
+      '00:00 in Jamaica. No door ceremony: her one entrance was on 21 October at 19:00 UK with the card (ADR-023). The Screening Room and Gift Vault are introduced by their journey milestones (Letters of Admission in the Lounge).',
   },
 ].sort((a, b) => a.at - b.at);
 
@@ -304,33 +304,6 @@ export const SCENARIOS: readonly Scenario[] = [
     at: BIRTHDAY - 4 * HOUR,
     go: '/',
     apply: (at) => locked(at),
-  },
-  {
-    id: 'final-minute',
-    label: 'One minute before midnight',
-    detail:
-      '23:59:00 Jamaica, card already presented: the final-minute glow, then the doors open by themselves.',
-    at: BIRTHDAY - MINUTE,
-    go: '/',
-    apply: (at) => locked(at, true),
-  },
-  {
-    id: 'midnight',
-    label: 'Birthday midnight',
-    detail:
-      'Five seconds before 00:00 Jamaica, card presented: the full door ceremony and the membership card.',
-    at: BIRTHDAY - 5000,
-    go: '/',
-    apply: (at) => locked(at, true),
-  },
-  {
-    id: 'awaiting-card',
-    label: 'Midnight, card not yet found',
-    detail:
-      '00:01 Jamaica without the card: the riddle. Present it by hand with the rehearsal number TC-3010-2410.',
-    at: BIRTHDAY + MINUTE,
-    go: '/',
-    apply: (at) => locked(at, false),
   },
   {
     id: 'just-entered',

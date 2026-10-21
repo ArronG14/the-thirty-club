@@ -106,7 +106,10 @@ beforeAll(async () => {
   // LIVE-like state before the hold: a redeemed privilege, a letter she has,
   // an SMS to her approved but not yet sent, one to Arron, a Desk letter
   // scheduled for later today, and the original 20 October milestone armed.
-  await pg.exec(`
+  // Seeded on the simulated clock (never the real date), so the test means
+  // the same whatever day it runs.
+  await pg.exec(
+    rewriteClock(`
     insert into public.ttc_privileges(slug,title,kind,opens_at,min_amount_pence,max_amount_pence)
       values ('shopping-test','Shopping','beauty',now() - interval '2 days',100,10000);
     insert into public.ttc_redemptions(member_id,privilege_id,kind,state,amount_pence,idempotency_key,fingerprint,fulfilled_at)
@@ -118,7 +121,8 @@ beforeAll(async () => {
     insert into public.ttc_letters(member_id,title,body,deliver_at,state,scheduled_at)
       select id,'Later today','A letter for this afternoon.',now() + interval '2 hours','scheduled',now()
       from public.ttc_members where slug='alise';
-    update public.ttc_journey_milestones set state='pending', fire_at='2026-10-20 13:00:00-05' where key='early-membership';`);
+    update public.ttc_journey_milestones set state='pending', fire_at='2026-10-20 13:00:00-05' where key='early-membership';`),
+  );
   await pg.exec(
     rewriteClock(readFileSync(join(MIGRATIONS, HOLD_MIGRATION), 'utf8')),
   );

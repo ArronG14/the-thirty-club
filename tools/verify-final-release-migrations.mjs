@@ -125,6 +125,45 @@ try {
     placeholderRefused = /placeholder/.test(error.message);
   }
   assert(placeholderRefused, 'a [[placeholder]] letter was not refused');
+  // Named zones (ADR-023): UK for 21-22 Oct, Jamaica from 23 Oct.
+  const zones = Object.fromEntries(
+    (
+      await rows(
+        'select key, timezone, state from public.ttc_journey_milestones',
+      )
+    ).map((r) => [r.key, r]),
+  );
+  for (const key of [
+    'early-membership',
+    'departure-ugg',
+    'departure-privileges',
+    'departure-airpods',
+  ])
+    assert(
+      zones[key]?.timezone === 'Europe/London',
+      `${key} is not Europe/London`,
+    );
+  for (const key of [
+    'casino-opening',
+    'birthday-screening',
+    'birthday-vault',
+    'birthday-breakfast',
+    'birthday-dinner',
+    'jamaica-arrival',
+  ])
+    assert(
+      zones[key]?.timezone === 'America/Jamaica',
+      `${key} is not America/Jamaica`,
+    );
+  assert(
+    zones['birthday-dinner'].state === 'held' &&
+      zones['jamaica-arrival'].state === 'held',
+    'the dinner and arrival letters must be held',
+  );
+  const floors = await rows(
+    'select count(*)::int as n from public.ttc_casino_promise_floor',
+  );
+  assert(floors[0].n === 0, 'a Casino promise is recorded before any letter');
   const sms = await rows('select mode from public.ttc_sms_operations');
   assert(sms.length === 1 && sms[0].mode === 'off', 'SMS mode is not OFF');
   const teaser = await rows(
@@ -184,8 +223,8 @@ try {
       or c.relname like 'ttc_casino%' or c.relname like 'ttc_sms%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
       'ttc_voucher_requests','ttc_communication_hold','ttc_membership_card'))`);
   assert(
-    tables.length === 13,
-    `expected 13 release tables, found ${tables.length}`,
+    tables.length === 14,
+    `expected 14 release tables, found ${tables.length}`,
   );
   for (const t of tables)
     assert(

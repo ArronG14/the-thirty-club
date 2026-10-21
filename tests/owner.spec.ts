@@ -118,20 +118,23 @@ test('mobile activation, incorrect PIN, room launches, test rewards, reset and e
   ).toBeNull();
 });
 
-test('birthday midnight scenario runs the ceremony; a reset returns to the locked doors', async ({
+test('the 19:00 card scenario runs the ceremony; a reset returns to the locked doors', async ({
   page,
 }) => {
+  test.setTimeout(120_000);
   await poster(page);
   await page.goto('/');
   await unlock(page);
   await panel(page);
-  await page.getByRole('button', { name: /^Birthday midnight/ }).click();
+  await page
+    .getByRole('button', { name: /^Early admission: 19:00 UK, card already/ })
+    .click();
   await expect(page.locator('.club')).toHaveAttribute(
     'data-stage',
     /locked|final-minute/,
   );
   await expect(page.locator('.club')).toHaveAttribute('data-stage', 'foyer', {
-    timeout: 15000,
+    timeout: 60000,
   });
   expect(
     await page.evaluate(() => localStorage.getItem('thirty-club:entrance')),
