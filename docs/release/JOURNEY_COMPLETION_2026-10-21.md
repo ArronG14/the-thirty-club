@@ -16,6 +16,12 @@
 | P0 (tonight) paths  | Entrance, card scan, 19:00 admission code unchanged. Touched shared code: `api.ts` (sends the owner's SMS right after a request), `sms.ts` (REHEARSAL claim), Lounge dock (Drinks entry), Casino. Release specs pass                                                                                                                                                                                                                                                                                                                |
 | Playwright          | Configs accept `PW_PORT` (your 4185 run was left alone)                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
+## 1b. Tonight, 19:00 — the 19:00 letter still needs your clue
+
+Unchanged and audited (revision 4): the `early-membership` letter holds a `[[CLUE — …]]` placeholder and refuses to send until you replace it (journey tab → Early admission → Edit wording). Paste the Story Bible text. If it is not to hand, this **PROPOSED** version tells Nyla's story with the real hiding place:
+
+> I am pleased to confirm that the committee has agreed to receive you this evening, rather sooner than the calendar intended. I regret to report a small irregularity: your membership card was delivered this afternoon and has since gone missing. Suspicion has fallen on a junior member of the household — four legs, a fine coat, and a well-known weakness for anything left unattended. I would begin with Nyla's crate. When you find the card, hold your telephone to it. The doors will know.
+
 ## 2. For the owner — set up before you fly (about 30 minutes, after deploy + migration 6)
 
 All in the LIVE Control Centre (`/concierge/owner`).
@@ -27,8 +33,10 @@ All in the LIVE Control Centre (`/concierge/owner`).
 5. **Airport drinks.** `airport-drinks` → wording → **Trigger now** once through security. She gets 2; each request texts you her drink.
 6. **Flight / arrival.** `flight-departure` and `jamaica-arrival` → wording → Trigger now at take-off / landing.
 7. **Casino (Fri).** The opening spins (`casino-opening-spins`) are now three with **Bring Me a Drink ×3 on the third** → **Resume** (still held). Afternoon: Casino & rewards → edit **A message from Nyla** → Film URL (an `https://` MP4) → Active → Save; journey → `casino-afternoon-spins` → Resume. Evening (777 jackpot → breakfast): Vault → create a compartment with trigger **Casino** (any reward), opens-before = Fri 23 Oct 20:00 Jamaica, clue to its NFC key, gift location = the breakfast message; copy its **ID for its Casino prize**; Casino & rewards → new prize, type **Gift Vault**, that ID, **slug `evening-jackpot`**, Active → Save; journey → `casino-evening-spins` → Resume.
-8. **Birthday.** `birthday-midnight-letter` → wording → Resume. **Breakfast:** `birthday-breakfast` → Trigger now **only after it has arrived**. `birthday-card`, `birthday-dinner`, `farewell` → wording → Trigger when ready.
+8. **Birthday.** `birthday-midnight-letter` → wording → Resume (optional: the armed Screening Room invitation already sends its own midnight letter and SMS, so this makes two). **Breakfast:** `birthday-breakfast` → Trigger now **only after it has arrived**. `birthday-card`, `birthday-dinner`, `farewell` → wording → Trigger when ready.
 9. **The film.** Not supplied. Either one MP4 (`BIRTHDAY_FILM`) or separate clips in order (`BIRTHDAY_REELS`) in `src/features/screening/config/screeningFilm.ts`, then deploy. Without it she sees "Your screening is being prepared."
+
+**Rehearse first (TEST, your iPhone):** Dev Mode now has _Airport: two drinks after security_, _Casino afternoon: Nyla's film on the third spin_ and _Birthday: the private card_, alongside the existing Casino launch (Bring Me a Drink on the third spin).
 
 **What you do not need to do:** mark drinks as served. Watch the _Drinks_ section only if an SMS shows FAILED.
 

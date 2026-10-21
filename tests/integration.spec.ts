@@ -193,3 +193,106 @@ test('The communication hold: visible, enforced by the server, release not befor
   expect(release).toBe(403);
   expect(calls).toEqual([]);
 });
+
+test('Scenario: two airport drinks after security; a request reaches the owner’s desk', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Airport: two drinks after security/ })
+    .click();
+  await page.waitForURL('**/lounge');
+  const dock = page.getByRole('button', { name: /^Drinks/ });
+  await expect(dock).toBeVisible({ timeout: 60_000 });
+  await dock.click();
+  const sheet = page.getByRole('dialog', { name: 'Drinks' });
+  await expect(sheet).toContainText('Two drinks before the flight', {
+    timeout: 30_000,
+  });
+  await expect(sheet.getByLabel('2 of 2 drinks remaining')).toBeVisible();
+  await sheet.getByLabel('What may I bring you?').fill('A glass of Ruinart');
+  await sheet.getByRole('button', { name: 'Request this drink' }).click();
+  await expect(sheet).toContainText('Word has gone to your husband', {
+    timeout: 30_000,
+  });
+  await expect(sheet.getByLabel('1 of 2 drinks remaining')).toBeVisible();
+  await shot(page, '04-airport-drink-requested');
+  await page.goto('/concierge/owner/test?section=drinks');
+  await expect(page.getByText('Starting the simulated club office')).toBeHidden(
+    { timeout: 90_000 },
+  );
+  await expect(page.getByText('A glass of Ruinart')).toBeVisible({
+    timeout: 30_000,
+  });
+  await shot(page, '05-owner-drinks-desk');
+  expect(calls).toEqual([]);
+});
+
+test('Scenario: the private birthday card, sealed and unfolded', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Birthday: the private card/ })
+    .click();
+  await page.waitForURL('**/birthdaycard');
+  await page
+    .getByRole('button', { name: 'Break the seal' })
+    .click({ timeout: 60_000 });
+  await expect(page.getByRole('region', { name: 'The card' })).toContainText(
+    'Rehearsal card.',
+    { timeout: 10_000 },
+  );
+  await page.waitForTimeout(1600);
+  await shot(page, '06-birthday-card');
+  expect(calls).toEqual([]);
+});
+
+test('Scenario: Nyla’s film on the third spin, replayable from the Lounge', async ({
+  page,
+}) => {
+  await unlock(page);
+  const calls = apiCalls(page);
+  await page.getByRole('button', { name: 'Open Dev Mode' }).click();
+  await page
+    .getByRole('button', { name: /^Casino afternoon: Nyla’s film/ })
+    .click();
+  await page.waitForURL('**/rooms/casino');
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60_000,
+  });
+  await page.getByRole('button', { name: /The Machine/ }).click();
+  const lever = page.getByRole('button', { name: /Pull the lever/ });
+  const count = page.locator('.panel--slots .panel__fine');
+  await expect(count).toHaveText('3 complimentary spins at your pleasure', {
+    timeout: 60_000,
+  });
+  await lever.click();
+  await expect(count).toHaveText('2 complimentary spins at your pleasure', {
+    timeout: 30_000,
+  });
+  await lever.click();
+  await expect(count).toHaveText('One complimentary spin at your pleasure', {
+    timeout: 30_000,
+  });
+  await lever.click();
+  const film = page.getByRole('dialog', { name: 'A message from Nyla' });
+  await expect(film).toBeVisible({ timeout: 30_000 });
+  await expect(film.locator('video')).toHaveAttribute(
+    'src',
+    '/media/screening/screening-test-5s.mp4',
+  );
+  await shot(page, '07-film-prize');
+  await film.getByRole('button', { name: 'Return to the table' }).click();
+  await page.goto('/lounge');
+  await page.getByRole('button', { name: 'Your Casino vouchers' }).click();
+  const wallet = page.getByRole('dialog', { name: 'Your vouchers' });
+  await expect(wallet.getByRole('button', { name: 'Watch again' })).toBeVisible(
+    { timeout: 30_000 },
+  );
+  expect(calls).toEqual([]);
+});

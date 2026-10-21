@@ -283,6 +283,21 @@ export const SCENARIOS: readonly Scenario[] = [
     apply: (at) => locked(at),
   },
   {
+    id: 'airport-drinks',
+    label: 'Airport: two drinks after security',
+    detail:
+      'Thursday 22 Oct, 14:15 UK, through security: the after-security milestone grants two airport drinks and the Butler’s note. Open Drinks in the Lounge and name a drink — one is used, and the owner’s SMS is recorded in the TEST office (never sent).',
+    at: uk('2026-10-22', '14:15'),
+    go: '/lounge',
+    admitted: ['lounge'],
+    fire: ['airport-drinks'],
+    apply: (at) => {
+      writeEntrance('locked', at);
+      writeMembership(inducted(at - 18 * HOUR));
+      writeCard(false, at);
+    },
+  },
+  {
     id: 'casino-opening',
     label: 'Casino opening (admission ceremony)',
     detail:
@@ -295,6 +310,23 @@ export const SCENARIOS: readonly Scenario[] = [
       writeMembership(inducted(at - 40 * HOUR));
       writeCard(false, at);
       writeCasino('fresh');
+    },
+  },
+  {
+    id: 'casino-film',
+    label: 'Casino afternoon: Nyla’s film on the third spin',
+    detail:
+      'Friday 23 Oct, 14:35 Jamaica, in the Casino: three complimentary spins on the Machine; the third reveals the film prize (the rehearsal plays the five-second test film). It stays under Your Casino vouchers in the Lounge, to watch again.',
+    at: CASINO_MILESTONE + 5 * HOUR + 35 * MINUTE,
+    go: '/rooms/casino',
+    admitted: ['lounge', 'casino'],
+    apply: async (at) => {
+      writeEntrance('locked', at);
+      writeMembership(inducted(at - 40 * HOUR));
+      writeCard(false, at);
+      writeCasino('fresh');
+      const { rehearseFilmSpins } = await import('./office');
+      await rehearseFilmSpins();
     },
   },
   {
@@ -316,6 +348,22 @@ export const SCENARIOS: readonly Scenario[] = [
       writeEntrance('unlocked', at);
       writeMembership(emptyMembership);
       writeCard(true, at);
+    },
+  },
+  {
+    id: 'birthday-card',
+    label: 'Birthday: the private card',
+    detail:
+      'Saturday 24 Oct, 12:00 Jamaica: the private card at /birthdaycard with a rehearsal message (TEST office only). Break the seal, fold it away, open it again.',
+    at: BIRTHDAY + 12 * HOUR,
+    go: '/birthdaycard',
+    admitted: ['lounge'],
+    apply: async (at) => {
+      writeEntrance('locked', at);
+      writeMembership(inducted(at - 60 * HOUR));
+      writeCard(false, at);
+      const { rehearseBirthdayCard } = await import('./office');
+      await rehearseBirthdayCard();
     },
   },
   {
