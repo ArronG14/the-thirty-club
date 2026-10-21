@@ -401,3 +401,13 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 | MD14 | P0       | VERIFIED    | Stall watch counts progress, not events (WebKit `waiting`/`playing` over a frozen picture left no Retry): `FilmPlayer` and Screening Room; new unit tests fail on the old code, pass on the new; WebKit outage test passes                                                                                                                |
 | MD15 | P1       | NOT STARTED | Real R2: `npm run media:verify` after MD07 (UK), and again from Jamaica                                                                                                                                                                                                                                                                   |
 | MD16 | P0       | NOT STARTED | Merge into the final story release (MEDIA_DELIVERY §7); rerun `npm run check`, `test:screening`, `test:media` there                                                                                                                                                                                                                       |
+
+## Story Bible acceptance (docs/acceptance/STORY_ACCEPTANCE.md)
+
+| ID   | Priority | Status      | Task / acceptance                                                                                         |
+| ---- | -------- | ----------- | --------------------------------------------------------------------------------------------------------- |
+| SA01 | P0       | IMPLEMENTED | Checklist (60 rows) and machine checks (`npm run test:acceptance`, 38 tests); baseline on `2b32872` 16/38 |
+| SA02 | P0       | BLOCKED     | Run against Codex's combined candidate (branch/path not available locally)                                |
+| SA03 | P0       | BLOCKED     | Owner: approved text for Chapters 4/5/6/8/10 and the missing SMS copy (§9)                                |
+| SA04 | P0       | NOT STARTED | E2E rows on the candidate (entrance-with-card, nine-spin play, claim, owner SMS per request)              |
+| SA05 | P0       | NOT STARTED | Owner iPhone rehearsal (§10)                                                                              |

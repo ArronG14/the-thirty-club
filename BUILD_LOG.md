@@ -905,3 +905,13 @@
 - **Known issues:** Not run against real R2 (no account yet), not deployed, no Netlify variables set, no physical iPhone. Playwright WebKit approximates but is not iPhone Safari. WebKit reads up to ~6.6 MB per print with `preload="metadata"`; the Films desk shows three players, so the owner's check costs ~20 MB before any tap.
 - **Remaining work:** Owner: Cloudflare set-up and upload (MD07), Netlify variables (MD08), Films desk on the iPhone (MD10), `media:verify` from Jamaica (MD15); merge into the final story release (MD16, MEDIA_DELIVERY §7).
 - **Commit:** unavailable while writing this entry; exact SHA in the delivery report.
+
+## 2026-10-21 21:05 BST (Europe/London) — Claude (Opus 5.5) — Story Bible acceptance harness and checklist (22–25 Oct)
+
+- **Task:** Independent acceptance criteria for the whole 22–25 October experience, while Codex implements it; no story-owned code touched.
+- **Summary:** `docs/acceptance/STORY_ACCEPTANCE.md` (60 rows by chapter, each as trigger → invitation → action → reveal → persistence → recovery; confirmed nine-spin allocation; 11 missing/ambiguous Bible items; iPhone rehearsal script). `tests/acceptance/storyBible.acceptance.test.ts` + `vitest.acceptance.config.ts` (`npm run test:acceptance`, `ACCEPT_ROOT=<candidate>`): applies a candidate's migrations to PGlite and checks schedule, zones, the nine spins, prizes and 14 locked verbatim passages; read-only. Source: local `.docx` working edition (Drive connector unauthenticated).
+- **Created:** `docs/acceptance/STORY_ACCEPTANCE.md`, `tests/acceptance/storyBible.acceptance.test.ts`, `vitest.acceptance.config.ts`. **Modified:** `package.json` (script), `BUILD_LOG.md`, `TASKS.md`.
+- **Checks and results:** `tsc -b` PASS, eslint PASS. `test:acceptance` against the deployed base `2b32872`: 16 pass / 22 fail of 38 (expected; e.g. session 3 at 20:00 not 20:30, missing `evening-jackpot` prize, Vault auto-invited at midnight, flight/arrival times, missing approved copy). Not yet run against Codex's candidate (not available locally).
+- **Known issues:** The harness checks seeds and copy, not device behaviour; E2E/PHONE rows remain. The approved revised copy for Chapters 4/5/6/8/10 is absent from the Bible.
+- **Remaining work:** Run against the combined candidate; E2E rows on the candidate; owner iPhone rehearsal.
+- **Commit:** see git log.
