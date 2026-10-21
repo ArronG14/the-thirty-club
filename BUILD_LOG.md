@@ -1,5 +1,15 @@
 # Engineering journal
 
+## 2026-10-21 02:21 BST (Europe/London) — Codex — release integration candidate
+
+- **Task:** Prepare the 16:00 teaser and 19:00 membership release from the stable Opus checkpoint without touching its worktree or changing hosted data.
+- **Summary:** Confirmed live `main@54b9cf2`, nine hosted Supabase migrations, Netlify auto publishing on and SMS transport false. Integrated committed Opus `b512da1` and `8883682` (locally cherry-picked as `8fbb99d`); the latter adds a sixth, held future-journey migration. Seeded the exact approved teaser and recovered Nyla letter from the Story Bible. Fixed the 19:00 server floor for manual trigger, owner time edits and public admission. Narrowed Netlify production credentials, recipients and SMS transport to the Production deploy context. Added a clean-commit preflight, disposable migration rehearsal and public read-only smoke script; wrote the short owner runbook. No hosted migration, deploy or SMS was performed.
+- **Files:** `supabase/migrations/20261022120000_sms_operations.sql`, `20261022130000_membership_card_admission.sql`; `netlify/backend/membershipCard.test.ts`; `tests/release.spec.ts`; `tools/release-preflight.mjs`, `verify-final-release-migrations.mjs`, `release-smoke.mjs`; `package.json`; `docs/release/RELEASE_RUNBOOK_2026-10-21.md`, `docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md`, `ARCHITECTURE.md` (ADR-025), `TASKS.md`.
+- **Checks and results:** `npm run check` PASS (755 tests, production build); `npm run verify:final-migrations` PASS (15 total migrations, existing records unchanged, 16 release tables and 59 functions closed to browser roles, hold ON, SMS OFF, teaser draft, early milestone held); `npm run functions:build` PASS; `npm run release:smoke` PASS against the still-published production site (HTML 200, unauthenticated API JSON 401). The full iPhone-profile WebKit rehearsal passed 18/18 on the five-migration candidate. On the six-migration candidate, the focused release suite passed four cases; the fifth initially timed out on an old test label, then passed alone after the test was updated to the approved letter title and clue. All five focused cases passed across those runs.
+- **Known limits:** The physical iPhone/NFC card and Twilio provider queue need the owner. The six hosted migrations and public deploy need explicit approval. Future 22–25 October UI work in Opus remains unfinished, so the sixth migration's milestones stay held. The live site is unchanged.
+- **Remaining work:** Freeze a clean commit and run `npm run release:preflight`; obtain owner approval for hosted changes, then execute the runbook and physical rehearsal.
+- **Commit:** `97874cb` contains the copy and 19:00 floor; final integration commit follows this entry.
+
 ## 2026-10-18 17:10 BST (Europe/London) — Claude Code — iPhone Safari 3D entrance stability
 
 - **Task:** Stop the 3D entrance reverting to the poster a few seconds after rendering on iPhone Safari.

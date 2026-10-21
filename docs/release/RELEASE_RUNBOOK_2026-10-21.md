@@ -1,6 +1,6 @@
 # 21 October release — owner handoff
 
-The release candidate is `codex/release-integration-2026-10-21`; check its exact commit with `git rev-parse HEAD`. The live site is still `main@54b9cf2` (Netlify deploy `6ad6804d45acc8f21add9e47`). Auto publishing is **on**. The five migrations below are absent from hosted Supabase. No hosted migration, public deploy or real SMS is authorised by this document.
+The release candidate is `codex/release-integration-2026-10-21`; check its exact commit with `git rev-parse HEAD`. The live site is still `main@54b9cf2` (Netlify deploy `6ad6804d45acc8f21add9e47`). Auto publishing is **on**. Six migrations are absent from hosted Supabase: the original five for the 16:00/19:00 release and a newer sixth for held 22–25 October work. No hosted migration, public deploy or real SMS is authorised by this document.
 
 The owner-approved 16:00 teaser and owner-recovered 19:00 Nyla letter are seeded verbatim in the pending migrations. The teaser remains an unapproved draft; `early-membership` remains held. The letter already contains the approved clue about Nyla's private quarters and has no `[[CLUE]]` placeholder. The Story Bible is the copy source: [Thirty Club Story Bible](https://docs.google.com/document/d/1EzD2yQpe-KqO4MUtd7lZGGMD_KXfHUXdUMZOyAHbxEE/edit), final copy and owner-recovered letter near its end.
 
@@ -12,17 +12,18 @@ In Netlify, **lock auto publishing before any merge to `main`**. Keep the existi
 
 ## 2. Approve and execute the hosted change
 
-Owner explicitly approves **this exact commit**, the five hosted migrations and the public deploy. Apply these files in filename order only; a migration-history check must show the nine existing versions followed by these five:
+Owner explicitly approves **this exact commit**, the six hosted migrations and the public deploy. Apply these files in filename order only; a migration-history check must show the nine existing versions followed by these six:
 
 1. `20261022090000_birthday_journey.sql`
 2. `20261022100000_casino_rewards.sql`
 3. `20261022110000_communication_hold.sql`
 4. `20261022120000_sms_operations.sql`
 5. `20261022130000_membership_card_admission.sql`
+6. `20261022140000_journey_completion.sql` — held 22–25 October drinks, Casino and Vault work; no automatic release of those held moments.
 
-Use the linked Supabase CLI from this checkout, if available: `supabase migration list --linked`, `supabase db push --linked --dry-run` (must show exactly these five), then `supabase db push --linked`. The connected Supabase migration tool is an alternative if the CLI is unavailable. Stop at the first error; never mark a failed migration applied manually or replay a partially applied file without diagnosis. These migrations are additive, but the hold cancels approved, unsent Alise SQL messages. The previous Netlify deploy is the code rollback; database rows are not automatically rolled back. The existing Blobs Shopping record is outside these migrations. The owner has explicitly closed further backup investigation.
+Use the linked Supabase CLI from this checkout, if available: `supabase migration list --linked`, `supabase db push --linked --dry-run` (must show exactly these six), then `supabase db push --linked`. The connected Supabase migration tool is an alternative if the CLI is unavailable. Stop at the first error; never mark a failed migration applied manually or replay a partially applied file without diagnosis. These migrations are additive, but the hold cancels approved, unsent Alise SQL messages. The previous Netlify deploy is the code rollback; database rows are not automatically rolled back. The existing Blobs Shopping record is outside these migrations. The owner has explicitly closed further backup investigation.
 
-Immediately verify in hosted SQL: 14 migration versions; hold `active=true`; SMS mode `off`; teaser `draft` at `2026-10-21T15:00:00Z`; early milestone `held` at `2026-10-21T18:00:00Z` in `Europe/London`; the seeded letter has the Nyla clue and no `[[`; zero card presentations; no approved/sending Alise outbox rows. Run the Supabase security advisor. Do not proceed if any check differs.
+Immediately verify in hosted SQL: 15 migration versions; hold `active=true`; SMS mode `off`; teaser `draft` at `2026-10-21T15:00:00Z`; early milestone `held` at `2026-10-21T18:00:00Z` in `Europe/London`; the seeded letter has the Nyla clue and no `[[`; zero card presentations; no approved/sending Alise outbox rows. Run the Supabase security advisor. Do not proceed if any check differs.
 
 ## 3. Publish and smoke check
 

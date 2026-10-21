@@ -11,6 +11,7 @@ const RELEASE = [
   '20261022110000_communication_hold.sql',
   '20261022120000_sms_operations.sql',
   '20261022130000_membership_card_admission.sql',
+  '20261022140000_journey_completion.sql',
 ];
 const git = (...args) => execFileSync('git', args, { encoding: 'utf8' }).trim();
 const fail = (message) => {
@@ -24,8 +25,10 @@ if (git('merge-base', EXPECTED_BASE, head) !== EXPECTED_BASE)
 const migrations = readdirSync(resolve('supabase/migrations'))
   .filter((name) => name.endsWith('.sql'))
   .sort();
-if (JSON.stringify(migrations.slice(-5)) !== JSON.stringify(RELEASE))
-  fail('The pending migration set or order differs from the reviewed five.');
+if (
+  JSON.stringify(migrations.slice(-RELEASE.length)) !== JSON.stringify(RELEASE)
+)
+  fail('The pending migration set or order differs from the reviewed six.');
 
 const teaser = readFileSync(resolve('supabase/migrations', RELEASE[3]), 'utf8');
 const admission = readFileSync(

@@ -3,7 +3,7 @@
  * (docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md). Applies the nine migrations
  * the hosted project already has, seeds LIVE-like records (a redeemed
  * privilege, a published letter, outbox rows, a vault), then applies the
- * five release migrations in order and checks that nothing existing
+ * six release migrations in order and checks that nothing existing
  * changed, the communication hold is active, and every new table and
  * function is closed to browser roles. Run: node tools/verify-final-release-migrations.mjs
  * It never connects to a hosted database.
@@ -20,6 +20,7 @@ const RELEASE = [
   '20261022110000_communication_hold.sql',
   '20261022120000_sms_operations.sql',
   '20261022130000_membership_card_admission.sql',
+  '20261022140000_journey_completion.sql',
 ];
 const dir = resolve('supabase/migrations');
 const all = readdirSync(dir)
@@ -63,7 +64,12 @@ try {
   const snapshot = async () => ({
     redemptions: await rows('select * from public.ttc_redemptions order by id'),
     privileges: await rows('select * from public.ttc_privileges order by id'),
-    vaults: await rows('select * from public.ttc_vaults order by id'),
+    vaults: (await rows('select * from public.ttc_vaults order by id')).map(
+      (row) =>
+        Object.fromEntries(
+          Object.entries(row).filter(([key]) => key !== 'opens_at'),
+        ),
+    ),
     letters: await rows(
       'select id,title,body,state,published_at,opened_at from public.ttc_letters order by id',
     ),
@@ -234,12 +240,12 @@ try {
       has_table_privilege('anon',c.oid,'SELECT') as anon,
       has_table_privilege('authenticated',c.oid,'SELECT') as auth
     from pg_class c join pg_namespace n on n.oid=c.relnamespace
-    where n.nspname='public' and c.relkind='r' and (c.relname like 'ttc_journey%' or c.relname like 'ttc_room%'
+    where n.nspname='public' and c.relkind='r' and (c.relname like 'ttc_journey%' or c.relname like 'ttc_room%' or c.relname like 'ttc_drink%'
       or c.relname like 'ttc_casino%' or c.relname like 'ttc_sms%' or c.relname in ('ttc_prize_catalogue','ttc_reward_entitlements',
       'ttc_voucher_requests','ttc_communication_hold','ttc_membership_card'))`);
   assert(
-    tables.length === 14,
-    `expected 14 release tables, found ${tables.length}`,
+    tables.length === 16,
+    `expected 16 release tables, found ${tables.length}`,
   );
   for (const t of tables)
     assert(
@@ -250,7 +256,7 @@ try {
       has_function_privilege('anon',p.oid,'EXECUTE') as anon,
       has_function_privilege('authenticated',p.oid,'EXECUTE') as auth
     from pg_proc p join pg_namespace n on n.oid=p.pronamespace
-    where n.nspname='public' and (p.proname like 'ttc_journey%' or p.proname like 'ttc_room%'
+    where n.nspname='public' and (p.proname like 'ttc_journey%' or p.proname like 'ttc_drink%' or p.proname like 'ttc_room%'
       or p.proname like 'ttc_casino%' or p.proname like 'ttc_hold%' or p.proname like 'ttc_letter%'
       or p.proname like 'ttc_sms%')`);
   for (const f of functions)

@@ -190,9 +190,11 @@ test('19:00 without the card: the clock holds at ten seconds; the letter, then t
   await page.waitForTimeout(12_000);
   await expect(club).toHaveAttribute('data-stage', 'final-minute');
   await expect(page.getByRole('timer')).toContainText('0 minutes, 10 seconds');
-  // The Butler's letter (the TEST office's rehearsal clue).
-  await page.getByRole('button', { name: 'Your early admission' }).click();
-  await expect(page.getByText('beneath the second cushion')).toBeVisible();
+  // The Butler's approved letter, including Nyla's hiding-place clue.
+  await page
+    .getByRole('button', { name: 'A Most Unfortunate Delivery Incident' })
+    .click();
+  await expect(page.getByText(/within her private quarters/)).toBeVisible();
   await shot(page, '06-the-letter-and-the-clue');
   await page.getByRole('button', { name: 'Close' }).click();
   // The printed number by hand (the fallback to scanning).
