@@ -246,8 +246,20 @@ async function rehearseCardHidden() {
  */
 export async function issueRehearsalSpins(quantity: number) {
   const { prizes } = await simOwner<{
-    prizes: { id: string; title: string }[];
+    prizes: { id: string; title: string; slug?: string | null }[];
   }>('/owner/casino/prizes');
+  // The story's opening (ADR-024): Bring Me a Drink on the last spin.
+  const drinks = prizes.find((p) => p.slug === 'jamaica-drinks')?.id;
+  if (drinks) {
+    await simOwner('/owner/casino/batches', {
+      quantity,
+      prizeIds: [drinks],
+      prizePositions: [quantity],
+      idempotencyKey: `rehearsal-launch-${Date.now()}`,
+      announce: false,
+    });
+    return;
+  }
   let voucher = prizes.find((p) => p.title === REHEARSAL_VOUCHER)?.id;
   if (!voucher) {
     const created = await simOwner<{ prize: { id: string } }>(

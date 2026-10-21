@@ -197,6 +197,8 @@ export interface VaultInput {
   trigger: VaultTrigger;
   availableAt: ISODateTime | null;
   casinoRewardId: string | null;
+  /** Opens before the birthday from this instant (ADR-024); null = birthday. */
+  opensAt?: ISODateTime | null;
 }
 export interface OwnerVault {
   id: string;

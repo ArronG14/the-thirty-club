@@ -24,6 +24,13 @@ interface Prize {
   active: boolean;
   ownerNotes: string;
   vaultId: string | null;
+  /** Stable reference for milestone hooks (ADR-024), e.g. evening-jackpot. */
+  slug: string | null;
+  /** A prize that grants drinks on her CLAIM. */
+  drinksKind: 'airport' | 'jamaica' | null;
+  drinksQuantity: number | null;
+  /** A film shown when won, replayable (HTTPS or /media/…). */
+  videoUrl: string | null;
 }
 interface Batch {
   id: string;
@@ -59,6 +66,10 @@ const empty: Omit<Prize, 'id'> = {
   active: true,
   ownerNotes: '',
   vaultId: null,
+  slug: null,
+  drinksKind: null,
+  drinksQuantity: null,
+  videoUrl: null,
 };
 
 export default function CasinoRewardsDesk() {
@@ -304,6 +315,9 @@ export default function CasinoRewardsDesk() {
                     ...form,
                     kind: e.target.value as Prize['kind'],
                     vaultId: null,
+                    drinksKind: null,
+                    drinksQuantity: null,
+                    videoUrl: null,
                   })
                 }
               >
@@ -381,6 +395,68 @@ export default function CasinoRewardsDesk() {
               </label>
             )}
             <label>
+              Slug (milestones refer to it){' '}
+              <input
+                value={form.slug ?? ''}
+                pattern="[a-z0-9-]{3,60}"
+                placeholder="e.g. evening-jackpot"
+                onChange={(e) =>
+                  setForm({ ...form, slug: e.target.value || null })
+                }
+              />
+            </label>
+            {form.kind === 'VOUCHER' && (
+              <>
+                <label>
+                  Grants drinks on her claim{' '}
+                  <select
+                    value={form.drinksKind ?? ''}
+                    onChange={(e) => {
+                      const kind = e.target.value as '' | 'airport' | 'jamaica';
+                      setForm({
+                        ...form,
+                        drinksKind: kind || null,
+                        drinksQuantity: kind
+                          ? (form.drinksQuantity ?? 3)
+                          : null,
+                      });
+                    }}
+                  >
+                    <option value="">No drinks</option>
+                    <option value="jamaica">Jamaica — Bring Me a Drink</option>
+                    <option value="airport">Airport drinks</option>
+                  </select>
+                </label>
+                {form.drinksKind && (
+                  <label>
+                    Number of drinks{' '}
+                    <input
+                      type="number"
+                      min={1}
+                      max={10}
+                      value={form.drinksQuantity ?? 3}
+                      onChange={(e) =>
+                        setForm({
+                          ...form,
+                          drinksQuantity: Number(e.target.value) || 1,
+                        })
+                      }
+                    />
+                  </label>
+                )}
+                <label>
+                  Film URL (shown when won; replayable){' '}
+                  <input
+                    value={form.videoUrl ?? ''}
+                    placeholder="https://… or /media/…"
+                    onChange={(e) =>
+                      setForm({ ...form, videoUrl: e.target.value || null })
+                    }
+                  />
+                </label>
+              </>
+            )}
+            <label>
               Owner notes{' '}
               <textarea
                 maxLength={2000}
@@ -415,7 +491,12 @@ export default function CasinoRewardsDesk() {
           {prizes.map((p) => (
             <li key={p.id}>
               <strong>{p.title}</strong> · {p.kind} ·{' '}
-              {p.active ? 'Active' : 'Inactive'}{' '}
+              {p.active ? 'Active' : 'Inactive'}
+              {p.slug ? ` · slug ${p.slug}` : ''}
+              {p.drinksKind
+                ? ` · ${p.drinksQuantity} ${p.drinksKind} drinks`
+                : ''}
+              {p.videoUrl ? ' · film' : ''}{' '}
               <button disabled={busy} onClick={() => setForm(p)}>
                 Edit
               </button>

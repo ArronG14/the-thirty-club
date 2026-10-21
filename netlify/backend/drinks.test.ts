@@ -547,3 +547,61 @@ describe('the Gift Vault before the birthday', () => {
     ).toBe(403);
   });
 });
+
+describe('the private birthday card', () => {
+  const save = (message: string, opensAt = '2026-10-24T05:00:00Z') =>
+    call('/owner/card', { message, signature: 'Arron', opensAt });
+
+  it('is sealed before its time, then hers alone, with the owner’s words', async () => {
+    await pg.exec(
+      "update public.ttc_birthday_card set message = '', signature = '', opens_at = '2026-10-24 05:00:00+00', first_opened_at = null",
+    );
+    await at('2026-10-23T23:00:00Z');
+    expect((await save('Happy birthday, my love.')).status).toBe(200);
+    const early = await call<{ state: string; message?: string }>(
+      '/card',
+      undefined,
+      'member',
+    );
+    expect(early.data.state).toBe('sealed');
+    expect(early.data.message).toBeUndefined();
+    await at('2026-10-24T05:00:01Z');
+    const open = await call<{
+      state: string;
+      message: string;
+      signature: string;
+    }>('/card', undefined, 'member');
+    expect(open.data).toMatchObject({
+      state: 'open',
+      message: 'Happy birthday, my love.',
+      signature: 'Arron',
+    });
+    // The owner can still correct it; she reads the latest words.
+    await save('Happy thirtieth, my love.');
+    expect(
+      (await call<{ message: string }>('/card', undefined, 'member')).data
+        .message,
+    ).toBe('Happy thirtieth, my love.');
+    // Only her session reads it; only the owner writes it.
+    expect((await call('/card')).status).toBe(403);
+    expect(
+      (
+        await call(
+          '/owner/card',
+          { message: 'x', opensAt: '2026-10-24T05:00:00Z' },
+          'member',
+        )
+      ).status,
+    ).toBe(403);
+  });
+
+  it('with no message written yet it says so rather than showing an empty card', async () => {
+    await pg.exec(
+      "update public.ttc_birthday_card set message = '', opens_at = '2026-10-24 05:00:00+00'",
+    );
+    await at('2026-10-24T06:00:00Z');
+    expect(
+      (await call<{ state: string }>('/card', undefined, 'member')).data.state,
+    ).toBe('preparing');
+  });
+});

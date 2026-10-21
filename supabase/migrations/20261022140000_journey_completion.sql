@@ -18,6 +18,7 @@
 -- 3. Gift Vault: a compartment can open before the birthday (opens_at).
 -- 4. REHEARSAL mode routes the owner's own notifications to the test number.
 -- 5. Held milestones for 22-25 October with PROPOSED wording.
+-- 6. The private birthday card: the owner's message, her session only.
 
 /* ---------- 1. Drinks privileges ---------- */
 
@@ -297,8 +298,13 @@ begin
      perform public.ttc_fail('invalid'); end if;
    result := public.ttc_casino_action_promised(p_actor, p_role, p_action, p_input);
    v_id := (result->'prize'->>'id')::uuid;
-   update public.ttc_prize_catalogue set slug = p_input->>'slug', drinks_kind = p_input->>'drinksKind',
-     drinks_quantity = nullif(p_input->>'drinksQuantity','')::integer, video_url = p_input->>'videoUrl'
+   -- Only the fields supplied: an older form editing a seeded prize keeps
+   -- its slug, drinks and film.
+   update public.ttc_prize_catalogue set
+     slug = case when p_input ? 'slug' then p_input->>'slug' else slug end,
+     drinks_kind = case when p_input ? 'drinksKind' then p_input->>'drinksKind' else drinks_kind end,
+     drinks_quantity = case when p_input ? 'drinksQuantity' then nullif(p_input->>'drinksQuantity','')::integer else drinks_quantity end,
+     video_url = case when p_input ? 'videoUrl' then p_input->>'videoUrl' else video_url end
      where id = v_id;
    return result;
  elsif p_action = 'owner-casino-prizes' then
@@ -563,8 +569,68 @@ update public.ttc_journey_milestones set
   updated_at = now()
  where key = 'birthday-breakfast' and state <> 'fired';
 
+/* ---------- 6. The private birthday card (/birthdaycard) ---------- */
+
+-- One card, written by the owner, read only by her member session and only
+-- from its opening time (the birthday, 00:00 Jamaica, unless the owner moves
+-- it). Its NFC tag carries the plain address; the session is the gate.
+create table public.ttc_birthday_card (
+  id boolean primary key default true check (id),
+  message text not null default '' check (length(message) <= 6000),
+  signature text not null default '' check (length(signature) <= 200),
+  opens_at timestamptz not null default '2026-10-24 00:00:00-05',
+  first_opened_at timestamptz,
+  updated_at timestamptz not null default now()
+);
+insert into public.ttc_birthday_card(id) values (true) on conflict do nothing;
+
+create function public.ttc_card_action(p_actor uuid, p_role text, p_action text, p_input jsonb default '{}')
+returns jsonb language plpgsql security invoker set search_path = '' as $$
+declare member uuid; c public.ttc_birthday_card;
+begin
+ select id into member from public.ttc_members where slug = 'alise' and enabled;
+ if member is null then perform public.ttc_fail('not-configured'); end if;
+ if p_role is null or p_role not in ('owner','member') then perform public.ttc_fail('forbidden'); end if;
+ if p_role = 'member' and p_actor is distinct from member then perform public.ttc_fail('forbidden'); end if;
+ if p_action like 'owner-%' and p_role <> 'owner' then perform public.ttc_fail('forbidden'); end if;
+ if p_action not like 'owner-%' and p_role <> 'member' then perform public.ttc_fail('forbidden'); end if;
+ select * into c from public.ttc_birthday_card where id;
+ if c.id is null then insert into public.ttc_birthday_card(id) values (true) returning * into c; end if;
+
+ if p_action = 'card-read' then
+   if now() < c.opens_at then
+     return jsonb_build_object('state','sealed','opensAt',c.opens_at);
+   end if;
+   if length(btrim(c.message)) = 0 then
+     return jsonb_build_object('state','preparing','opensAt',c.opens_at);
+   end if;
+   if c.first_opened_at is null then
+     update public.ttc_birthday_card set first_opened_at = now() where id returning * into c;
+     insert into public.ttc_activity_events(type) values ('card.opened');
+   end if;
+   return jsonb_build_object('state','open','opensAt',c.opens_at,'message',c.message,'signature',c.signature,
+     'firstOpenedAt',c.first_opened_at);
+ elsif p_action = 'owner-card' then
+   return jsonb_build_object('message',c.message,'signature',c.signature,'opensAt',c.opens_at,
+     'firstOpenedAt',c.first_opened_at,'updatedAt',c.updated_at);
+ elsif p_action = 'owner-card-save' then
+   if length(coalesce(p_input->>'message','')) > 6000 or length(coalesce(p_input->>'signature','')) > 200
+      or (p_input->>'opensAt') is null then perform public.ttc_fail('invalid'); end if;
+   update public.ttc_birthday_card set message = p_input->>'message', signature = coalesce(p_input->>'signature',''),
+     opens_at = (p_input->>'opensAt')::timestamptz, updated_at = now() where id returning * into c;
+   insert into public.ttc_activity_events(type) values ('card.saved');
+   return jsonb_build_object('message',c.message,'signature',c.signature,'opensAt',c.opens_at,
+     'firstOpenedAt',c.first_opened_at,'updatedAt',c.updated_at);
+ end if;
+ perform public.ttc_fail('not-found'); return null;
+end $$;
+
 /* ---------- Security ---------- */
 
+alter table public.ttc_birthday_card enable row level security;
+revoke all on public.ttc_birthday_card from public, anon, authenticated;
+grant all on public.ttc_birthday_card to service_role;
+create policy service_only on public.ttc_birthday_card for all to service_role using (true) with check (true);
 alter table public.ttc_drink_grants enable row level security;
 alter table public.ttc_drink_requests enable row level security;
 revoke all on public.ttc_drink_grants, public.ttc_drink_requests from public, anon, authenticated;
@@ -577,7 +643,7 @@ do $$ declare obj record; begin
      'ttc_casino_prize_snapshot','ttc_casino_issue','ttc_journey_hook','ttc_journey_hook_casino',
      'ttc_casino_action','ttc_casino_action_promised',
      'ttc_vault_effective_opens_at','ttc_vault_owner_json','ttc_vault_action','ttc_vault_action_birthday',
-     'ttc_sms_claim_rehearsal','ttc_sms_claim_owner','ttc_sms_action','ttc_sms_action_live') loop
+     'ttc_sms_claim_rehearsal','ttc_sms_claim_owner','ttc_sms_action','ttc_sms_action_live','ttc_card_action') loop
    execute format('revoke all on function %s from public, anon, authenticated', obj.signature);
    execute format('grant execute on function %s to service_role', obj.signature);
  end loop;

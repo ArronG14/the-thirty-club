@@ -30,6 +30,7 @@ export function SlotsPanel({
   message,
   onSpin,
   spinsLeft,
+  complimentary,
 }: {
   phase: SlotsPhase;
   result: SlotEvaluation | null;
@@ -39,9 +40,16 @@ export function SlotsPanel({
   message: string | null;
   onSpin(): void;
   spinsLeft: number | null;
+  /**
+   * Production (ADR-024): her complimentary spins left, decided by the
+   * server. The lever plays one; with none left the machine rests.
+   */
+  complimentary?: number | undefined;
 }) {
   const [table, setTable] = useState(false);
-  const affordable = chips >= SLOT_RULES.stake;
+  const house = complimentary !== undefined;
+  const left = complimentary ?? 0;
+  const affordable = house ? left > 0 : chips >= SLOT_RULES.stake;
   const spinning = phase === 'spinning';
 
   return (
@@ -84,11 +92,21 @@ export function SlotsPanel({
         disabled={spinning || !affordable}
       >
         Pull the lever
-        <small>{SLOT_RULES.stake} chips a spin</small>
+        <small>
+          {house
+            ? left > 0
+              ? 'A complimentary spin'
+              : 'Awaiting your next invitation'
+            : `${SLOT_RULES.stake} chips a spin`}
+        </small>
       </button>
       <p className="panel__fine">
-        {chips.toLocaleString('en-GB')} chips held
-        {spinsLeft !== null && spinsLeft <= 10
+        {house
+          ? left === 1
+            ? 'One complimentary spin at your pleasure'
+            : `${left} complimentary spins at your pleasure`
+          : `${chips.toLocaleString('en-GB')} chips held`}
+        {!house && spinsLeft !== null && spinsLeft <= 10
           ? spinsLeft === 0
             ? ' · the machine is resting for the evening'
             : ` · ${spinsLeft} spins left`

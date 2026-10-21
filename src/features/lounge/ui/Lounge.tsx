@@ -45,12 +45,14 @@ import { Sheet } from './Sheet';
 import { useButlerService } from '../../butler-service/useButlerService';
 import { ArrivedEnvelope } from '../../butler-service/ui/ArrivedEnvelope';
 import { VoucherWallet } from './VoucherWallet';
+import { DrinksPrivilege } from '../../drinks/DrinksPrivilege';
+import { useDrinksPresence } from '../../drinks/useDrinksPresence';
 import './lounge.css';
 
 const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
 
 type RenderMode = 'poster' | 'loading' | 'fading' | 'scene';
-type Overlay = 'card' | 'directory' | 'vouchers' | null;
+type Overlay = 'card' | 'directory' | 'vouchers' | 'drinks' | null;
 const FADE_MS = 1400;
 /**
  * The Butler's escort to the Screening Room: the camera walks towards the
@@ -97,6 +99,7 @@ export function Lounge({
 }) {
   const { welcomed, replay, reducedMotion, currentHour } = model;
   const journey = useJourney();
+  const drinks = useDrinksPresence();
   const club = useClub(environment, journey?.snapshot.rooms);
   // A member by the server's record who did not come through the doors on
   // this device just now: no second induction (ADR-022).
@@ -557,6 +560,22 @@ export function Lounge({
                   <Glyph kind="bell" />
                   Ring for service
                 </button>
+                {/* Named once drinks are hers, or a prize awaits her claim. */}
+                {drinks.show && (
+                  <button
+                    type="button"
+                    className="dock__item"
+                    onClick={(e) => openSheet('drinks', e.currentTarget)}
+                  >
+                    Drinks
+                    {drinks.waiting > 0 && (
+                      <span className="sr-only"> — a prize to claim</span>
+                    )}
+                    {drinks.waiting > 0 && (
+                      <b className="dock__badge" aria-hidden="true" />
+                    )}
+                  </button>
+                )}
                 {/* Named only once she has been admitted to the Casino. */}
                 {journey?.stateOf('casino') === 'admitted' && (
                   <button
@@ -608,6 +627,17 @@ export function Lounge({
           onAccept={() => void acceptLetter(letter.roomId)}
           onLater={() => later(letter.roomId)}
         />
+      )}
+      {overlay === 'drinks' && (
+        <Sheet
+          variant="vouchers"
+          label="With the club’s compliments"
+          title="Drinks"
+          returnFocusTo={opener}
+          onClose={closeSheet}
+        >
+          <DrinksPrivilege />
+        </Sheet>
       )}
       {overlay === 'vouchers' && (
         <Sheet

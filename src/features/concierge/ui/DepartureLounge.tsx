@@ -177,6 +177,12 @@ function Wallet({
             />
           ))}
         </ul>
+        {/* The two airport drinks live with the club's other privileges
+            (ADR-024); her husband pays, the Butler passes word. */}
+        <Link className="wallet__drinks" to="/drinks">
+          <span>Two drinks before the flight</span>
+          <small>Choose a drink · word goes to your husband</small>
+        </Link>
       </div>
       {opened && view && (
         <PaperSheet

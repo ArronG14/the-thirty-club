@@ -55,7 +55,7 @@ export const DRINK_COPY: Record<DrinkKind, DrinkCopy> = {
     none: 'Both airport drinks have been enjoyed.',
   },
   jamaica: {
-    eyebrow: 'Bring Me a Drink',
+    eyebrow: 'At the resort',
     title: 'Bring Me a Drink',
     intro:
       'Wherever you happen to be, Madam, you need only name it. It will be brought to you.',

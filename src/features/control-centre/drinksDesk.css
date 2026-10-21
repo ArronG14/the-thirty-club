@@ -1,0 +1,98 @@
+.dd {
+  padding: 1rem 0 3rem;
+  color: inherit;
+}
+.dd h2,
+.dd h3 {
+  font-family: var(--font-display, serif);
+  font-weight: 400;
+}
+.dd h2 {
+  margin: 0;
+  font-size: clamp(2rem, 6vw, 3rem);
+}
+.dd__head p,
+.dd__note,
+.dd__message {
+  max-width: 40rem;
+  line-height: 1.5;
+}
+.dd__message {
+  font-style: italic;
+}
+.dd__balances {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr));
+  gap: 1rem;
+}
+.dd__card {
+  margin: 1rem 0;
+  padding: 1.25rem;
+  border: 1px solid #b89b6870;
+  border-radius: 0.8rem;
+  background: #25191a80;
+}
+.dd__card h3 {
+  margin: 0 0 0.5rem;
+  font-size: 1.3rem;
+}
+.dd__count {
+  margin: 0;
+  font-family: var(--font-display, serif);
+  font-size: 2.6rem;
+}
+.dd__count span {
+  font-size: 1rem;
+  opacity: 0.75;
+}
+.dd__form,
+.dd__form label {
+  display: grid;
+  gap: 0.5rem;
+}
+.dd__form input,
+.dd__form select {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 2.8rem;
+  padding: 0.6rem;
+  border: 1px solid #b89b68;
+  border-radius: 0.4rem;
+  background: #0f0b0c;
+  color: inherit;
+  font: inherit;
+}
+.dd__form button {
+  justify-self: start;
+  min-height: 2.8rem;
+  padding: 0.6rem 1.4rem;
+  border: 1px solid #d9bf8a;
+  border-radius: 0.4rem;
+  background: #3a262a;
+  color: inherit;
+  font: inherit;
+}
+.dd__requests {
+  display: grid;
+  gap: 0.8rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.dd__requests li {
+  display: grid;
+  gap: 0.15rem;
+  padding-left: 0.75rem;
+  border-left: 3px solid #b89b68;
+}
+.dd__requests li[data-status='failed'],
+.dd__requests li[data-status='uncertain'] {
+  border-left-color: #e0645a;
+}
+.dd__requests li[data-status='paused'] {
+  border-left-color: #e0b05a;
+}
+.dd__requests span {
+  font-size: 0.92rem;
+  opacity: 0.85;
+}

@@ -4,6 +4,7 @@ import type {
   EntranceEnvironment,
 } from '../entrance/domain/environment';
 import { CLUB_REWARD_IDS, CLUB_REWARDS } from '../prizes/clubRewards';
+import type { RewardDefinition } from '../prizes/rewards';
 import { rewardViews, unclaimed } from '../prizes/ledger';
 import {
   browserPrizeStorage,
@@ -68,7 +69,14 @@ export interface Overrides {
  * Every play is resolved and SAVED before this returns, so the interface
  * can animate it knowing a refresh at any moment lands in a finished state.
  */
-export function useCasino(stores: CasinoStores) {
+export function useCasino(
+  stores: CasinoStores,
+  /**
+   * What local play can award. Production passes none: prizes there are the
+   * server's alone (ADR-024), and roulette's house tokens win only tokens.
+   */
+  awards: readonly RewardDefinition[] = CLUB_REWARDS,
+) {
   const { casino: casinoStore, prizes, clock } = stores;
   const [state, setState] = useState<CasinoState>(() => ({
     casino: casinoStore.load(),
@@ -99,9 +107,9 @@ export function useCasino(stores: CasinoStores) {
     (): PlayContext => ({
       rng: Math.random,
       nowIso: new Date(clock.now()).toISOString(),
-      catalog: CLUB_REWARDS,
+      catalog: awards,
     }),
-    [clock],
+    [clock, awards],
   );
 
   const enter = useCallback(() => {

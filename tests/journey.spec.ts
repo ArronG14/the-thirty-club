@@ -90,12 +90,16 @@ test('Casino admission: a founding member’s Letter of Admission in the Lounge,
     .getByRole('button', { name: 'ENTER THE GRAND CASINO' })
     .click();
   await expect(page).toHaveURL(/\/rooms\/casino$/, { timeout: 15_000 });
-  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60_000,
+  });
   await shot(page, '03-escorted-into-the-casino');
 
   // Admitted: a direct link opens it, and it is in the Directory.
   await page.goto('/rooms/casino');
-  await expect(page.locator('.casino-live')).toBeVisible({ timeout: 60_000 });
+  await expect(page.locator('.casino[data-house="true"]')).toBeVisible({
+    timeout: 60_000,
+  });
   await page.goto('/lounge');
   await expect(
     page.getByRole('dialog', { name: 'The Grand Casino' }),
