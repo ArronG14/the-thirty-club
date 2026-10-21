@@ -34,6 +34,11 @@ export async function casinoRoute({ route, path, body, session, db }: Context) {
     const data = await call<{ duplicate: boolean }>('voucher-request', body);
     return { data, status: data.duplicate ? 200 : 201 };
   }
+  if (route === 'POST /vouchers/claim') {
+    v.keys(body, ['id']);
+    v.uuid(body.id);
+    return { data: await call('voucher-claim', body) };
+  }
   if (route === 'GET /owner/casino/prizes')
     return { data: await call('owner-casino-prizes') };
   if (
@@ -51,6 +56,10 @@ export async function casinoRoute({ route, path, body, session, db }: Context) {
       'active',
       'ownerNotes',
       'vaultId',
+      'slug',
+      'drinksKind',
+      'drinksQuantity',
+      'videoUrl',
     ]);
     if (
       typeof body.title !== 'string' ||
@@ -69,6 +78,31 @@ export async function casinoRoute({ route, path, body, session, db }: Context) {
       v.invalid();
     if (body.validUntil != null) v.instant(body.validUntil);
     if (body.vaultId != null) v.uuid(body.vaultId);
+    if (
+      body.slug != null &&
+      (typeof body.slug !== 'string' || !/^[a-z0-9-]{3,60}$/.test(body.slug))
+    )
+      v.invalid();
+    if ((body.drinksKind == null) !== (body.drinksQuantity == null))
+      v.invalid();
+    if (body.drinksKind != null) {
+      if (body.drinksKind !== 'airport' && body.drinksKind !== 'jamaica')
+        v.invalid();
+      if (v.integer(body.drinksQuantity) > 10) v.invalid();
+    }
+    if (
+      body.videoUrl != null &&
+      (typeof body.videoUrl !== 'string' ||
+        body.videoUrl.length > 500 ||
+        (!body.videoUrl.startsWith('/') &&
+          !body.videoUrl.startsWith('https://')))
+    )
+      v.invalid();
+    if (
+      (body.drinksKind != null || body.videoUrl != null) &&
+      body.kind !== 'VOUCHER'
+    )
+      v.invalid();
     const update = route.startsWith('PATCH ');
     const data = await call(
       update ? 'owner-casino-prize-update' : 'owner-casino-prize-create',
@@ -82,10 +116,31 @@ export async function casinoRoute({ route, path, body, session, db }: Context) {
   if (route === 'GET /owner/casino/batches')
     return { data: await call('owner-casino-batches') };
   if (route === 'POST /owner/casino/batches') {
-    v.keys(body, ['quantity', 'prizeIds', 'idempotencyKey', 'announce']);
-    v.integer(body.quantity);
+    v.keys(body, [
+      'quantity',
+      'prizeIds',
+      'prizePositions',
+      'idempotencyKey',
+      'announce',
+    ]);
+    const quantity = v.integer(body.quantity);
     if (!Array.isArray(body.prizeIds) || body.prizeIds.length > 50) v.invalid();
     body.prizeIds.forEach((id) => v.uuid(id));
+    if (body.prizePositions != null) {
+      const positions = body.prizePositions;
+      if (
+        !Array.isArray(positions) ||
+        positions.length !== body.prizeIds.length ||
+        positions.some(
+          (p, i) =>
+            !Number.isSafeInteger(p) ||
+            (p as number) < 1 ||
+            (p as number) > quantity ||
+            positions.indexOf(p) !== i,
+        )
+      )
+        v.invalid();
+    }
     v.idempotency(body.idempotencyKey);
     if (body.announce !== undefined && typeof body.announce !== 'boolean')
       v.invalid();
