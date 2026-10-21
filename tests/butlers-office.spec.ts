@@ -31,7 +31,9 @@ test('mobile office signs in, issues membership, redeems beauty and fulfils the 
     .click();
   const token = await page.getByLabel('Invitation token').inputValue();
   expect(token).toHaveLength(43);
-  const member = await browser.newContext({ baseURL: 'http://127.0.0.1:4180' });
+  const member = await browser.newContext({
+    baseURL: `http://127.0.0.1:${process.env.PW_PORT ?? 4180}`,
+  });
   const exchange = await member.request.post('/api/v1/auth/member', {
     headers,
     data: { token },

@@ -48,7 +48,7 @@ test('owner configures a compartment; Alise scans, authenticates, opens and revi
   });
 
   const alise = await browser.newContext({
-    baseURL: 'http://127.0.0.1:4180',
+    baseURL: `http://127.0.0.1:${process.env.PW_PORT ?? 4180}`,
     viewport: { width: 390, height: 844 },
     isMobile: true,
     hasTouch: true,

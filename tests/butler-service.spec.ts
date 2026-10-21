@@ -26,7 +26,7 @@ import type {
   OwnerRequests,
 } from '../src/shared/concierge/types.ts';
 
-const BASE = 'http://127.0.0.1:4183';
+const BASE = `http://127.0.0.1:${process.env.PW_PORT ?? 4183}`;
 const OWNER_PASSWORD = 'thirty-club-local-rehearsal-only';
 const headers = {
   'content-type': 'application/json',
