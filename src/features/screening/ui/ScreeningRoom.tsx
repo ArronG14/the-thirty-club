@@ -18,6 +18,11 @@ import {
 } from '../config/screeningFilm';
 import { progressStorage } from '../../owner/session';
 import {
+  filmProblemText,
+  useFilmSource,
+} from '../../../shared/media/filmSource';
+import { protectedMediaId } from '../../../shared/media/contract';
+import {
   loadRecord,
   resumeSeconds,
   saveRecord,
@@ -73,6 +78,15 @@ const SAVE_EVERY_SECONDS = 2;
 const LOAD_FAILED = 'The film could not be loaded just now. Please try again.';
 const OFFLINE =
   'The screening needs a connection. The film is not kept on this device.';
+/**
+ * No picture this long after her tap, or no progress this long mid-film:
+ * stop, keep her place and offer Retry rather than load forever (ADR-026).
+ * The iPhone's own player shows its spinner meanwhile.
+ */
+export const START_TIMEOUT_MS = 30_000;
+export const STALL_TIMEOUT_MS = 45_000;
+const SLOW =
+  'The film is arriving too slowly over this connection. Your place is kept.';
 
 /**
  * Dev Mode / TEST rehearsals and the local dev server may use the test
@@ -172,6 +186,19 @@ export default function ScreeningRoom({
     },
     [reels],
   );
+  /**
+   * Where the current reel plays from. The birthday film is protected
+   * (ADR-026): its signed URL is fetched as the room fades in, never inside
+   * her tap, so Watch Movie can still open the iPhone's player.
+   */
+  const source = useFilmSource(film?.src);
+  const { renew, renewIfExpiring } = source;
+  /** The lighter print, once she has chosen it after a struggle. */
+  const [print, setPrint] = useState<'standard' | 'lighter'>('standard');
+  const playable =
+    print === 'lighter' && source.lighterUrl ? source.lighterUrl : source.url;
+  const [buffering, setBuffering] = useState(false);
+  const watchdog = useRef<number | null>(null);
   const reducedMotion = useReducedMotion();
   const [record, dispatchRecord] = useReducer(
     screeningReducer,
@@ -258,9 +285,17 @@ export default function ScreeningRoom({
     [commit],
   );
 
+  const clearWatchdog = useCallback(() => {
+    if (watchdog.current !== null) window.clearTimeout(watchdog.current);
+    watchdog.current = null;
+  }, []);
+  useEffect(() => clearWatchdog, [clearWatchdog]);
+
   /** Back in her seat, facing the screen. */
   const backToSeat = useCallback(
     (line: string | null, problem = '') => {
+      clearWatchdog();
+      setBuffering(false);
       phaseRef.current = 'seated';
       setPhase('seated');
       setPresentation(null);
@@ -271,7 +306,7 @@ export default function ScreeningRoom({
         primary.current?.focus({ preventScroll: true }),
       );
     },
-    [reducedMotion, say],
+    [clearWatchdog, reducedMotion, say],
   );
 
   useEffect(() => {
@@ -331,6 +366,8 @@ export default function ScreeningRoom({
       video.current?.pause();
       savePosition();
       leaveFullscreen(video.current);
+      // A fresh ticket is ready for Retry (an expired URL is one cause).
+      void renew();
       // A reel that will not load never blocks the rest of the programme.
       const next = reelRef.current + 1;
       if (next < reels.length) {
@@ -340,7 +377,19 @@ export default function ScreeningRoom({
       }
       backToSeat(null, problem);
     },
-    [backToSeat, reels.length, savePosition],
+    [backToSeat, reels.length, renew, savePosition],
+  );
+
+  /** Loading always ends: too slow to start or stalled too long → Retry. */
+  const arm = useCallback(
+    (ms: number) => {
+      clearWatchdog();
+      watchdog.current = window.setTimeout(() => {
+        watchdog.current = null;
+        if (phaseRef.current === 'film') fail(SLOW);
+      }, ms);
+    },
+    [clearWatchdog, fail],
   );
 
   // Browser-owned fullscreen closing is the user leaving the film.
@@ -398,14 +447,16 @@ export default function ScreeningRoom({
     };
   }, [savePosition]);
   // The source is set here, never as a rendered attribute: re-rendering the
-  // same src would restart a reel she is watching.
+  // same src would restart a reel she is watching. A renewed ticket waits
+  // until she is back in her seat.
   useEffect(() => {
     const element = video.current;
-    if (film && element && element.getAttribute('src') !== film.src) {
-      element.src = film.src;
+    if (!film || !element || !playable || phaseRef.current === 'film') return;
+    if (element.getAttribute('src') !== playable) {
+      element.src = playable;
       element.load();
     }
-  }, [film]);
+  }, [film, playable]);
 
   const status = film ? screeningStatus(record, film.id) : 'never-entered';
   const resumeAt = film ? resumeSeconds(record, film.id) : null;
@@ -414,16 +465,24 @@ export default function ScreeningRoom({
    * Watch Movie. Everything iOS needs (play, fullscreen) happens here,
    * synchronously inside the tap; the camera move is CSS that follows.
    */
-  function watch(from: 'resume' | 'beginning', index = reelRef.current) {
+  function watch(
+    from: 'resume' | 'beginning',
+    index = reelRef.current,
+    url: string | null = index === reelRef.current ? playable : null,
+  ) {
     const element = video.current;
     const target = reels[index];
     if (!target || !element || phaseRef.current === 'film') return;
+    // An ordinary reel plays from its own address; a protected one only
+    // once its ticket is in hand (fetched as the reel comes up).
+    const address = protectedMediaId(target.src) ? url : target.src;
     if (index !== reelRef.current) chooseReel(index);
+    if (!address) return;
     filmRef.current = target;
     // Another reel: its source is set inside the tap, so play() below is
     // still the gesture iPhone requires.
-    if (element.getAttribute('src') !== target.src) {
-      element.src = target.src;
+    if (element.getAttribute('src') !== address) {
+      element.src = address;
       element.load();
     }
     const start =
@@ -451,12 +510,34 @@ export default function ScreeningRoom({
       );
     });
     commit({ type: 'start', at: iso() });
+    arm(START_TIMEOUT_MS);
+    setBuffering(true);
     setIntermission(null);
     setNotice('');
     setSpeech((s) => (s ? { ...s, visible: false } : s));
     setSettling(false);
     setPresentation(shown);
     setPhase('film');
+  }
+
+  /** After a struggle: the smaller print, from her place, in the same tap. */
+  function watchLighter() {
+    if (!source.lighterUrl) return;
+    setPrint('lighter');
+    watch('resume', reelRef.current, source.lighterUrl);
+  }
+
+  /**
+   * The offline fallback (ADR-026): the film is shown another way (the
+   * owner's own copy). Recorded as exactly that, never as watched; the
+   * evening's guidance moves on, and the film stays here, place kept.
+   */
+  function watchElsewhere() {
+    commit({ type: 'elsewhere', at: iso() });
+    setNotice('');
+    setIntermission(null);
+    say(SCREENING_LINES.elsewhere);
+    onComplete?.();
   }
 
   function onLoadedMetadata(event: SyntheticEvent<HTMLVideoElement>) {
@@ -478,7 +559,19 @@ export default function ScreeningRoom({
   }
 
   const inFilm = phase === 'film';
-  const isTest = film?.kind === 'test';
+  const isTest = film?.kind === 'test' || source.simulated;
+  /** The ticket was refused or could not be fetched. */
+  const unreachable = film !== null && source.status === 'unavailable';
+  /** Not uploaded, or not yet: the honest "being prepared". */
+  const preparing =
+    !film ||
+    (unreachable &&
+      (source.problem === 'preparing' || source.problem === 'not-open'));
+  const problem =
+    notice ||
+    (unreachable && !preparing && source.problem
+      ? filmProblemText(source.problem)
+      : '');
 
   return (
     <section
@@ -487,6 +580,7 @@ export default function ScreeningRoom({
       data-settling={settling}
       data-presentation={presentation ?? 'none'}
       data-status={status}
+      data-problem={problem ? 'true' : 'false'}
       data-motion={reducedMotion ? 'reduced' : 'full'}
       aria-labelledby="cinema-title"
       onKeyDown={(event) => {
@@ -519,22 +613,35 @@ export default function ScreeningRoom({
                 : `${reelIndex + 1} of ${reels.length} · ${film.title}`}
             </p>
           )}
-          {film ? (
+          {film && !preparing ? (
             <button
               ref={primary}
               type="button"
               className="cinema__primary"
+              // While the projector's ticket is on its way there is nothing
+              // to play yet; it is fetched as she sits down.
+              disabled={!playable && !unreachable}
               onClick={() =>
-                intermission
-                  ? watch('beginning', intermission.next)
-                  : watch('resume')
+                !playable
+                  ? void renew()
+                  : intermission
+                    ? watch('beginning', intermission.next)
+                    : watch('resume')
               }
             >
-              {intermission || (reelIndex > 0 && status !== 'interrupted')
-                ? 'Continue the screening'
-                : status === 'interrupted'
-                  ? 'Resume Movie'
-                  : 'Watch Movie'}
+              {!playable
+                ? unreachable
+                  ? 'Try again'
+                  : 'Preparing the projector…'
+                : intermission
+                  ? 'Continue the screening'
+                  : notice
+                    ? 'Try again'
+                    : reelIndex > 0 && status !== 'interrupted'
+                      ? 'Continue the screening'
+                      : status === 'interrupted'
+                        ? 'Resume Movie'
+                        : 'Watch Movie'}
             </button>
           ) : (
             <p className="cinema__empty" role="status">
@@ -543,7 +650,10 @@ export default function ScreeningRoom({
           )}
         </div>
 
-        <div className="cinema__below">
+        <div
+          className="cinema__below"
+          data-problem={problem ? 'true' : 'false'}
+        >
           <div
             className="cinema__butler"
             data-speaking={speech?.visible ? 'true' : 'false'}
@@ -564,18 +674,42 @@ export default function ScreeningRoom({
               <button
                 type="button"
                 className="cinema__text-button"
+                // Ready only once the projector's ticket is in hand.
+                disabled={!playable}
                 onClick={() => watch('beginning', 0)}
               >
                 Watch from the beginning
               </button>
             </p>
           )}
-          {notice && (
+          {problem && (
             <p className="cinema__notice" role="alert">
-              {notice}
+              {problem}
             </p>
           )}
-          {film && <p className="cinema__sound">Turn your sound on, Madam.</p>}
+          {problem && film && (
+            <p className="cinema__recovery">
+              {source.lighterUrl && print === 'standard' && playable && (
+                <button
+                  type="button"
+                  className="cinema__text-button"
+                  onClick={watchLighter}
+                >
+                  Try the lighter print
+                </button>
+              )}
+              <button
+                type="button"
+                className="cinema__text-button"
+                onClick={watchElsewhere}
+              >
+                Watch it another way
+              </button>
+            </p>
+          )}
+          {film && !preparing && !problem && (
+            <p className="cinema__sound">Turn your sound on, Madam.</p>
+          )}
           {isTest && (
             <p className="cinema__rehearsal">
               Rehearsal · temporary five-second test film
@@ -606,14 +740,30 @@ export default function ScreeningRoom({
             aria-label={film.title}
             onLoadedMetadata={onLoadedMetadata}
             onTimeUpdate={onTimeUpdate}
+            onPlaying={() => {
+              clearWatchdog();
+              setBuffering(false);
+            }}
+            onWaiting={() => {
+              if (phaseRef.current !== 'film' || settled.current) return;
+              setBuffering(true);
+              arm(STALL_TIMEOUT_MS);
+            }}
             onPause={() => {
-              if (phaseRef.current === 'film' && !settled.current)
+              if (phaseRef.current === 'film' && !settled.current) {
+                // Her pause: no stall to watch for until she plays again.
+                clearWatchdog();
+                setBuffering(false);
                 savePosition();
+              }
             }}
             onEnded={finish}
             onError={() => {
               if (phaseRef.current === 'film')
                 fail(navigator.onLine ? LOAD_FAILED : OFFLINE);
+              // In her seat: a new ticket only if this one has expired
+              // (otherwise her Retry decides; never a renewal loop).
+              else void renewIfExpiring();
             }}
           >
             {film.captions && (
@@ -626,6 +776,11 @@ export default function ScreeningRoom({
               />
             )}
           </video>
+          {inFilm && buffering && (
+            <p className="cinema__buffering" role="status">
+              The film is loading…
+            </p>
+          )}
           {inFilm && (
             <button
               type="button"

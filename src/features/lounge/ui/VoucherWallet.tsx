@@ -1,5 +1,6 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router';
+import { FilmPlayer } from '../../../shared/media/FilmPlayer';
 import { establishStanding, vaultRequest } from '../../vault/client/vaultApi';
 
 interface Entitlement {
@@ -22,33 +23,11 @@ interface Entitlement {
 const safeMedia = (url: string | null | undefined): url is string =>
   !!url && (url.startsWith('/') || url.startsWith('https://'));
 
-/** A won film, replayable; play() inside her tap (iPhone fullscreen). */
+/** A won film, replayable without a spin; play() inside her tap (iPhone). */
 function Film({ src, title }: { src: string; title: string }) {
-  const video = useRef<HTMLVideoElement>(null);
-  const [problem, setProblem] = useState('');
   return (
     <div className="voucher-wallet__film">
-      <video
-        ref={video}
-        src={src}
-        controls
-        preload="metadata"
-        aria-label={title}
-      />
-      <button
-        type="button"
-        onClick={() => {
-          setProblem('');
-          void video.current?.play().catch(() => {
-            setProblem(
-              'The film could not start. Please use the player’s own controls.',
-            );
-          });
-        }}
-      >
-        Watch again
-      </button>
-      {problem && <p role="alert">{problem}</p>}
+      <FilmPlayer src={src} title={title} watchLabel="Watch again" />
     </div>
   );
 }

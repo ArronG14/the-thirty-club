@@ -63,6 +63,8 @@ async function initialize() {
       CONCIERGE_SESSION_SECRET: TEST_ENV.CONCIERGE_SESSION_SECRET,
       OWNER_PASSWORD_HASH: `scrypt$local-rehearsal$${scryptSync('thirty-club-local-rehearsal-only', 'local-rehearsal', 64).toString('hex')}`,
       SMS_SENDING_ENABLED: 'false',
+      // Protected films (ADR-026) answer with the five-second test film.
+      MEDIA_SIMULATED: 'true',
     },
   });
   // LOCAL ONLY: brings every scheduled letter's moment forward and runs the

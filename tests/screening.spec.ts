@@ -30,12 +30,26 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
       JSON.stringify({ version: 1, unlockedAt: stamp, ceremonySeenAt: stamp }),
     );
   }, seen);
+  // LIVE, the film protected (ADR-026): with no member session the server
+  // refuses the ticket (this preview has no office, so it answers as the
+  // real one does). Honest, nothing to play, never the test film.
+  let tickets = 0;
+  await page.route('**/api/v1/media/birthday-film', (route) => {
+    tickets++;
+    return route.fulfill({
+      status: 401,
+      contentType: 'application/json',
+      body: JSON.stringify({ error: 'unauthorised' }),
+    });
+  });
   await page.reload();
-  // LIVE before the birthday film is configured: honest, nothing to play.
   await expect(
-    page.getByText('Your screening is being prepared.'),
+    page.getByText('Please present your membership card to watch this film.'),
   ).toBeVisible();
-  await expect(page.locator('canvas, video')).toHaveCount(0);
+  expect(tickets).toBeGreaterThan(0);
+  await expect(page.locator('canvas')).toHaveCount(0);
+  await expect(page.locator('video')).not.toHaveAttribute('src');
+  await expect(page.getByText(/test film/i)).toHaveCount(0);
   await page
     .getByRole('link', { name: 'Return to the Members’ Lounge' })
     .click();
@@ -48,9 +62,10 @@ test('production gate, no-WebGL screening and lounge round trip', async ({
   await expect(
     page.getByText('This way, Madam. Your seat is ready.'),
   ).toBeVisible();
-  await expect(page.getByText('Your screening is being prepared.')).toBeVisible(
-    { timeout: 10000 },
-  );
+  await expect(
+    page.getByRole('heading', { name: 'Thirty Years of Alise' }),
+  ).toBeVisible({ timeout: 10000 });
+  await expect(page.locator('video')).not.toHaveAttribute('src');
   const completed = await page.evaluate(
     () =>
       JSON.parse(localStorage.getItem('thirty-club:membership')!).rooms[

@@ -129,6 +129,12 @@
   outline: 2px solid #5d4630;
   outline-offset: 3px;
 }
+/* The projector's ticket is on its way (ADR-026). */
+.cinema .cinema__primary:disabled {
+  cursor: progress;
+  filter: saturate(0.6);
+  opacity: 0.75;
+}
 .cinema__empty {
   margin: 6px 0 0;
   font: italic 17px/1.4 var(--font-text);
@@ -158,6 +164,15 @@
 .cinema__butler[data-speaking='false'] {
   opacity: 0;
   visibility: hidden;
+}
+/* A problem to put right (ADR-026): his silent space gives way, and the
+   room grows below the (absolutely placed) screen so the notice, the
+   recovery and the way out stay clear of the status footer. */
+.cinema[data-problem='true'] {
+  min-height: calc(100svh + 6rem);
+}
+.cinema__below[data-problem='true'] .cinema__butler[data-speaking='false'] {
+  min-height: 0;
 }
 .cinema__words {
   margin: 0;
@@ -256,6 +271,34 @@
   background: #000;
 }
 /* Centred: native controls own the corners of the frame. */
+/* After a failure: the lighter print and the offline fallback. */
+.cinema__recovery {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 4px 14px;
+  margin: 0;
+  font: italic 16px/1.4 var(--font-text);
+  text-shadow: 0 1px 10px #000;
+}
+.cinema__recovery .cinema__text-button {
+  min-height: 44px;
+}
+/* Theatre layout only: the iPhone's own player shows its spinner. */
+.cinema__buffering {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  margin: 0;
+  padding: 8px 14px;
+  font: 12px/1.5 var(--font-caps);
+  letter-spacing: 0.12em;
+  color: #f2dfb9;
+  background: #0c0806cc;
+  border: 1px solid #876e45;
+  pointer-events: none;
+}
 .cinema__leave {
   position: absolute;
   top: max(12px, env(safe-area-inset-top));

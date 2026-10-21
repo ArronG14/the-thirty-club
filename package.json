@@ -31,7 +31,9 @@
     "test:screening": "npm run build && playwright test -c playwright.screening.config.ts && SCREENING_WEBKIT=1 playwright test -c playwright.screening.config.ts",
     "verify:final-migrations": "node tools/verify-final-release-migrations.mjs",
     "release:preflight": "node tools/release-preflight.mjs && npm run verify:final-migrations",
-    "release:smoke": "node tools/release-smoke.mjs"
+    "release:smoke": "node tools/release-smoke.mjs",
+    "media:verify": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts verify",
+    "media:upload": "node --experimental-strip-types --no-warnings=ExperimentalWarning --env-file-if-exists=.env tools/media-storage.ts upload"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",

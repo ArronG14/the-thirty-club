@@ -71,9 +71,11 @@ describe('room gate', () => {
       serialiseMembership({ inductedAt: '2026-10-24T05:00:00Z', rooms: {} }),
     );
     visit('/rooms/screening-room');
-    // LIVE, before the birthday film is configured: honest, no Watch Movie.
+    // The room itself (its film's ticket is the room's business, ADR-026).
     expect(
-      await screen.findByText('Your screening is being prepared.'),
+      await screen.findByRole('heading', {
+        name: 'The Private Screening Room',
+      }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Watch Movie' })).toBeNull();
     expect(

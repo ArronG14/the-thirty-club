@@ -448,7 +448,7 @@ export default function CasinoRewardsDesk() {
                   Film URL (shown when won; replayable){' '}
                   <input
                     value={form.videoUrl ?? ''}
-                    placeholder="https://… or /media/…"
+                    placeholder="/api/v1/media/nyla-film"
                     onChange={(e) =>
                       setForm({ ...form, videoUrl: e.target.value || null })
                     }

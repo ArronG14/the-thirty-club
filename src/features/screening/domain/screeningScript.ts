@@ -26,6 +26,12 @@ export const SCREENING_LINES = {
     'My apologies, Madam — that reel seems to have gone astray. Shall we continue?',
   /** She left the film before its end. */
   paused: 'Of course, Madam. I have kept your place.',
+  /**
+   * The film could not be streamed and is being shown another way (the
+   * owner's own copy, ADR-026). PROPOSED. It claims no viewing.
+   */
+  elsewhere:
+    'Very good, Madam. The film shall be shown by other means this evening. The theatre remains at your disposal, and the film will be here whenever you wish to return to it.',
   /** LIVE, before the owner has configured the film. */
   preparing:
     'Madam, the projectionist is making his final preparations. Your screening will be ready very shortly.',

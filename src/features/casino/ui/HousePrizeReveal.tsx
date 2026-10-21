@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link } from 'react-router';
 import { claimDrinks } from '../../drinks/drinksApi';
+import { FilmPlayer } from '../../../shared/media/FilmPlayer';
 import type { HouseSpin } from '../useHouseSpins';
 import './housePrize.css';
 
@@ -28,7 +29,6 @@ export function HousePrizeReveal({
   const { prize } = spin;
   const titleId = useId();
   const close = useRef<HTMLButtonElement>(null);
-  const video = useRef<HTMLVideoElement>(null);
   const [claim, setClaim] = useState<'idle' | 'busy' | 'done' | 'error'>(
     claimed ? 'done' : 'idle',
   );
@@ -121,33 +121,17 @@ export function HousePrizeReveal({
         {film && (
           <div className="house-prize__film">
             {/* Not playsInline: on iPhone, play() inside the tap opens the
-                native fullscreen player (ADR-019). */}
-            <video
-              ref={video}
+                native fullscreen player (ADR-019). A protected film's
+                ticket is fetched before her tap (ADR-026). */}
+            <FilmPlayer
               src={film}
-              controls
-              preload="metadata"
-              aria-label={prize.title}
+              title={prize.title}
+              buttonClassName="house-prize__button"
+              noteClassName="house-prize__fine"
             />
-            <button
-              type="button"
-              className="house-prize__button"
-              onClick={() => {
-                const element = video.current;
-                if (!element) return;
-                void element.play().catch(() => {
-                  setMessage(
-                    'The film could not start. Please use the player’s own controls.',
-                  );
-                });
-              }}
-            >
-              Watch
-            </button>
             <p className="house-prize__fine">
               Kept in your Casino vouchers in the Lounge, to watch again.
             </p>
-            {message && <p role="alert">{message}</p>}
           </div>
         )}
 

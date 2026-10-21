@@ -1,5 +1,6 @@
 import { createBackendApi } from '../backend/api.ts';
 import { database } from '../backend/database.ts';
+import { MEDIA_BUCKET, MEDIA_OBJECTS } from '../backend/mediaObjects.ts';
 import { blobStore } from '../concierge/blobStore.ts';
 import { postgresLegacyStore } from '../backend/legacyStore.ts';
 import { createConciergeApi } from '../concierge/api.ts';
@@ -20,10 +21,12 @@ export default async function api(
   context: NetlifyContext,
 ): Promise<Response> {
   if (new URL(request.url).pathname.startsWith('/api/v1/')) {
-    return createBackendApi({ db: database(process.env), env: process.env })(
-      request,
-      context.ip ?? 'unknown',
-    );
+    return createBackendApi({
+      db: database(process.env),
+      env: process.env,
+      // Server only (ADR-026): never part of the browser's rehearsal office.
+      media: { bucket: MEDIA_BUCKET, objects: MEDIA_OBJECTS },
+    })(request, context.ip ?? 'unknown');
   }
   const config = readConfig(process.env);
   const handle = createConciergeApi({

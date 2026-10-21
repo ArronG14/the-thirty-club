@@ -26,6 +26,8 @@ export const SIM_ENV: NodeJS.ProcessEnv = {
   ARRON_PHONE: '+440000000002',
   SMS_REHEARSAL_TO: '+440000000003',
   SMS_SENDING_ENABLED: 'false',
+  // Protected films (ADR-026) answer with the five-second test film.
+  MEDIA_SIMULATED: 'true',
 };
 
 // The outbox worker builds a Basic header with Buffer before calling the

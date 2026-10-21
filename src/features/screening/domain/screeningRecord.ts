@@ -25,6 +25,13 @@ export interface ScreeningRecord {
   completions: number;
   /** Where an interrupted screening stopped, for this film only. */
   resume: { filmId: string; seconds: number } | null;
+  /**
+   * The offline fallback (ADR-026): streaming failed and the film was shown
+   * another way (the owner's own copy). Never a completion: it says only
+   * that the room's screening was concluded outside the player.
+   */
+  elsewhereAt: string | null;
+  elsewhere: number;
 }
 
 export const freshRecord = (): ScreeningRecord => ({
@@ -34,6 +41,8 @@ export const freshRecord = (): ScreeningRecord => ({
   completedAt: null,
   completions: 0,
   resume: null,
+  elsewhereAt: null,
+  elsewhere: 0,
 });
 
 const stamp = (value: unknown): string | null =>
@@ -68,6 +77,9 @@ export function parseRecord(raw: string | null): ScreeningRecord {
         resume.seconds > 0
           ? { filmId: resume.filmId, seconds: resume.seconds }
           : null,
+      // Added within version 2 (absent from earlier records: none yet).
+      elsewhereAt: stamp(data.elsewhereAt),
+      elsewhere: count(data.elsewhere),
     };
   } catch {
     return freshRecord();
@@ -103,7 +115,8 @@ export type ScreeningAction =
   | { type: 'introduced'; at: string }
   | { type: 'start'; at: string }
   | { type: 'position'; filmId: string; seconds: number; duration: number }
-  | { type: 'complete'; at: string };
+  | { type: 'complete'; at: string }
+  | { type: 'elsewhere'; at: string };
 
 export function screeningReducer(
   state: ScreeningRecord,
@@ -138,6 +151,13 @@ export function screeningReducer(
         completedAt: state.completedAt ?? action.at,
         completions: state.completions + 1,
         resume: null,
+      };
+    case 'elsewhere':
+      // Her place is kept: she may still watch it here later.
+      return {
+        ...state,
+        elsewhereAt: state.elsewhereAt ?? action.at,
+        elsewhere: state.elsewhere + 1,
       };
   }
 }

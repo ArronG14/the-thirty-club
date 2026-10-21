@@ -157,11 +157,60 @@ describe('the Butler in the screening room', () => {
   });
 });
 
+describe('the offline fallback (ADR-026)', () => {
+  it('is recorded apart from entering, starting and finishing, and kept across reloads', () => {
+    const entered = screeningReducer(freshRecord(), {
+      type: 'enter',
+      at: '2026-10-24T05:10:00.000Z',
+    });
+    const away = screeningReducer(entered, {
+      type: 'elsewhere',
+      at: '2026-10-24T05:20:00.000Z',
+    });
+    expect(away).toMatchObject({
+      enteredAt: '2026-10-24T05:10:00.000Z',
+      elsewhereAt: '2026-10-24T05:20:00.000Z',
+      elsewhere: 1,
+      plays: 0,
+      completedAt: null,
+      completions: 0,
+    });
+    expect(screeningStatus(away, 'film')).toBe('entered');
+    const again = screeningReducer(away, {
+      type: 'elsewhere',
+      at: '2026-10-24T06:00:00.000Z',
+    });
+    expect(again.elsewhereAt).toBe('2026-10-24T05:20:00.000Z');
+    expect(again.elsewhere).toBe(2);
+    saveRecord(again);
+    expect(loadRecord()).toEqual(again);
+  });
+
+  it('a record saved before the fallback existed reads with none', () => {
+    const { elsewhereAt: _a, elsewhere: _b, ...older } = freshRecord();
+    void _a;
+    void _b;
+    expect(
+      parseRecord(JSON.stringify({ version: 2, ...older, plays: 3 })),
+    ).toMatchObject({ plays: 3, elsewhereAt: null, elsewhere: 0 });
+  });
+});
+
 describe('the film configuration', () => {
-  it('keeps LIVE safely unconfigured until the birthday film is supplied', () => {
-    expect(BIRTHDAY_FILM).toBeNull();
-    expect(resolveFilm(false)).toBeNull();
-    expect(resolveFilm(true)).toBe(TEST_FILM);
+  it('the supplied birthday film is protected: a reference, never an address (ADR-026)', () => {
+    expect(BIRTHDAY_FILM).toMatchObject({
+      src: '/api/v1/media/birthday-film',
+      kind: 'birthday',
+      type: 'video/mp4',
+    });
+    // Nothing in the bundle points at the file itself.
+    expect(JSON.stringify(BIRTHDAY_FILM)).not.toMatch(
+      /supabase|storage|https:|\/media\/screening/,
+    );
+    expect(resolveFilm(false)).toBe(BIRTHDAY_FILM);
+    expect(resolveFilm(true)).toBe(BIRTHDAY_FILM);
+    expect(resolveFilm(false, null)).toBeNull();
+    expect(resolveFilm(true, null)).toBe(TEST_FILM);
   });
 
   it('presents a valid birthday film everywhere, and never the test film to Alise', () => {
