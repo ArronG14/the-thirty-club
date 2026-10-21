@@ -50,7 +50,7 @@ async function freshDatabase(dataDir?: string) {
   await migrate(pg);
   // Delivery is under test here; the hold (ADR-021) is tested in hold.test.ts.
   await pg.exec(
-    "update public.ttc_communication_hold set active = false, released_at = now(); update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'",
+    "update public.ttc_communication_hold set active = false, released_at = now(); update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z'; update public.ttc_journey_milestones set story_managed=false,story_disabled=false,requires_keys='{}',manual_only=false; update public.ttc_journey_milestones set state='pending' where key in ('casino-opening','birthday-screening','birthday-vault')",
   );
   return pg;
 }

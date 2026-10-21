@@ -72,7 +72,10 @@ test('Early admission at 19:00 UK: the hold at ten seconds, the final ten, the d
   await expect(page.getByRole('timer')).toContainText('2 hours, 58 minutes');
   await shot(page, '01-after-the-teaser');
 
-  await scenario(page, 'Early admission: 19:00 UK, card already presented');
+  await scenario(
+    page,
+    'Early admission: 19:00 UK, card presented after invitation',
+  );
   await expect(page.getByRole('timer')).toContainText('0 minutes, 10 seconds', {
     timeout: 60_000,
   });

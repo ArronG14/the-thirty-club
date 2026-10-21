@@ -138,14 +138,23 @@ export function LetterPresentation({
             >
               {letter.title}
             </h1>
-            <p className="cd-paper__salutation">{letter.salutation}</p>
+            {!/^(Madam[,!]|The Thirty Club|Good morning)/.test(letter.body) && (
+              <p className="cd-paper__salutation">{letter.salutation}</p>
+            )}
             <div className="cd-paper__body">
               {paragraphs(letter.body).map((lines, index) => (
                 <p key={index}>
                   {lines.map((line, n) => (
                     <span key={n}>
                       {n > 0 && <br />}
-                      {line}
+                      {line === 'Happy 30th Birthday, Madam.' ||
+                      line === 'The Thirty Club' ? (
+                        <strong>{line}</strong>
+                      ) : line === 'Forever your devoted Butler' ? (
+                        <em>{line}</em>
+                      ) : (
+                        line
+                      )}
                     </span>
                   ))}
                 </p>

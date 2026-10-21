@@ -174,6 +174,9 @@ beforeEach(async () => {
     delete from public.ttc_journey_milestones;
     insert into public.ttc_journey_milestones select * from public.seeded_milestones;
     update public.ttc_communication_hold set active = false, released_at = now();
+    -- These are generic reward-engine fixtures; story-release guards have their own chronological suite.
+    update public.ttc_journey_milestones set story_managed=false,story_disabled=false,requires_keys='{}',manual_only=false;
+    update public.ttc_journey_milestones set state='pending' where key='casino-opening';
     update public.ttc_sms_operations set mode = 'live', live_since = '2026-01-01T00:00:00Z';`);
   await at('2026-10-23T14:30:00Z'); // 09:30 in Jamaica, Casino day
   await pg.query(
@@ -457,9 +460,7 @@ describe('the Casino never promises spins that do not exist', () => {
     await call('/owner/journey/milestones/casino-opening-spins/resume', {});
     await at('2026-10-23T14:00:30Z');
     await runJourneyRound(db);
-    expect(await letterOfAdmission()).toContain(
-      'complimentary spins have been placed at your disposal',
-    );
+    expect(await letterOfAdmission()).toContain('three complimentary spins');
     await call('/journey/admissions/casino/accept', {}, 'member');
     expect(await available()).toBe(4);
   });
@@ -517,9 +518,7 @@ describe('cancelling spins never leaves a letter promising them (Codex P1)', () 
     await at('2026-10-23T13:30:00Z');
     const batch = await issueQuiet(3, 'codex-repro-batch');
     await openCasino();
-    expect(await letterOfAdmission()).toContain(
-      'complimentary spins have been placed at your disposal',
-    );
+    expect(await letterOfAdmission()).toContain('three complimentary spins');
     const cancelled = await cancel(batch.data.batchId);
     expect(cancelled.status).toBe(409);
     expect(cancelled.data.error).toBe('spins-promised');

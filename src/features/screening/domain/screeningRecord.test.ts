@@ -150,9 +150,7 @@ describe('the Butler in the screening room', () => {
   });
 
   it('closes the first screening, and greets an encore differently', () => {
-    expect(endLine(true)).toBe(
-      'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.',
-    );
+    expect(endLine(true)).toBe(SCREENING_LINES.closing);
     expect(endLine(false)).toBe(SCREENING_LINES.encore);
   });
 });

@@ -419,14 +419,26 @@ describe('release on 21 October', () => {
     expect(early2.status).toBe(403);
     expect(early2.data.error).toBe('card-required');
     await pg.query(
-      'insert into public.ttc_membership_card(member_id) values ($1)',
+      'insert into public.ttc_membership_card(member_id,admission_presented_at) values ($1,now())',
       [member],
     );
     // Accepted in the Lounge: recorded once, for every device.
     expect((await call('/journey/enter', {}, 'member')).status).toBe(201);
     expect((await call('/journey/enter', {}, 'member')).status).toBe(200);
     // A letter milestone resumed now is delivered, with its SMS queued.
-    await call('/owner/journey/milestones/departure-ugg/fire', {});
+    await call('/owner/journey/milestones', {
+      key: 'hold-release-letter',
+      title: 'Hold release test',
+      fireAt: '2026-10-22T08:00:00Z',
+      effects: [
+        {
+          type: 'letter',
+          title: 'A test letter',
+          body: 'A test of the generic publication hold.',
+        },
+      ],
+    });
+    await call('/owner/journey/milestones/hold-release-letter/fire', {});
     expect(await published()).toBe(2);
     expect(await aliseSmsApproved()).toBe(2);
     // The invitation link that establishes her member session works again.

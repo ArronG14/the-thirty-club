@@ -6,6 +6,7 @@
  *
  * Placeholders: `{room}` (the room's name), `{quantity}`, `{title}`.
  */
+import { STORY_COPY } from '../story/copy.ts';
 import { CLUB_LINK } from '../correspondence/templates.ts';
 import type { AdmissionRoomId, JourneyEventType } from './contract.ts';
 
@@ -47,27 +48,21 @@ export const ADMISSION_COPY: Record<AdmissionRoomId, AdmissionCopy> = {
     },
   },
   'screening-room': {
-    letter: {
-      title: 'Letter of Admission — The Private Screening Room',
-      body: 'Madam, a number of rather important people have requested an audience with you. The Private Screening Room has been prepared, the lights are low, and your seat has been reserved in the centre of the front row.',
-    },
-    summons: {
-      title: 'A matter requiring your presence',
-      body: 'If you would be so kind as to return to the Members’ Lounge, I have something to present to you. I shan’t say more; I have been sworn to secrecy, and I take such things seriously.',
-    },
+    letter: { title: 'The Reason for It All', body: STORY_COPY.midnight },
+    summons: { title: 'The Reason for It All', body: STORY_COPY.midnight },
   },
   casino: {
     letter: {
-      title: 'Letter of Admission — The Grand Casino',
-      body: 'Madam, it is my privilege to confirm your admission to the Grand Casino. The tables have been dressed, the croupier has been warned, and a number of complimentary spins have been placed at your disposal. The house always wins, Madam. Today, the house is yours.',
+      title: 'An Invitation of Considerable Importance',
+      body: STORY_COPY.casino,
     },
     letterWithoutSpins: {
       title: 'Letter of Admission — The Grand Casino',
       body: 'Madam, it is my privilege to confirm your admission to the Grand Casino. The tables have been dressed and the croupier has been warned. I shall write the moment he is ready to deal you in. The house always wins, Madam. Today, the house is yours.',
     },
     summons: {
-      title: 'Your presence is requested in the Lounge',
-      body: 'Forgive the interruption. A letter bearing the club’s seal awaits you in the Members’ Lounge. I am instructed to hand it to you personally.',
+      title: 'An Invitation of Considerable Importance',
+      body: STORY_COPY.casino,
     },
   },
   'gift-vault': {

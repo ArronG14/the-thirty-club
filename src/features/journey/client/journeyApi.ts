@@ -45,6 +45,22 @@ export const acceptAdmission = (room: AdmissionRoomId) =>
 
 export const ownerJourney = () => deskRequest<OwnerJourney>('/owner/journey');
 
+export const reviewStory = (
+  key: string,
+  input: {
+    storyApproved?: boolean;
+    storySms?: string;
+    storyVaultId?: string | null;
+  },
+) =>
+  deskRequest<{ milestone: OwnerMilestone }>(
+    `/owner/journey/milestones/${key}`,
+    {
+      method: 'PATCH',
+      body: input,
+    },
+  );
+
 export type MilestoneCommand = 'fire' | 'hold' | 'resume' | 'retry';
 
 export const commandMilestone = (key: string, command: MilestoneCommand) =>

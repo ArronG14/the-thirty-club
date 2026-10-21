@@ -166,6 +166,31 @@ async function fillRehearsalWording(key: string) {
     const journey = await simOwner<OwnerJourney>('/owner/journey');
     const milestone = journey.milestones.find((m) => m.key === key);
     if (!milestone || milestone.state === 'fired') return;
+    // Standalone presets begin AFTER their preceding chapters. The full
+    // story rehearsal exercises those chapters continuously instead.
+    if (milestone.storyManaged) {
+      const { simOffice } = await import('./sim/v1');
+      const office = await simOffice();
+      for (const prior of milestone.requiresKeys ?? [])
+        await office.pg.query(
+          "update public.ttc_journey_milestones set state='fired',fired_at=public.ttc_sim_now() where key=$1 and state in ('held','failed')",
+          [prior],
+        );
+      await simOwner(
+        `/owner/journey/milestones/${key}`,
+        {
+          storySms:
+            milestone.storySms ||
+            'TEST rehearsal invitation https://30.ag14.co/lounge',
+        },
+        'PATCH',
+      );
+      await simOwner(
+        `/owner/journey/milestones/${key}`,
+        { storyApproved: true },
+        'PATCH',
+      );
+    }
     const effects = milestone.effects.map((e) =>
       e.type === 'letter'
         ? {
@@ -352,6 +377,7 @@ export function applyLaunchIntents(): Promise<void> {
 
 /** Triggers a journey milestone now, as the owner would from TEST. */
 export async function fireRehearsalMilestone(key: string) {
+  await fillRehearsalWording(key);
   await simOwner(`/owner/journey/milestones/${key}/fire`, {});
 }
 

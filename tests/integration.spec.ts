@@ -118,7 +118,10 @@ test('Casino: three server spins, Bring Me a Drink on the third, CLAIM, a drink 
     .getByLabel('What would you like brought to you?')
     .fill('A rum punch by the pool');
   await drinks.getByRole('button', { name: 'Bring me this drink' }).click();
-  await expect(drinks).toContainText('Consider it done', { timeout: 30_000 });
+  await expect(drinks).toContainText(
+    'Your request is recorded. The notification to your husband is waiting to be sent.',
+    { timeout: 30_000 },
+  );
   await expect(drinks.locator('.drinks__history')).toContainText(
     'A rum punch by the pool',
   );
@@ -162,7 +165,7 @@ test('The communication hold: visible, enforced by the server, release not befor
   // The journey tab disables what would reach her ...
   const casino = page
     .locator('.office-journey__milestone')
-    .filter({ hasText: 'The Grand Casino opens' });
+    .filter({ hasText: 'An Invitation of Considerable Importance' });
   await expect(
     casino.getByRole('button', { name: 'Trigger now' }),
   ).toBeDisabled({ timeout: 30_000 });
@@ -220,7 +223,7 @@ test('Scenario: two airport drinks after security; a request reaches the ownerâ€
   await expect(sheet.getByLabel('2 of 2 drinks remaining')).toBeVisible();
   await sheet.getByLabel('What may I bring you?').fill('A glass of Ruinart');
   await sheet.getByRole('button', { name: 'Request this drink' }).click();
-  await expect(sheet).toContainText('Word has gone to your husband', {
+  await expect(sheet).toContainText('Your request is recorded.', {
     timeout: 30_000,
   });
   await expect(sheet.getByLabel('1 of 2 drinks remaining')).toBeVisible();

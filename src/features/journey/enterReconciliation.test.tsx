@@ -93,6 +93,7 @@ function holdCard() {
     realm: 'live',
     scopes: ['membership'],
     iat: Date.now(),
+    cardPresentedAt: Date.now(),
   });
   localStorage.setItem(SESSION_KEYS.live, `${claims}.signature`);
 }

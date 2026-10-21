@@ -73,11 +73,19 @@ export function AdmissionLetter({
         <p className="admission__rule" aria-hidden="true">
           ◆
         </p>
-        <p className="admission__body">{letter.body}</p>
-        <p className="admission__signature">
-          With the compliments of the committee,
-          <span>The Butler</span>
-        </p>
+        <div className="admission__body">
+          {letter.body.split(/\n\n+/).map((paragraph, i) => (
+            <p key={i} style={{ whiteSpace: 'pre-line' }}>
+              {paragraph}
+            </p>
+          ))}
+        </div>
+        {!letter.body.includes('Your devoted Butler') && (
+          <p className="admission__signature">
+            With the compliments of the committee,
+            <span>The Butler</span>
+          </p>
+        )}
         {error && (
           <p className="admission__error" role="alert">
             {error}

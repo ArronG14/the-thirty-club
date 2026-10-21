@@ -1,4 +1,6 @@
 /**
+ * Historical verifier of the original fifteen-migration release. The current
+ * hosted-to-story upgrade is checked by verify-story-upgrade.mjs.
  * Disposable PostgreSQL rehearsal of the final release's database step
  * (docs/FINAL_INTEGRATION_RELEASE_HANDOVER.md). Applies the nine migrations
  * the hosted project already has, seeds LIVE-like records (a redeemed
@@ -24,7 +26,10 @@ const RELEASE = [
 ];
 const dir = resolve('supabase/migrations');
 const all = readdirSync(dir)
-  .filter((name) => name.endsWith('.sql'))
+  .filter(
+    (name) =>
+      name.endsWith('.sql') && name !== '20261022150000_story_sequence.sql',
+  )
   .sort();
 const assert = (condition, detail) => {
   if (!condition) throw new Error(detail);

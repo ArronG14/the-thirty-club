@@ -518,6 +518,7 @@ describe('after the birthday has passed', () => {
     // The built Screening Room is now offered alongside the lounge controls.
     expect(names).toEqual([
       'Continue your evening',
+      'Club Menu',
       'Members’ Directory',
       'Membership card',
       'Ring for service',

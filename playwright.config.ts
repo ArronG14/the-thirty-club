@@ -15,6 +15,8 @@ export default defineConfig({
     'journey.spec.ts',
     'integration.spec.ts',
     'release.spec.ts',
+    // Continuous iPhone story: playwright.story.config.ts.
+    'story.spec.ts',
     'casino.look.spec.ts',
     // WebKit with a phone profile: playwright.webkit.config.ts.
     'entrance-webkit.spec.ts',

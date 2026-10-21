@@ -30,8 +30,10 @@
     "test:rehearsal": "npm run build && playwright test -c playwright.rehearsal.config.ts",
     "test:screening": "npm run build && playwright test -c playwright.screening.config.ts && SCREENING_WEBKIT=1 playwright test -c playwright.screening.config.ts",
     "verify:final-migrations": "node tools/verify-final-release-migrations.mjs",
-    "release:preflight": "node tools/release-preflight.mjs && npm run verify:final-migrations",
-    "release:smoke": "node tools/release-smoke.mjs"
+    "release:preflight": "node tools/release-preflight.mjs && npm run verify:story-upgrade",
+    "release:smoke": "node tools/release-smoke.mjs",
+    "verify:story-upgrade": "node tools/verify-story-upgrade.mjs",
+    "test:story": "npm run build && playwright test -c playwright.story.config.ts"
   },
   "dependencies": {
     "@fontsource-variable/bodoni-moda": "^5.3.0",

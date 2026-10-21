@@ -380,3 +380,14 @@ Same branch and worktree. Not merged or deployed. Supersedes FR10, FR12–FR14 w
 | JC12 | P1       | BLOCKED     | Birthday film media (owner); physical iPhone/NFC rehearsal of the new flows                                                                                                                                                                                                              |
 | JC13 | P2       | NOT STARTED | Owner decision: Machine jackpot as 777 glyphs                                                                                                                                                                                                                                            |
 | JC14 | P1       | VERIFIED    | Letters that mention drinks or a birthday card offer a button to `/drinks` / `/birthdaycard` (never on "membership card") (`roomMentions.test.ts`)                                                                                                                                       |
+
+## Story integration — 21 October 2026 (ADR-027)
+
+- VERIFIED — Explicit signed card-presentation proof and stale-session regression; preserve completed admission.
+- VERIFIED — Corrected chronological schedules, prerequisites, manual-only physical notices and reviewed exact-SMS controls in the mobile journey desk.
+- IMPLEMENTED — Recovered document copy and locked flow notes; explicit review holds for referenced variants and real physical setup.
+- VERIFIED — Durable Departure Lounge introduction/request, early Vault refresh correction, truthful drink notification states and persistent retry keys.
+- VERIFIED — Three fixed Casino sessions, pending CLAIM, exact Nyla/mystery presentation, no duplicate reward SMS, breakfast concealed until NFC.
+- IMPLEMENTED — One optional midnight screening invitation, exact post-film closing, private-card silence, dinner and excursion-free farewell closing.
+- VERIFIED — Local gates: 775 tests; type/lint/format/build; security/upgrade rehearsals; four Chromium/WebKit continuous recipient and phone-owner cases; ten release/integration regressions per browser; three PWA checks. Actual results and reruns in BUILD_LOG.
+- BLOCKED — Production readiness: copy/short SMS review and real setup pending; no real Vault mappings or birthday-card message hosted; Nyla inactive; final media branch requires separate approved upload/deploy/device validation. No production write/deploy/send performed.

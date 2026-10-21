@@ -229,6 +229,11 @@ async function activate(deps: ServiceDeps, request: Request, ip: string) {
       ...new Set<Scope>([...(existing?.scopes ?? []), match.credential]),
     ],
     iat: deps.clock(),
+    ...(match.credential === 'membership'
+      ? { cardPresentedAt: at }
+      : existing?.cardPresentedAt !== undefined
+        ? { cardPresentedAt: existing.cardPresentedAt }
+        : {}),
     ...(existing?.offsetMs !== undefined
       ? { offsetMs: existing.offsetMs }
       : {}),

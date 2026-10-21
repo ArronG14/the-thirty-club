@@ -222,13 +222,30 @@ export async function journeyRoute({
   if (milestone) {
     const key = milestone[1]!;
     if (method === 'PATCH' && !milestone[2]) {
-      v.keys(body, ['title', 'description', 'fireAt', 'effects']);
+      v.keys(body, [
+        'title',
+        'description',
+        'fireAt',
+        'effects',
+        'storyApproved',
+        'storySms',
+        'storyVaultId',
+      ]);
       const input: Record<string, unknown> = { key };
       if (body.title !== undefined) input.title = v.text(body.title, 1, 120);
       if (body.description !== undefined)
         input.description = v.text(body.description, 0, 1000);
       if (body.fireAt !== undefined) input.fireAt = v.instant(body.fireAt);
       if (body.effects !== undefined) input.effects = effects(body.effects);
+      if (body.storyApproved !== undefined) {
+        if (typeof body.storyApproved !== 'boolean') v.invalid();
+        input.storyApproved = body.storyApproved;
+      }
+      if (body.storySms !== undefined)
+        input.storySms = v.text(body.storySms, 0, 1600);
+      if (body.storyVaultId !== undefined)
+        input.storyVaultId =
+          body.storyVaultId === null ? null : v.uuid(body.storyVaultId);
       return { data: await call('owner-journey-milestone-update', input) };
     }
     if (method === 'POST' && milestone[2]) {

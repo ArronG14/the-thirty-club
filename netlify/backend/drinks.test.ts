@@ -176,7 +176,8 @@ beforeEach(async () => {
     insert into public.ttc_prize_catalogue select * from public.seeded_prizes;
     delete from public.ttc_journey_milestones;
     insert into public.ttc_journey_milestones select * from public.seeded_milestones;
-    update public.ttc_communication_hold set active = false, released_at = now();`);
+    update public.ttc_communication_hold set active = false, released_at = now();
+    update public.ttc_journey_milestones set story_approved=true,requires_keys='{}',story_sms='TEST invitation https://30.ag14.co/lounge' where key in ('airport-drinks','casino-opening-spins','casino-afternoon-spins');`);
   await setMode('live');
   await at('2026-10-22T12:45:00Z'); // 13:45 UK, through security
   await pg.query(

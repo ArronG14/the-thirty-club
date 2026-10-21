@@ -7,6 +7,17 @@ import { hasScope } from '../domain/session';
 import { browserConciergeStorage, type ConciergeStorage } from './localRecord';
 import { activeSession } from './sessionStore';
 
+/** The current ceremony requires an explicit presentation, never a legacy scope. */
+export function hasAdmissionCard(): boolean {
+  const claims = activeSession()?.claims;
+  return Boolean(
+    claims &&
+    hasScope(claims, 'membership') &&
+    claims.cardPresentedAt !== undefined &&
+    claims.cardPresentedAt >= Date.parse('2026-10-21T18:00:00Z'),
+  );
+}
+
 export function hasMembership(
   storage: ConciergeStorage = browserConciergeStorage(),
 ): boolean {

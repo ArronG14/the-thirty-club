@@ -155,7 +155,7 @@ export function useGiftVault(mode: VaultMode) {
     const result = await source.current.load();
     if (!result.ok) return result;
     setVaults(result.data.vaults);
-    setOpen(result.data.open);
+    setOpen(result.data.open || result.data.early === true);
     return result;
   }, []);
 
@@ -264,7 +264,12 @@ export function useGiftVault(mode: VaultMode) {
       fresh.forEach((v) => markAnnounced(v.id));
       speak(...ANNOUNCEMENT);
     } else {
-      speak(arrivalLine(listed.data.vaults, listed.data.open));
+      speak(
+        arrivalLine(
+          listed.data.vaults,
+          listed.data.open || listed.data.early === true,
+        ),
+      );
     }
   }, [mode, refresh, settle, speak]);
 

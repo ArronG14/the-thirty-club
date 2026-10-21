@@ -176,18 +176,16 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
           // this device a member session unless it already has one. The
           // card is never an owner credential.
           v.keys(body, []);
-          await requireMembershipCard(request, env);
+          const cardPresentedAt = await requireMembershipCard(request, env);
           const current = await requireSession(db, request).catch(() => null);
           if (current?.role === 'owner') throw new BackendError('forbidden');
           const presented = await db.action<{
             card: { firstPresentedAt: string; presentations: number };
             session?: Session;
-          }>(
-            null,
-            'system',
-            'system-journey-card',
-            current ? {} : { hash: hashToken(token) },
-          );
+          }>(null, 'system', 'system-journey-card', {
+            ...(current ? {} : { hash: hashToken(token) }),
+            cardPresentedAt,
+          });
           if (current)
             return respond({ session: current, card: presented.card });
           headers.set('set-cookie', sessionCookie(url, token, 2592000));

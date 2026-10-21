@@ -593,6 +593,9 @@ describe('owner rehearsals to the verified test number', () => {
 
   it('rehearses a milestone’s letter SMS from the same renderer as LIVE', async () => {
     await setMode('rehearsal');
+    await pg.exec(
+      'update public.ttc_journey_milestones set story_managed=false,effects=\'[{"type":"letter","title":"SMS renderer test","body":"TEST","action":{"kind":"return","room":"casino"}}]\' where key=\'casino-evening-mystery\'',
+    );
     const rehearsed = await v1<{ rehearsal: { state: string } }>(
       '/owner/sms/rehearsals',
       {
@@ -625,6 +628,10 @@ describe('every Butler invitation carries a working link', () => {
     await at('2026-10-24T14:00:00Z');
     await pg.exec(
       `update public.ttc_journey_milestones set state = 'held' where state = 'pending';
+       -- Generic SMS renderer fixtures, not the gated birthday-story schedule.
+       update public.ttc_journey_milestones set story_managed=false,story_disabled=false,manual_only=false,requires_keys='{}';
+       update public.ttc_journey_milestones set effects='[{"type":"letter","title":"The croupier has a confession","body":"TEST","action":{"kind":"return","room":"casino"}}]' where key='casino-evening-mystery';
+       update public.ttc_journey_milestones set effects='[{"type":"letter","title":"Breakfast is served","body":"TEST"}]' where key='birthday-breakfast';
        update public.ttc_journey_milestones set state = 'pending', fire_at = now() - interval '1 minute'
          where key in ('casino-evening-mystery','birthday-breakfast','birthday-screening')`,
     );
@@ -643,7 +650,7 @@ describe('every Butler invitation carries a working link', () => {
       'https://30.ag14.co/correspondence',
     );
     // An admission summons points at the entrance (the club itself).
-    const summons = of('A matter requiring your presence');
+    const summons = of('The Reason for It All');
     expect(summons).toMatch(/https:\/\/30\.ag14\.co(\s|$)/);
     expect(summons).not.toContain('/rooms/screening-room');
   });

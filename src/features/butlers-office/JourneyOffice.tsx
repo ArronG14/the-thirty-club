@@ -31,8 +31,11 @@ import {
   ownerJourney,
   rescheduleMilestone,
   retryEvent,
+  reviewStory,
   type MilestoneCommand,
 } from '../journey/client/journeyApi';
+import { ownerVaults } from '../vault/client/vaultApi';
+import type { OwnerVault } from '../../shared/concierge/types';
 import { simulatedOwnerDocument } from '../rehearsal/mode';
 
 const when = (at: string | null, zone: string) =>
@@ -97,6 +100,10 @@ export function JourneyOffice() {
   const [editing, setEditing] = useState<string | null>(null);
   const [wall, setWall] = useState('');
   const [wording, setWording] = useState<Wording | null>(null);
+  const [storyEditing, setStoryEditing] = useState<string | null>(null);
+  const [storySms, setStorySms] = useState('');
+  const [storyVaultId, setStoryVaultId] = useState('');
+  const [mappingVaults, setMappingVaults] = useState<OwnerVault[]>([]);
   // The communication hold (ADR-021): actions that reach Alise wait for it.
   const [held, setHeld] = useState(false);
 
@@ -143,6 +150,16 @@ export function JourneyOffice() {
     setBusy(false);
     if (!result.ok) {
       setError(failureText(result));
+      return;
+    }
+    const outcome = result.data as {
+      milestone?: { state?: string; lastError?: string };
+    } | null;
+    if (outcome?.milestone?.state === 'failed') {
+      await load();
+      setError(
+        outcome.milestone.lastError ?? 'The scene could not be released.',
+      );
       return;
     }
     setNotice(done);
@@ -301,6 +318,121 @@ export function JourneyOffice() {
               {when(m.fireAt, 'Europe/London')} UK
             </p>
             {m.description && <p className="office-hint">{m.description}</p>}
+            {m.storyManaged && (
+              <div className="office-hint">
+                <p>
+                  {m.storyDisabled
+                    ? 'Disabled: superseded scene.'
+                    : m.manualOnly
+                      ? 'Manual only: the clock cannot trigger this scene.'
+                      : 'Scheduled only after you resume it.'}
+                </p>
+                <p>
+                  Editorial review: {m.storyApproved ? 'approved' : 'required'}.
+                </p>
+                {!!m.requiresKeys?.length && (
+                  <p>Required scenes: {m.requiresKeys.join(', ')}.</p>
+                )}
+                <p style={{ whiteSpace: 'pre-wrap' }}>
+                  SMS:{' '}
+                  {m.storySms ||
+                    'No outbound text configured. Review before release.'}
+                </p>
+                {m.storyVaultId && (
+                  <p>Physical compartment: {m.storyVaultId}</p>
+                )}
+                {m.effects
+                  .filter((e) => e.type === 'letter')
+                  .map(
+                    (e, i) =>
+                      e.type === 'letter' && (
+                        <details key={i}>
+                          <summary>Preview “{e.title}”</summary>
+                          <p style={{ whiteSpace: 'pre-wrap' }}>{e.body}</p>
+                        </details>
+                      ),
+                  )}
+                {m.state !== 'fired' && !m.storyDisabled && (
+                  <div className="office-actions">
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        setStoryEditing(m.key);
+                        void ownerVaults().then((result) => {
+                          if (result.ok) setMappingVaults(result.data.vaults);
+                          else
+                            setError(
+                              'The physical compartments could not be loaded.',
+                            );
+                        });
+                        setStorySms(m.storySms ?? '');
+                        setStoryVaultId(m.storyVaultId ?? '');
+                      }}
+                    >
+                      Edit SMS and physical mapping
+                    </button>
+                    <button
+                      disabled={busy || m.storyApproved}
+                      onClick={() =>
+                        void run(
+                          () => reviewStory(m.key, { storyApproved: true }),
+                          'Story reviewed. It remains held until you trigger or resume it.',
+                          'Approve the exact copy, SMS and physical arrangements shown for this scene? This does not send it.',
+                        )
+                      }
+                    >
+                      Approve reviewed story
+                    </button>
+                  </div>
+                )}
+                {storyEditing === m.key && (
+                  <div className="office-form-row">
+                    <label>
+                      Exact outbound SMS
+                      <textarea
+                        value={storySms}
+                        maxLength={1600}
+                        rows={8}
+                        onChange={(e) => setStorySms(e.target.value)}
+                      />
+                    </label>
+                    <label>
+                      Physical gift compartment
+                      <select
+                        value={storyVaultId}
+                        onChange={(e) => setStoryVaultId(e.target.value)}
+                      >
+                        <option value="">No physical gift mapping</option>
+                        {mappingVaults.map((v) => (
+                          <option value={v.id} key={v.id}>
+                            No. {String(v.number).padStart(3, '0')} — {v.state}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <button
+                      disabled={busy}
+                      onClick={() => {
+                        setStoryEditing(null);
+                        void run(
+                          () =>
+                            reviewStory(m.key, {
+                              storySms,
+                              storyVaultId: storyVaultId || null,
+                            }),
+                          'Saved for review; approval cleared.',
+                        );
+                      }}
+                    >
+                      Save story setup
+                    </button>
+                    <button onClick={() => setStoryEditing(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
             <ul className="office-journey__effects">
               {m.effects.map((effect, i) => (
                 <li key={i}>{effectText(effect)}</li>
@@ -392,14 +524,24 @@ export function JourneyOffice() {
             {m.state !== 'fired' && (
               <div className="office-actions">
                 <button
-                  disabled={busy || held}
+                  disabled={
+                    busy ||
+                    held ||
+                    m.storyDisabled ||
+                    (m.storyManaged && !m.storyApproved)
+                  }
                   onClick={() => milestoneCommand(m, 'fire')}
                 >
                   Trigger now
                 </button>
                 {m.state === 'held' ? (
                   <button
-                    disabled={busy}
+                    disabled={
+                      busy ||
+                      m.manualOnly ||
+                      m.storyDisabled ||
+                      (m.storyManaged && !m.storyApproved)
+                    }
                     onClick={() => milestoneCommand(m, 'resume')}
                   >
                     Resume

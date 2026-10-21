@@ -205,7 +205,7 @@ export function MembershipPrompt({
       const result = await api.state(session.token);
       if (stopped || !result.ok) return;
       const at = result.data.activations.membership;
-      if (at) {
+      if (at && Date.parse(at) >= Date.parse('2026-10-21T18:00:00Z')) {
         recordMembership(at);
         presented.current();
       }

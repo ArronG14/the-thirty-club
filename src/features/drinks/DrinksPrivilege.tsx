@@ -14,13 +14,14 @@ import {
   type UnclaimedDrinks,
 } from './drinksApi';
 import './drinks.css';
+import { deviceStorage } from '../rehearsal/storage';
 
 const DRAFT = (kind: DrinkKind) => `thirty-club:drinks:draft:${kind}`;
 const KEY = (kind: DrinkKind) => `thirty-club:drinks:key:${kind}`;
 
 function storage(): Storage | null {
   try {
-    return window.sessionStorage;
+    return deviceStorage();
   } catch {
     return null;
   }
@@ -115,7 +116,15 @@ function Composer({
       store?.removeItem(KEY(kind));
       store?.removeItem(DRAFT(kind));
       setText('');
-      setMessage({ tone: 'ok', text: copy.confirmation });
+      setMessage({
+        tone: 'ok',
+        text:
+          result.data.request.notice === 'sent'
+            ? 'Your drink request has been sent to your husband.'
+            : result.data.request.notice === 'delayed'
+              ? 'Your request is recorded. The notification is delayed; please let your husband know.'
+              : 'Your request is recorded. The notification to your husband is waiting to be sent.',
+      });
       onSent();
     } else {
       // A definite refusal frees the key; an interrupted call keeps it.

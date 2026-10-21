@@ -70,6 +70,7 @@
 }
 
 .house-prize__words {
+  white-space: pre-line;
   margin: 0;
   color: var(--ink-soft);
   font-size: 1.15rem;

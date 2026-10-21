@@ -95,7 +95,11 @@ const owner = <T = Record<string, unknown>>(
 const conciergeSession = (
   scopes: Scope[],
   realm: 'live' | 'rehearsal' = 'live',
-) => signSession({ v: 1, realm, scopes, iat: Date.now() }, SECRET);
+) =>
+  signSession(
+    { v: 1, realm, scopes, cardPresentedAt: Date.now(), iat: Date.now() },
+    SECRET,
+  );
 
 /** Presents the card on a device; returns its member session cookie. */
 async function scan(cookie: string | null = null) {
@@ -482,7 +486,7 @@ describe('every scheduled item, read in its own named zone (ADR-023)', () => {
     const expected: Record<string, [string, string]> = {
       'early-membership': ['Europe/London', '21/10/2026, 19:00'],
       'departure-ugg': ['Europe/London', '22/10/2026, 09:00'],
-      'departure-privileges': ['Europe/London', '22/10/2026, 14:00'],
+      'departure-privileges': ['Europe/London', '22/10/2026, 10:00'],
       'departure-airpods': ['Europe/London', '22/10/2026, 15:00'],
       'casino-opening': ['America/Jamaica', '23/10/2026, 09:00'],
       'casino-opening-spins': ['America/Jamaica', '23/10/2026, 09:00'],

@@ -65,7 +65,12 @@ describe('the rehearsal entrance (owner-mode isolation)', () => {
   it('runs at the rehearsal moment and writes to separate records', () => {
     const offset = 3 * 24 * 3_600_000;
     saveSession(
-      token({ realm: 'rehearsal', scopes: ['membership'], offsetMs: offset }),
+      token({
+        realm: 'rehearsal',
+        scopes: ['membership'],
+        cardPresentedAt: Date.parse('2026-10-21T18:00:00Z'),
+        offsetMs: offset,
+      }),
     );
     const env = createEntranceEnvironment();
     expect(env.clock.now() - Date.now()).toBeGreaterThan(offset - 1000);

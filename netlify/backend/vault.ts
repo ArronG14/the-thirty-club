@@ -145,7 +145,7 @@ export async function bridgeMemberSession(
 export async function requireMembershipCard(
   request: Request,
   env: NodeJS.ProcessEnv,
-): Promise<void> {
+): Promise<number | null> {
   const secret = env.CONCIERGE_SESSION_SECRET?.trim();
   if (!secret || secret.length < 24) throw new BackendError('not-configured');
   const header = request.headers.get('authorization') ?? '';
@@ -155,6 +155,7 @@ export async function requireMembershipCard(
   if (claims.realm !== 'live') throw new BackendError('forbidden');
   if (!claims.scopes.includes('membership'))
     throw new BackendError('unauthorised');
+  return claims.cardPresentedAt ?? null;
 }
 
 /** Releases compartments a server-verified casino outcome has earned. */

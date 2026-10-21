@@ -15,6 +15,26 @@ import {
   type DeskResult,
 } from '../../correspondence/client/correspondenceApi';
 import { WORD_PROMPT } from '../../correspondence/domain/butlerLines';
+import { deviceStorage } from '../../rehearsal/storage';
+
+const DRAFT_KEY = 'thirty-club:butler:word-draft';
+function savedDraft(): { draft: string; key: string } {
+  try {
+    const saved = JSON.parse(deviceStorage().getItem(DRAFT_KEY) ?? 'null') as {
+      draft?: unknown;
+      key?: unknown;
+    } | null;
+    if (
+      saved &&
+      typeof saved.draft === 'string' &&
+      typeof saved.key === 'string'
+    )
+      return { draft: saved.draft.slice(0, REPLY_MAX_LENGTH), key: saved.key };
+  } catch {
+    /* A corrupt draft cannot prevent a new request. */
+  }
+  return { draft: '', key: newIdempotencyKey() };
+}
 
 export interface RequestComposerProps {
   send(body: string, key: string): Promise<DeskResult<unknown>>;
@@ -35,13 +55,21 @@ export function RequestComposer({
   cancelLabel = 'Never mind',
   note,
 }: RequestComposerProps) {
-  const [draft, setDraft] = useState('');
+  const [saved] = useState(savedDraft);
+  const [draft, setDraft] = useState(saved.draft);
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState<string | null>(null);
-  const [key, setKey] = useState(newIdempotencyKey);
+  const [key, setKey] = useState(saved.key);
   const field = useRef<HTMLTextAreaElement>(null);
   const fieldId = useId();
   const countId = useId();
+  useEffect(() => {
+    try {
+      deviceStorage().setItem(DRAFT_KEY, JSON.stringify({ draft, key }));
+    } catch {
+      /* The server still deduplicates this mounted request. */
+    }
+  }, [draft, key]);
 
   useEffect(() => {
     field.current?.focus({ preventScroll: true });

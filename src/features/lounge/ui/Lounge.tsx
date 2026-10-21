@@ -52,7 +52,14 @@ import './lounge.css';
 const LoungeCanvas = lazy(() => import('../scene/LoungeCanvas'));
 
 type RenderMode = 'poster' | 'loading' | 'fading' | 'scene';
-type Overlay = 'card' | 'directory' | 'vouchers' | 'drinks' | null;
+type Overlay =
+  | 'card'
+  | 'directory'
+  | 'vouchers'
+  | 'drinks'
+  | 'club-menu'
+  | 'privileges'
+  | null;
 const FADE_MS = 1400;
 /**
  * The Butler's escort to the Screening Room: the camera walks towards the
@@ -543,6 +550,13 @@ export function Lounge({
                 <button
                   type="button"
                   className="dock__item"
+                  onClick={(e) => openSheet('club-menu', e.currentTarget)}
+                >
+                  Club Menu
+                </button>
+                <button
+                  type="button"
+                  className="dock__item"
                   onClick={(e) => openSheet('directory', e.currentTarget)}
                 >
                   <Glyph kind="directory" />
@@ -627,6 +641,50 @@ export function Lounge({
           onAccept={() => void acceptLetter(letter.roomId)}
           onLater={() => later(letter.roomId)}
         />
+      )}
+      {overlay === 'club-menu' && (
+        <Sheet
+          variant="vouchers"
+          label="The Thirty Club"
+          title="Club Menu"
+          returnFocusTo={opener}
+          onClose={closeSheet}
+        >
+          <button
+            className="brass-button"
+            onClick={() => setOverlay('directory')}
+          >
+            Members’ Directory
+          </button>
+          {drinks.show && (
+            <button
+              className="brass-button"
+              onClick={() => setOverlay('privileges')}
+            >
+              Privileges Collection
+            </button>
+          )}
+          <button
+            className="brass-button"
+            onClick={() => {
+              closeSheet();
+              ring();
+            }}
+          >
+            Ring for service
+          </button>
+        </Sheet>
+      )}
+      {overlay === 'privileges' && (
+        <Sheet
+          variant="vouchers"
+          label="Your earned privileges"
+          title="Privileges Collection"
+          returnFocusTo={opener}
+          onClose={closeSheet}
+        >
+          <DrinksPrivilege />
+        </Sheet>
       )}
       {overlay === 'drinks' && (
         <Sheet

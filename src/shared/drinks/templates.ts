@@ -52,7 +52,7 @@ export const DRINK_COPY: Record<DrinkKind, DrinkCopy> = {
     submit: 'Request this drink',
     confirmation:
       'Very good, Madam. Word has gone to your husband; it will be with you shortly.',
-    none: 'Both airport drinks have been enjoyed.',
+    none: 'No airport drink vouchers are currently available.',
   },
   jamaica: {
     eyebrow: 'Bring Me a Drink',
@@ -64,7 +64,7 @@ export const DRINK_COPY: Record<DrinkKind, DrinkCopy> = {
     submit: 'Bring me this drink',
     confirmation:
       'Consider it done, Madam. It is on its way to you — do not move a muscle.',
-    none: 'All three Bring Me a Drink vouchers have been enjoyed.',
+    none: 'No Bring Me a Drink vouchers are currently available.',
   },
 };
 

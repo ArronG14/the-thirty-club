@@ -2,6 +2,7 @@
  * The Butler in the Private Screening Room. Scripted (no AI); each moment
  * speaks once. All wording is PROVISIONAL until the owner approves it.
  */
+import { STORY_COPY } from '../../../shared/story/copy';
 import type { ScreeningStatus } from './screeningRecord';
 
 export const SCREENING_LINES = {
@@ -15,8 +16,7 @@ export const SCREENING_LINES = {
   welcomeBackResume:
     'Welcome back, Madam. I have kept your place, should you wish to continue.',
   /** The film's first natural end. */
-  closing:
-    'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.',
+  closing: STORY_COPY.postFilm,
   /** Any later natural end. */
   encore: 'An encore, Madam. The theatre remains entirely at your disposal.',
   /** Between reels of a programme (PROPOSED, ADR-024). */

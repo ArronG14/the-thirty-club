@@ -23,6 +23,10 @@ import {
   type MembershipCard,
 } from '../domain/environment';
 import { Entrance } from './Entrance';
+import { createEntranceEnvironment } from '../entranceEnvironment';
+import { saveSession } from '../../concierge/client/sessionStore';
+import { encodeClaims } from '../../concierge/domain/session';
+import { recordMembership } from '../../concierge/client/membership';
 
 /** 19:00 in London on Wednesday 21 October 2026 (BST) = 13:00 Jamaica. */
 const OPENS = Date.parse('2026-10-21T18:00:00Z');
@@ -115,6 +119,72 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.useRealTimers();
+  vi.unstubAllGlobals();
+  localStorage.clear();
+});
+
+it('a retained authenticated session and old recognition cannot start the ceremony before the new card action', async () => {
+  vi.setSystemTime(OPENS - 5_000);
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(
+      async (input: string) =>
+        new Response(
+          JSON.stringify(
+            input.includes('/api/concierge/state')
+              ? { activations: {} }
+              : { error: 'not-configured' },
+          ),
+          { status: input.includes('/api/concierge/state') ? 200 : 503 },
+        ),
+    ),
+  );
+  saveSession(
+    `${encodeClaims({ v: 1, realm: 'live', scopes: ['membership'], iat: OPENS - 86_400_000 })}.old-signature`,
+  );
+  recordMembership(new Date(OPENS - 86_400_000).toISOString());
+  const env = createEntranceEnvironment();
+  expect(env.card.isPresented()).toBe(false);
+  const view = render(
+    <MemoryRouter>
+      <Entrance environment={{ ...env, admission: source() }} />
+    </MemoryRouter>,
+  );
+  const club = view.container.querySelector('.club')!;
+  await settle();
+  advance(7_000);
+  await settle();
+  expect(
+    screen.getByRole('button', { name: 'Your early admission' }),
+  ).toBeVisible();
+  advance(20_000);
+  expect(club).toHaveAttribute('data-stage', 'final-minute');
+  expect(timer()).toContain('10 seconds');
+  saveSession(
+    `${encodeClaims({ v: 1, realm: 'live', scopes: ['membership'], iat: Date.now(), cardPresentedAt: Date.now() })}.new-signature`,
+  );
+  act(() => window.dispatchEvent(new Event('storage')));
+  advance(9_000);
+  expect(club).toHaveAttribute('data-stage', 'final-minute');
+  advance(2_000);
+  expect(club).toHaveAttribute('data-stage', 'unlocking');
+  advance(5_000);
+  advance(20_000);
+  await settle();
+  expect(club).toHaveAttribute('data-stage', 'foyer');
+  cleanup();
+  render(
+    <MemoryRouter>
+      <Entrance
+        environment={{ ...createEntranceEnvironment(), admission: source() }}
+      />
+    </MemoryRouter>,
+  );
+  await settle();
+  expect(document.querySelector('.club')).toHaveAttribute(
+    'data-stage',
+    'foyer',
+  );
 });
 
 describe('the rules', () => {

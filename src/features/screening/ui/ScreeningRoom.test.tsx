@@ -170,7 +170,9 @@ describe('the Private Screening Room', () => {
     fireEvent.ended(video());
     fireEvent.ended(video());
     expect(phase()).toBe('seated');
-    expect(screen.getByText(SCREENING_LINES.closing)).toBeInTheDocument();
+    expect(
+      screen.getByText(SCREENING_LINES.closing, { normalizer: (text) => text }),
+    ).toBeInTheDocument();
     expect(complete).toHaveBeenCalledTimes(1);
     expect(loadRecord()).toMatchObject({ completions: 1, resume: null });
     const firstCompletion = loadRecord().completedAt;
@@ -338,7 +340,9 @@ describe('a programme of reels (ADR-024)', () => {
     end();
     expect(complete).toHaveBeenCalledTimes(1);
     expect(loadRecord().completions).toBe(1);
-    expect(screen.getByText(SCREENING_LINES.closing)).toBeInTheDocument();
+    expect(
+      screen.getByText(SCREENING_LINES.closing, { normalizer: (text) => text }),
+    ).toBeInTheDocument();
     // Watch again starts from the first reel.
     expect(screen.getByRole('button', { name: 'Watch Movie' })).toBeVisible();
     expect(screen.getByText('1 of 3 · Reel 1')).toBeInTheDocument();

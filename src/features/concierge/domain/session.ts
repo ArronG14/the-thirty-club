@@ -21,6 +21,8 @@ export interface SessionClaims {
   scopes: Scope[];
   /** Issued at, epoch ms. */
   iat: number;
+  /** Explicit membership scan/code entry; retaining a scope is not a scan. */
+  cardPresentedAt?: number;
   /** Rehearsal only: virtual time = real time + offsetMs. */
   offsetMs?: number;
 }
@@ -65,6 +67,11 @@ export function parseClaims(value: unknown): SessionClaims | null {
     scopes: [...new Set(scopes)],
     iat: source.iat,
   };
+  if (
+    typeof source.cardPresentedAt === 'number' &&
+    Number.isFinite(source.cardPresentedAt)
+  )
+    claims.cardPresentedAt = source.cardPresentedAt;
   if (
     source.realm === 'rehearsal' &&
     typeof source.offsetMs === 'number' &&

@@ -61,11 +61,16 @@ export async function serviceRoute({
     if (route === 'GET /service/requests')
       return { data: await call('service-requests') };
     if (method !== 'POST') return undefined;
-    v.keys(body, ['body', 'idempotencyKey']);
+    v.keys(body, ['body', 'idempotencyKey', 'purpose']);
+    if (body.purpose !== undefined && body.purpose !== 'departure-introduction')
+      v.invalid();
     const result = await call<{ duplicate: boolean }>('service-request', {
       body: replyText(body.body),
       idempotencyKey: v.idempotency(body.idempotencyKey),
       notification: ARRON_REQUEST_NOTIFICATION,
+      ...(body.purpose === 'departure-introduction'
+        ? { purpose: body.purpose }
+        : {}),
     });
     return { data: result, status: result.duplicate ? 200 : 201 };
   }

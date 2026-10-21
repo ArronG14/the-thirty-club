@@ -160,6 +160,7 @@
   visibility: hidden;
 }
 .cinema__words {
+  white-space: pre-line;
   margin: 0;
   max-width: 30rem;
   animation: cinema-words 0.9s cubic-bezier(0.2, 0.7, 0.2, 1) both;
@@ -425,6 +426,7 @@
   .cinema[data-phase='film'] .cinema__film,
   .cinema[data-settling='true'] .cinema__poster,
   .cinema__words {
+    white-space: pre-line;
     animation: none;
   }
   .cinema__veil {

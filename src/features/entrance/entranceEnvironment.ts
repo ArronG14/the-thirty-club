@@ -2,7 +2,7 @@ import { ownerActive } from '../owner/session';
 import { appClock } from '../rehearsal/clock';
 import { simulationActive } from '../rehearsal/mode';
 import { browserMembershipStorage } from '../club/domain/membershipRecord';
-import { hasMembership } from '../concierge/client/membership';
+import { hasAdmissionCard } from '../concierge/client/membership';
 import { activeSession, realmKey } from '../concierge/client/sessionStore';
 import { browserEntranceStorage } from './domain/entranceRecord';
 import {
@@ -74,7 +74,7 @@ export function createEntranceEnvironment(): EntranceEnvironment {
       clock: appClock,
       storage: browserEntranceStorage(),
       membership: browserMembershipStorage(),
-      card: { isPresented: () => hasMembership() },
+      card: { isPresented: () => hasAdmissionCard() },
       preview: null,
       admission: admissionSource,
     };
@@ -89,7 +89,7 @@ export function createEntranceEnvironment(): EntranceEnvironment {
     clock: offset ? { now: () => Date.now() + offset } : systemClock,
     storage: browserEntranceStorage(realmKey('entrance')),
     membership: browserMembershipStorage(realmKey('membership')),
-    card: { isPresented: () => hasMembership() },
+    card: { isPresented: () => hasAdmissionCard() },
     preview: null,
     admission: admissionSource,
   };

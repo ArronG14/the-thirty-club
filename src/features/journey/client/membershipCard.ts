@@ -8,11 +8,12 @@
 import { activeSession } from '../../concierge/client/sessionStore';
 import { hasScope } from '../../concierge/domain/session';
 import { presentCard } from './journeyApi';
+import { hasAdmissionCard } from '../../concierge/client/membership';
 
 /** This device holds the card's verified credential. */
 export function holdsCard(): boolean {
   const session = activeSession();
-  return session !== null && hasScope(session.claims, 'membership');
+  return session !== null && hasAdmissionCard();
 }
 
 /**
@@ -22,7 +23,12 @@ export function holdsCard(): boolean {
  */
 export async function presentCardToClub(): Promise<boolean> {
   const session = activeSession();
-  if (!session || !hasScope(session.claims, 'membership')) return false;
+  if (
+    !session ||
+    !hasScope(session.claims, 'membership') ||
+    !hasAdmissionCard()
+  )
+    return false;
   const result = await presentCard(session.token);
   return result.ok;
 }

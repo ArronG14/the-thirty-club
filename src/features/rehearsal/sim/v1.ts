@@ -296,12 +296,10 @@ async function boot(): Promise<SimOffice> {
         const presented = await db.action<{
           card: unknown;
           session?: unknown;
-        }>(
-          null,
-          'system',
-          'system-journey-card',
-          existing ? {} : { hash: hashToken(token) },
-        );
+        }>(null, 'system', 'system-journey-card', {
+          ...(existing ? {} : { hash: hashToken(token) }),
+          cardPresentedAt: claims.cardPresentedAt ?? null,
+        });
         if (!existing) jar.set('member', token);
         return json({
           session: existing ?? presented.session,

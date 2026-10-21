@@ -22,6 +22,7 @@ import { PrivilegeCard } from './PrivilegeCard';
 import { PrivilegeEnvelope } from './PrivilegeEnvelope';
 import { SplitFlapBoard } from './SplitFlapBoard';
 import './departure.css';
+import { DepartureWelcome, useDepartureWelcome } from './DepartureWelcome';
 
 function boardRemarks(model: ConciergeModel): string {
   const schedule = knownSchedule(model.state);
@@ -234,6 +235,7 @@ function Stage({
 export default function DepartureLounge({ deps }: { deps?: ConciergeDeps }) {
   const [resolved] = useState(() => deps ?? browserConciergeDeps());
   const model = useConcierge(resolved);
+  const welcome = useDepartureWelcome();
   const reducedMotion = useReducedMotion();
 
   return (
@@ -264,11 +266,18 @@ export default function DepartureLounge({ deps }: { deps?: ConciergeDeps }) {
           model.phase === 'open' && !model.boarded ? 'boarding' : model.phase
         }
       >
-        <Stage
-          phase={model.phase}
-          model={model}
-          reducedMotion={reducedMotion}
-        />
+        {welcome?.available ? (
+          <DepartureWelcome
+            introduced={welcome.introduced}
+            body={welcome.body}
+          />
+        ) : (
+          <Stage
+            phase={model.phase}
+            model={model}
+            reducedMotion={reducedMotion}
+          />
+        )}
       </div>
       <ConnectionNote model={model} />
     </div>

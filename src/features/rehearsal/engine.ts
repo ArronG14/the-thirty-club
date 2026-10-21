@@ -245,10 +245,10 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   {
     id: 'early-admission-doors',
-    label: 'Early admission: 19:00 UK, card already presented',
+    label: 'Early admission: 19:00 UK, card presented after invitation',
     detail:
-      '18:59:40 UK, the card scanned earlier: the clock holds at 00:00:10, the final ten seconds begin at 19:00 and the doors open by themselves into the membership ceremony.',
-    at: EARLY_MEMBERSHIP - 20_000,
+      '19:00:05 UK: after the invitation, an explicit TEST card scan starts the final ten seconds and membership ceremony. A retained session alone cannot start it.',
+    at: EARLY_MEMBERSHIP + 5_000,
     go: '/',
     resume: ['early-membership'],
     card: true,
@@ -299,6 +299,7 @@ export const SCENARIOS: readonly Scenario[] = [
   },
   {
     id: 'casino-opening',
+    resume: ['casino-opening-spins', 'casino-opening'],
     label: 'Casino opening (admission ceremony)',
     detail:
       'Friday 23 Oct, 08:59:30 Jamaica, in the Lounge as a founding member: at 09:00 the Casino milestone fires and the Butler presents its Letter of Admission. Accept it to be escorted in.',

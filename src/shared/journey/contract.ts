@@ -116,6 +116,13 @@ export type MilestoneProgress =
   | 'completed';
 
 export interface OwnerMilestone {
+  storyManaged?: boolean;
+  manualOnly?: boolean;
+  storyApproved?: boolean;
+  storyDisabled?: boolean;
+  requiresKeys?: string[];
+  storySms?: string | null;
+  storyVaultId?: string | null;
   key: string;
   title: string;
   description: string;
