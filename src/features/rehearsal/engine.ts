@@ -705,7 +705,7 @@ export async function launchRoom(id: string) {
 
 const ROOM_KEYS: Partial<Record<string, readonly string[]>> = {
   casino: ['thirty-club:casino', 'thirty-club:prizes'],
-  'screening-room': ['thirty-club:screening'],
+  'screening-room': ['thirty-club:screening', 'thirty-club:screening-reel'],
   entrance: ['thirty-club:entrance'],
   lounge: ['thirty-club:membership'],
 };

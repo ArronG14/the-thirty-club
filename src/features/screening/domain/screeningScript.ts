@@ -19,6 +19,11 @@ export const SCREENING_LINES = {
     'I trust you enjoyed your private screening, Madam. The theatre shall remain at your disposal should you wish to revisit it.',
   /** Any later natural end. */
   encore: 'An encore, Madam. The theatre remains entirely at your disposal.',
+  /** Between reels of a programme (PROPOSED, ADR-024). */
+  nextReel: 'There is more, Madam. Whenever you are ready.',
+  /** A reel could not be loaded; the next is offered (PROPOSED). */
+  reelUnavailable:
+    'My apologies, Madam — that reel seems to have gone astray. Shall we continue?',
   /** She left the film before its end. */
   paused: 'Of course, Madam. I have kept your place.',
   /** LIVE, before the owner has configured the film. */

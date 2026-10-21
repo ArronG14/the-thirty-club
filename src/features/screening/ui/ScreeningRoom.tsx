@@ -12,10 +12,11 @@ import { appClock } from '../../rehearsal/clock';
 import { simulationActive } from '../../rehearsal/mode';
 import { useReducedMotion } from '../../../shared/ui/useReducedMotion';
 import {
-  resolveFilm,
+  resolveProgramme,
   SCREENING_POSTER,
   type ScreeningFilm,
 } from '../config/screeningFilm';
+import { progressStorage } from '../../owner/session';
 import {
   loadRecord,
   resumeSeconds,
@@ -82,6 +83,39 @@ const rehearsalPage = () =>
 
 const iso = () => new Date(appClock.now()).toISOString();
 
+/** Which reel of a programme she is on, kept across visits (ADR-024). */
+const REEL_KEY = 'thirty-club:screening-reel';
+const programmeId = (reels: readonly ScreeningFilm[]) =>
+  reels.map((reel) => reel.id).join('|');
+function loadReel(reels: readonly ScreeningFilm[]): number {
+  try {
+    const raw = progressStorage.getItem(REEL_KEY);
+    const saved = raw
+      ? (JSON.parse(raw) as { programme?: string; index?: number })
+      : null;
+    if (
+      saved?.programme === programmeId(reels) &&
+      Number.isInteger(saved.index) &&
+      saved.index! >= 0 &&
+      saved.index! < reels.length
+    )
+      return saved.index!;
+  } catch {
+    // A fresh programme.
+  }
+  return 0;
+}
+function saveReel(reels: readonly ScreeningFilm[], index: number) {
+  try {
+    progressStorage.setItem(
+      REEL_KEY,
+      JSON.stringify({ programme: programmeId(reels), index }),
+    );
+  } catch {
+    // Storage unavailable: the reel is kept for this visit only.
+  }
+}
+
 function timestamp(seconds: number) {
   const value = Math.max(0, Math.floor(seconds));
   return `${Math.floor(value / 60)}:${String(value % 60).padStart(2, '0')}`;
@@ -102,14 +136,41 @@ interface Speech {
  */
 export default function ScreeningRoom({
   film: filmProp,
+  programme,
   onComplete,
 }: {
   /** Defaults to the configured film for this page (LIVE or rehearsal). */
   film?: ScreeningFilm | null;
+  /** Reels in order (tests); defaults to the configured programme. */
+  programme?: readonly ScreeningFilm[];
   onComplete?: () => void;
 }) {
-  const [film] = useState(() =>
-    filmProp === undefined ? resolveFilm(rehearsalPage()) : filmProp,
+  const [reels] = useState<readonly ScreeningFilm[]>(
+    () =>
+      programme ??
+      (filmProp === undefined
+        ? resolveProgramme(rehearsalPage())
+        : filmProp
+          ? [filmProp]
+          : []),
+  );
+  const [reelIndex, setReelIndex] = useState(() => loadReel(reels));
+  const reelRef = useRef(reelIndex);
+  const film = reels[reelIndex] ?? null;
+  /** The reel the native listeners and saves refer to. */
+  const filmRef = useRef(film);
+  /** Between reels (or after a reel failed): the reel offered next. */
+  const [intermission, setIntermission] = useState<{ next: number } | null>(
+    null,
+  );
+  const chooseReel = useCallback(
+    (index: number) => {
+      reelRef.current = index;
+      filmRef.current = reels[index] ?? null;
+      saveReel(reels, index);
+      setReelIndex(index);
+    },
+    [reels],
   );
   const reducedMotion = useReducedMotion();
   const [record, dispatchRecord] = useReducer(
@@ -185,15 +246,16 @@ export default function ScreeningRoom({
   /** `element` is passed on unmount, when the ref is already detached. */
   const savePosition = useCallback(
     (element: HTMLVideoElement | null = video.current) => {
-      if (!film || !element || element.readyState < 1) return;
+      const current = filmRef.current;
+      if (!current || !element || element.readyState < 1) return;
       commit({
         type: 'position',
-        filmId: film.id,
+        filmId: current.id,
         seconds: element.ended ? 0 : element.currentTime,
         duration: element.duration,
       });
     },
-    [commit, film],
+    [commit],
   );
 
   /** Back in her seat, facing the screen. */
@@ -218,16 +280,28 @@ export default function ScreeningRoom({
     return () => clearTimeout(timer);
   }, [settling]);
 
-  /** The film reached its natural end. Counted once per playback. */
+  /**
+   * The film reached its natural end. Counted once per playback, at the end
+   * of the last reel; between reels the next is offered (her tap starts it).
+   */
   const finish = useCallback(() => {
     if (settled.current || phaseRef.current !== 'film') return;
     settled.current = true;
+    const next = reelRef.current + 1;
+    if (next < reels.length) {
+      leaveFullscreen(video.current);
+      chooseReel(next);
+      setIntermission({ next });
+      backToSeat(SCREENING_LINES.nextReel);
+      return;
+    }
     const first = recordRef.current.completedAt === null;
     commit({ type: 'complete', at: iso() });
     leaveFullscreen(video.current);
+    if (reels.length > 1) chooseReel(0);
     backToSeat(endLine(first));
     onComplete?.();
-  }, [backToSeat, commit, onComplete]);
+  }, [backToSeat, chooseReel, commit, onComplete, reels.length]);
 
   /** She closed the player before the end: keep her place, no completion. */
   const leaveEarly = useCallback(() => {
@@ -257,9 +331,16 @@ export default function ScreeningRoom({
       video.current?.pause();
       savePosition();
       leaveFullscreen(video.current);
+      // A reel that will not load never blocks the rest of the programme.
+      const next = reelRef.current + 1;
+      if (next < reels.length) {
+        setIntermission({ next });
+        backToSeat(SCREENING_LINES.reelUnavailable, problem);
+        return;
+      }
       backToSeat(null, problem);
     },
-    [backToSeat, savePosition],
+    [backToSeat, reels.length, savePosition],
   );
 
   // Browser-owned fullscreen closing is the user leaving the film.
@@ -316,9 +397,11 @@ export default function ScreeningRoom({
       }
     };
   }, [savePosition]);
+  // The source is set here, never as a rendered attribute: re-rendering the
+  // same src would restart a reel she is watching.
   useEffect(() => {
     const element = video.current;
-    if (film && element && !element.getAttribute('src')) {
+    if (film && element && element.getAttribute('src') !== film.src) {
       element.src = film.src;
       element.load();
     }
@@ -331,10 +414,22 @@ export default function ScreeningRoom({
    * Watch Movie. Everything iOS needs (play, fullscreen) happens here,
    * synchronously inside the tap; the camera move is CSS that follows.
    */
-  function watch(from: 'resume' | 'beginning') {
+  function watch(from: 'resume' | 'beginning', index = reelRef.current) {
     const element = video.current;
-    if (!film || !element || phaseRef.current === 'film') return;
-    const start = from === 'resume' ? (resumeAt ?? 0) : 0;
+    const target = reels[index];
+    if (!target || !element || phaseRef.current === 'film') return;
+    if (index !== reelRef.current) chooseReel(index);
+    filmRef.current = target;
+    // Another reel: its source is set inside the tap, so play() below is
+    // still the gesture iPhone requires.
+    if (element.getAttribute('src') !== target.src) {
+      element.src = target.src;
+      element.load();
+    }
+    const start =
+      from === 'resume'
+        ? (resumeSeconds(recordRef.current, target.id) ?? 0)
+        : 0;
     if (element.error) element.load();
     pendingSeek.current = start;
     if (element.readyState >= 1) element.currentTime = start;
@@ -356,6 +451,7 @@ export default function ScreeningRoom({
       );
     });
     commit({ type: 'start', at: iso() });
+    setIntermission(null);
     setNotice('');
     setSpeech((s) => (s ? { ...s, visible: false } : s));
     setSettling(false);
@@ -416,14 +512,29 @@ export default function ScreeningRoom({
           <p className="cinema__eyebrow">{SCREENING_POSTER.presenter}</p>
           <h2>{SCREENING_POSTER.title}</h2>
           <p className="cinema__subtitle">{SCREENING_POSTER.subtitle}</p>
+          {film && reels.length > 1 && (
+            <p className="cinema__reel">
+              {intermission
+                ? `Next — ${reels[intermission.next]?.title ?? ''}`
+                : `${reelIndex + 1} of ${reels.length} · ${film.title}`}
+            </p>
+          )}
           {film ? (
             <button
               ref={primary}
               type="button"
               className="cinema__primary"
-              onClick={() => watch('resume')}
+              onClick={() =>
+                intermission
+                  ? watch('beginning', intermission.next)
+                  : watch('resume')
+              }
             >
-              {status === 'interrupted' ? 'Resume Movie' : 'Watch Movie'}
+              {intermission || (reelIndex > 0 && status !== 'interrupted')
+                ? 'Continue the screening'
+                : status === 'interrupted'
+                  ? 'Resume Movie'
+                  : 'Watch Movie'}
             </button>
           ) : (
             <p className="cinema__empty" role="status">
@@ -453,7 +564,7 @@ export default function ScreeningRoom({
               <button
                 type="button"
                 className="cinema__text-button"
-                onClick={() => watch('beginning')}
+                onClick={() => watch('beginning', 0)}
               >
                 Watch from the beginning
               </button>
@@ -486,7 +597,6 @@ export default function ScreeningRoom({
         <div className="cinema__film" aria-hidden={!inFilm}>
           <video
             ref={video}
-            src={film.src}
             poster={film.poster}
             // Deliberately not playsinline: on iPhone, play() opens the
             // native fullscreen player with its own controls.
