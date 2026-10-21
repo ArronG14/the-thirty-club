@@ -174,6 +174,11 @@ export interface MemberVaultList {
   open: boolean;
   opensAt: ISODateTime;
   vaults: MemberVault[];
+  /**
+   * Before the birthday: true once a compartment with its own earlier date
+   * has opened to her (ADR-024). Those compartments read as they really are.
+   */
+  early?: boolean;
 }
 export interface VaultOpenInput {
   /** The token from the NFC tag's URL (43 characters). */
@@ -212,6 +217,8 @@ export interface OwnerVault {
   openedVia: 'nfc' | 'code' | 'owner' | null;
   createdAt: ISODateTime;
   updatedAt: ISODateTime;
+  /** Opens before the birthday from this instant (ADR-024); null = birthday. */
+  opensAt?: ISODateTime | null;
 }
 export interface OwnerVaultList {
   opensAt: ISODateTime;

@@ -76,6 +76,7 @@ function vaultInput(body: Record<string, unknown>) {
     'trigger',
     'availableAt',
     'casinoRewardId',
+    'opensAt',
   ]);
   const number = v.integer(body.displayNumber);
   if (number > 999) v.invalid();
@@ -99,6 +100,11 @@ function vaultInput(body: Record<string, unknown>) {
     trigger: body.trigger,
     availableAt,
     casinoRewardId: reward,
+    // Before the birthday only if the owner says so (ADR-024); absent or
+    // null keeps the birthday time-lock.
+    ...(body.opensAt === undefined
+      ? {}
+      : { opensAt: v.instant(body.opensAt, true) }),
   };
 }
 

@@ -12,7 +12,8 @@ import {
   sessionCookie,
 } from './auth.ts';
 import * as v from './validation.ts';
-import { statusCallback } from './sms.ts';
+import { processMessages, statusCallback } from './sms.ts';
+import { drinksRoute } from './drinks.ts';
 import { correspondenceRoute } from './correspondence.ts';
 import {
   journeyRoute,
@@ -91,6 +92,14 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
     });
     const respond = (data: unknown, status = 200) =>
       new Response(JSON.stringify(data), { status, headers });
+    // Her request is committed with its SMS already queued; sending it now
+    // (rather than at the next minute's round) is a courtesy. A failure here
+    // leaves the message queued for the round and never fails her request.
+    const notifyOwnerNow = () =>
+      processMessages(db, env, send, 'owner').then(
+        () => undefined,
+        () => undefined,
+      );
     try {
       if (path === '/twilio/status' && request.method === 'POST')
         return await statusCallback(request, db, env);
@@ -405,6 +414,11 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
           }),
         );
       }
+      const drinks = await drinksRoute({ route, body, session, db });
+      if (drinks) {
+        if ('notify' in drinks && drinks.status === 201) await notifyOwnerNow();
+        return respond(drinks.data, drinks.status);
+      }
       const vault = await vaultRoute({
         route,
         path,
@@ -426,7 +440,11 @@ export function createBackendApi({ db, env, send = fetch }: ApiDeps) {
         db,
         env,
       });
-      if (service) return respond(service.data, service.status);
+      if (service) {
+        if (route === 'POST /service/requests' && service.status === 201)
+          await notifyOwnerNow();
+        return respond(service.data, service.status);
+      }
       const desk = await correspondenceRoute({
         route,
         path,

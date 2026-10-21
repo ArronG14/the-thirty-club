@@ -4,7 +4,13 @@ import { BackendError, type Database } from './database.ts';
 import { deliverSms, transportStatus, type SmsAudience } from './smsPolicy.ts';
 interface ClaimedMessage extends ScheduledMessage {
   claimId: string;
+  /** Claimed in REHEARSAL mode: an owner notification for the test number. */
+  rehearsal?: boolean;
 }
+
+/** Prefixed to an owner notification delivered in REHEARSAL mode. */
+export const OWNER_REHEARSAL_BANNER =
+  '[REHEARSAL — owner notification; Alise was not contacted]';
 /** Every outbox category goes to exactly one known phone. */
 export function recipientFor(
   category: ScheduledMessage['category'],
@@ -27,6 +33,8 @@ export async function processMessages(
   db: Database,
   env: NodeJS.ProcessEnv,
   send: typeof fetch = fetch,
+  /** 'owner': only the owner's notifications (right after her request). */
+  only?: 'owner',
 ): Promise<{ processed: number }> {
   const transport = transportStatus(env);
   // The transport must be available; it never authorises anything itself.
@@ -36,13 +44,32 @@ export async function processMessages(
   let processed = 0;
   // At most one eight-second request, safely inside Netlify's scheduler budget.
   for (let n = 0; n < 1; n++) {
-    const item = await db.action<ClaimedMessage | null>(
-      null,
-      'system',
-      'system-sms-claim',
-    );
+    // LIVE claims first; in REHEARSAL mode only the owner's own
+    // notifications are claimed, for the owner's test number (ADR-024).
+    const item =
+      only === 'owner'
+        ? await db.action<ClaimedMessage | null>(
+            null,
+            'system',
+            'system-sms-claim-owner',
+          )
+        : ((await db.action<ClaimedMessage | null>(
+            null,
+            'system',
+            'system-sms-claim',
+          )) ??
+          (await db.action<ClaimedMessage | null>(
+            null,
+            'system',
+            'system-sms-claim-rehearsal',
+          )));
     if (!item) break;
-    const audience = audienceFor(item.category);
+    const audience = item.rehearsal
+      ? item.category === 'correspondence-arron' ||
+        item.category === 'transactional-arron'
+        ? ('owner-test' as const)
+        : undefined
+      : audienceFor(item.category);
     if (!audience) {
       await db.action(null, 'system', 'system-message-result', {
         id: item.id,
@@ -55,7 +82,9 @@ export async function processMessages(
     }
     const sent = await deliverSms(db, env, send, {
       audience,
-      body: item.body,
+      body: item.rehearsal
+        ? `${OWNER_REHEARSAL_BANNER}\n${item.body}`
+        : item.body,
       statusCallback: `${env.CONCIERGE_SITE_URL.replace(/\/$/, '')}/api/v1/twilio/status?messageId=${item.id}&claimId=${item.claimId}`,
     });
     if (sent.state === 'refused') {

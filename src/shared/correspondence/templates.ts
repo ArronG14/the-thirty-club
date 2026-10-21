@@ -70,7 +70,7 @@ export function invitationSlot(
  * is not tied to a letter. `{message}` is her exact request.
  */
 export const ARRON_REQUEST_NOTIFICATION =
-  'THE THIRTY CLUB — Madam Alise rang for the Butler: {message}. Reply from the Butler’s Office.';
+  'THE THIRTY CLUB — A WORD WITH THE BUTLER. Alise writes: “{message}”. Reply from the Butler’s Office.';
 
 /** Longest Butler SMS Arron may write (one outbox message). */
 export const BUTLER_SMS_MAX_LENGTH = 1600;
