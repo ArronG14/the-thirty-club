@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { createDojaHandler, type LetterStore } from './fromdoja.ts';
+import { createDojaHandler, type LetterStore } from '../functions/fromdoja.ts';
 import { wordCount, type DojaLetter } from '../../src/features/doja/letter.ts';
 
 const URL = 'https://club.example/.netlify/functions/fromdoja';
